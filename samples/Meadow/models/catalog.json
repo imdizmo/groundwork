@@ -1,0 +1,171 @@
+{
+ "kinds": [
+  {
+   "model": "CommonTree_1",
+   "label": "Oak",
+   "category": "Trees",
+   "scale": [
+    0.8,
+    1.3
+   ]
+  },
+  {
+   "model": "CommonTree_3",
+   "label": "Oak, tall",
+   "category": "Trees",
+   "scale": [
+    0.8,
+    1.3
+   ]
+  },
+  {
+   "model": "Pine_1",
+   "label": "Pine",
+   "category": "Trees",
+   "scale": [
+    0.8,
+    1.3
+   ]
+  },
+  {
+   "model": "Pine_3",
+   "label": "Pine, tall",
+   "category": "Trees",
+   "scale": [
+    0.8,
+    1.3
+   ]
+  },
+  {
+   "model": "Birch_2",
+   "label": "Birch",
+   "category": "Trees",
+   "scale": [
+    0.8,
+    1.3
+   ]
+  },
+  {
+   "model": "Bush_Long_1",
+   "label": "Bush",
+   "category": "Bushes",
+   "scale": [
+    0.8,
+    1.2
+   ]
+  },
+  {
+   "model": "Bush_Large_Flowers",
+   "label": "Flowering bush",
+   "category": "Bushes",
+   "scale": [
+    0.8,
+    1.2
+   ]
+  },
+  {
+   "model": "Fern_1",
+   "label": "Fern",
+   "category": "Plants",
+   "scale": [
+    0.8,
+    1.2
+   ]
+  },
+  {
+   "model": "Grass_Common_Short",
+   "label": "Grass",
+   "category": "Plants",
+   "scale": [
+    0.8,
+    1.2
+   ]
+  },
+  {
+   "model": "Flower_3_Group",
+   "label": "Flowers",
+   "category": "Plants",
+   "scale": [
+    0.8,
+    1.2
+   ]
+  },
+  {
+   "model": "Mushroom_Common",
+   "label": "Mushroom",
+   "category": "Plants",
+   "scale": [
+    0.8,
+    1.2
+   ]
+  },
+  {
+   "model": "Rock_Medium_1",
+   "label": "Rock",
+   "category": "Rocks",
+   "scale": [
+    0.7,
+    1.4
+   ]
+  },
+  {
+   "model": "Rock_Medium_3",
+   "label": "Stone",
+   "category": "Rocks",
+   "scale": [
+    0.6,
+    1.2
+   ]
+  },
+  {
+   "model": "Rock_Big_1",
+   "label": "Boulder",
+   "category": "Rocks",
+   "scale": [
+    0.8,
+    1.4
+   ]
+  }
+ ],
+ "categories": {
+  "Trees": {
+   "density": 2,
+   "spacing": 4
+  },
+  "Bushes": {
+   "density": 3,
+   "spacing": 2
+  },
+  "Plants": {
+   "density": 40,
+   "spacing": 0.6
+  },
+  "Rocks": {
+   "density": 1,
+   "spacing": 3
+  }
+ },
+ "biomes": {
+  "Woodland": {
+   "paint": "Dirt",
+   "density": 1,
+   "kinds": {
+    "CommonTree_1": 3,
+    "Pine_1": 2,
+    "Birch_2": 1,
+    "Bush_Long_1": 3,
+    "Fern_1": 4,
+    "Mushroom_Common": 1
+   }
+  },
+  "Meadow": {
+   "paint": "Grass",
+   "density": 1,
+   "kinds": {
+    "Grass_Common_Short": 6,
+    "Flower_3_Group": 3,
+    "Bush_Large_Flowers": 1
+   }
+  }
+ }
+}

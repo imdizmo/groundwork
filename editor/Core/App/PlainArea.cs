@@ -1,0 +1,51 @@
+using Groundwork.Sdk;
+
+namespace Groundwork.App;
+
+/// <summary>
+/// An area of flat ground, the same everywhere (IAreaView): what a mod's tool reads while no area is open, and a stand-in
+/// for an open one where only its objects matter.
+/// </summary>
+/// <param name="minX">Its west edge, world x in metres.</param>
+/// <param name="minZ">Its south edge, world z in metres.</param>
+/// <param name="maxX">Its east edge, world x in metres.</param>
+/// <param name="maxZ">Its north edge, world z in metres.</param>
+/// <param name="height">The ground's height everywhere, in metres.</param>
+public sealed class PlainArea(float minX, float minZ, float maxX, float maxZ, float height) : IAreaView
+{
+    /// <summary>Its objects, by asset name; none of an asset not listed.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<IObjectView>> Objects { get; init; } = new Dictionary<string, IReadOnlyList<IObjectView>>();
+
+    /// <summary>The layer everywhere (0: the first).</summary>
+    public int LayerValue { get; init; }
+
+    /// <summary>The ground's colour everywhere (linear).</summary>
+    public System.Numerics.Vector3 Colour { get; init; } = new(0.5f, 0.5f, 0.5f);
+
+    /// <inheritdoc/>
+    public float MinX => minX;
+
+    /// <inheritdoc/>
+    public float MinZ => minZ;
+
+    /// <inheritdoc/>
+    public float MaxX => maxX;
+
+    /// <inheritdoc/>
+    public float MaxZ => maxZ;
+
+    /// <inheritdoc/>
+    public IReadOnlyList<IObjectView> ObjectsOf(string asset) => Objects.TryGetValue(asset, out var found) ? found : [];
+
+    /// <inheritdoc/>
+    public float GroundHeight(float x, float z) => height;
+
+    /// <inheritdoc/>
+    public int Layer(float x, float z) => LayerValue;
+
+    /// <inheritdoc/>
+    public System.Numerics.Vector3 GroundColor(int x, int z) => Colour;
+
+    /// <inheritdoc/>
+    public uint GroundMask(int x, int z) => 0;
+}

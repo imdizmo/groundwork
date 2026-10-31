@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- A sample Groundwork plugin: a Fence tool and the rails between its posts. Build it, then copy
+       bin/Release/net10.0/Fences.dll into the editor's plugins folder and allow it in Settings. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The editor brings its own copy of the SDK: build against it, do not ship it. -->
+    <ProjectReference Include="../../Groundwork.Sdk/Groundwork.Sdk.csproj" Private="false" />
+  </ItemGroup>
+</Project>

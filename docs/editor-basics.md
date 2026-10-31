@@ -1,0 +1,45 @@
+# The window
+
+The top bar holds **Start** (back to your maps), the map's name and size, undo and redo, **Live**, **Save**, and the
+panels: **Layers**, **Checks**, **History**, **View** and **?**. The rail on the left holds the tools; the objects
+drawer runs along the bottom; the minimap sits in the corner.
+
+## The tool rail
+
+| Section | Tools |
+|---|---|
+| Select | **Select** (`E`): pick, move, turn, copy, delete. |
+| Ground | **Sculpt** (`1`) and **Paint** (`6`): see [Sculpt and paint](terrain.md). |
+| Place | **Object**, **Brush**, **Biome**, **Stamp**: see [Objects](objects.md). |
+| Water | **Rivers**: see [Rivers and lakes](water.md). |
+| Tools | **Measure** (`M`) and **View** (`Esc` or `H`). |
+
+Plugins add their own tools below (see [Plugins](plugins.md)).
+
+## Camera
+
+| Mouse or key | Action |
+|---|---|
+| Right drag | Turn the view. |
+| Wheel | Zoom. |
+| Middle drag, or `Space` + left drag | Slide the view. |
+| `W` `A` `S` `D` or the arrows | Move around. |
+
+**Orbit**, **Top** and **Walk** over the view switch the camera: orbiting a point, straight down, or at eye height.
+Click the minimap to look there.
+
+## History
+
+Every change is a step: a stroke, a placement, a move, a paste, a river point. **History** (`L`) lists them, newest
+first. Click one to go back to it; **Remove** takes one step out and keeps what came after. Steps Claude made carry a
+chip, and **Take back Claude's changes** removes them all.
+
+## View panel
+
+**View** (`V`) shows or hides each kind of object (from the map's catalog: Trees, Rocks, Bushes, Plants, Props,
+Buildings, Markers, Other) and the water. Hidden objects cannot be picked. Plants, Markers and Other start hidden.
+
+## Settings
+
+**Settings** (from the start page) holds the language, the maps folder, how many steps History keeps, which plugins
+may run, and whether Claude may connect.

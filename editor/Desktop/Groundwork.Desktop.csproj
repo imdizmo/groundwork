@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The app: an Avalonia window, the 3D view and the map drawn with OpenGL. Uses the Core library. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Groundwork</AssemblyName>
+    <RootNamespace>Groundwork.Desktop</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Published as one file. On Linux its native libraries (Skia, HarfBuzz, SPIRV-Cross) are packed
+         inside it too; on Windows they stay beside the .exe: a program that writes DLLs to a temporary
+         folder and loads them is what antivirus heuristics take for a dropper. -->
+    <IncludeNativeLibrariesForSelfExtract Condition="!$(RuntimeIdentifier.StartsWith('win'))">true</IncludeNativeLibrariesForSelfExtract>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationIcon>Assets/icon.ico</ApplicationIcon>
+    <!-- The program's details (Windows shows them in its Properties and in the Task Manager); a program
+         without them looks more suspect to antivirus heuristics. -->
+    <Product>Groundwork</Product>
+    <AssemblyTitle>Groundwork</AssemblyTitle>
+    <Description>A world editor for Unreal Engine: shape the ground, paint its layers, place and move objects, draw rivers and lakes, live in the Unreal editor.</Description>
+    <Company>Groundwork</Company>
+    <Authors>Groundwork contributors; Thibault Bene (Valheim World Editor, which Groundwork comes from)</Authors>
+    <Copyright>Copyright (c) 2026 Groundwork contributors; Copyright (c) 2026 Thibault Bene</Copyright>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Desktop.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The window's icon (Windows also takes the program's, ApplicationIcon). -->
+    <AvaloniaResource Include="Assets/icon.png" />
+    <!-- The Script tool's API, compiled with each script. -->
+    <!-- The documentation, shown in the Help window (HelpDocs): its pages and pictures go inside the program, so help
+         works offline and always matches the version. Not the pages for the editor's own developers. -->
+    <EmbeddedResource Include="../../docs/**/*.md" Exclude="../../docs/releases/**;../../docs/dev/**;../../docs/architecture.md;../../docs/development.md" LogicalName="Docs/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" />
+    <EmbeddedResource Include="../../docs/images/**/*" LogicalName="Docs/images/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Core/Groundwork.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageReference Include="Silk.NET.OpenGL" Version="2.23.0" />
+    <!-- The Help window reads the documentation's Markdown (HelpDocs, HelpView). -->
+    <PackageReference Include="Markdig" Version="1.5.0" />
+    <!-- glTF models in a map's models folder (ModelStore.Gltf). -->
+    <PackageReference Include="SharpGLTF.Core" Version="1.0.6" />
+    <!-- Claude's connection (Settings: Allow Claude to connect): an MCP server inside the app, on
+         127.0.0.1 only (ClaudeServer.cs), with ASP.NET Core's web server. -->
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.3.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+</Project>

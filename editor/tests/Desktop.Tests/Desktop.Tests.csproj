@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The app's tests: its windows and panels run in Avalonia's headless mode (no screen, no OpenGL),
+       driven with exact mouse and keyboard input. Laid out like Desktop, one test class per file named
+       after the file it tests; Integration/ holds the tests of several files at once (window workflows), Support/ (here and editor/tests/Support) their helpers. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Groundwork.Desktop.Tests</RootNamespace>
+    <!-- Test methods need no doc comment: their names say what they check. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- Both test projects' settings (a stuck test dumped and stopped after 5 minutes), for dotnet test. -->
+    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --config-file $(MSBuildThisFileDirectory)../testconfig.json</TestingPlatformCommandLineArguments>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The tests run on Microsoft.Testing.Platform (global.json): xUnit's runner for it, and a dump of a
+         stuck test (testconfig.json). -->
+    <PackageReference Include="xunit.v3.mtp-v2" Version="3.2.2" />
+    <!-- glTF files made for the tests (ModelStoreGltfTests). -->
+    <PackageReference Include="SharpGLTF.Toolkit" Version="1.0.6" />
+    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.1" />
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The helpers both test projects share: the fixtures. -->
+    <Compile Include="../Support/**/*.cs" LinkBase="Support/Shared" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Desktop/Groundwork.Desktop.csproj" />
+    <!-- The SDK's sample plugin, run through the editor (FencesSampleTests). -->
+    <ProjectReference Include="../../../sdk/samples/Fences/Fences.csproj" />
+  </ItemGroup>
+</Project>

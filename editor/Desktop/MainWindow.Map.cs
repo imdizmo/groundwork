@@ -1,0 +1,888 @@
+using System.Diagnostics;
+using Avalonia.Controls;
+using Avalonia.Media;
+using Groundwork.App;
+
+namespace Groundwork.Desktop;
+
+// A map in the window: opened from the start page, every ground tool on it, Save writes the heightmap, Start goes
+// back to the start page.
+public partial class MainWindow
+{
+    /// <summary>Whether the map is open.</summary>
+    internal bool InMap { get; private set; }
+
+    /// <summary>The edits' version when the map was last saved (or opened).</summary>
+    private int _mapSaved, _mapObjects;
+
+    /// <summary>The ground's heights when the objects last stood on it (opened, or settled): Settle moves them by the change since.</summary>
+    private float[]? _mapGround;
+
+    /// <summary>Send to Unreal and Settle objects, on the top bar while the map is open.</summary>
+    private Button? _moreButton, _layersButton, _checksButton;
+
+    private Avalonia.Controls.Shapes.Ellipse? _liveDot;
+
+    private TextBlock? _liveStatus;
+
+    private ModToolPanel? _ownRight;
+
+    private Border? _selectionBar;
+
+    /// <summary>The objects drawer along the bottom (ObjectsDrawer), made when the map is first opened.</summary>
+    private ObjectsDrawer? _drawer;
+
+    /// <summary>The rail and the tool cards (they end above the drawer).</summary>
+    private readonly Panel _toolColumn = null!;
+
+    private TextBlock? _selectionCount;
+
+    private ModToolContext? _ownRightContext;
+
+    private ModExtensions.Tool? _ownRightTool;
+
+    private List<ModExtensions.Tool> _ownRightTools = [];
+
+    /// <summary>The Checks button says how many problems the last check found.</summary>
+    internal void ChecksFound(int n) => _checksButton?.Content = n > 0 ? $"Checks · {n}" : "Checks";
+
+    /// <summary>Grow, chosen from the ⋯ menu.</summary>
+    private ModExtensions.Tool? _growTool;
+
+    /// <summary>Live in Unreal (UnrealLive): on while set.</summary>
+    private UnrealLive? _live;
+
+    private Avalonia.Controls.Primitives.ToggleButton? _liveButton;
+
+    /// <summary>While live: looks every 1.5 s for changes made in Unreal.</summary>
+    private Avalonia.Threading.DispatcherTimer? _pullTimer;
+
+    /// <summary>The map changed since it was last saved.</summary>
+    internal bool MapDirty => InMap && Session != null && (Session.Edits.Version != _mapSaved || MapWater.Dirty);
+
+    /// <summary>Opens a map (null: the current one again); it is the current map once it is open.</summary>
+    internal async Task ShowMap(MapProject? chosen = null)
+    {
+        // Another map open with changes not saved: asked first.
+        if (InMap && MapDirty && !await Ask("Open another map?", "The open map has changes not saved.", Lang.T("common.leaveAnyway"), Lang.T("common.stay")))
+        {
+            return;
+        }
+        WorldScene scene;
+        MapProject map;
+        try
+        {
+            map = chosen ?? MapProject.Current ?? throw new IOException("no map chosen");
+            scene = map.Read();
+            var raster = map.ReadRaster();
+            _mapSize = $"{raster.Cols - 1} × {raster.Rows - 1} m";
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        {
+            await Tell("The map could not be read: " + ex.Message);
+            return;
+        }
+        MapProject.Current = map;
+        RememberMap(map.Folder);
+        if (!map.HasUnrealLevel && _liveButton != null)
+        {
+            _liveButton.IsChecked = false;
+        }
+        MapWater.Changed -= ShowWater;
+        MapWater.Changed += ShowWater;
+        await ShowEditor(scene);
+        ShowWater();
+        TitleText.Text = map.HasUnrealLevel ? map.Name : map.Name + " (no Unreal level)";
+        InMap = true;
+        _mapSaved = scene.Session!.Edits.Version;
+        MapButton.Content = Icons.With("back", Lang.T("top.label.start"));
+        // The map's objects have ids of their own (negative, as new ones): no "not saved yet" marks on them.
+        View.ShowNewMarkers = false;
+        Brush.MapOpen = true;
+        Tools.RelabelPaints();
+        LayerMaskNames(true);
+        Tools.ChooseSelect();
+        _mapGround = (float[])scene.Heights.Clone();
+        MapButtons(true);
+        Tools.SetMap(true);
+        MapRailTools();
+        UpdateSaveBar();
+        // The map first: no right-hand panel open (the choice kept for the game's worlds).
+        string right = Prefs.Get("panel.right", "view");
+        ShowRight(null);
+        Prefs.Set("panel.right", right);
+        Msg(new Said("", ""));
+    }
+
+    /// <summary>New map: asks its name, size and ground, makes it in the maps folder (Settings) and opens it.</summary>
+    private async Task NewMap()
+    {
+        if (await Dialogs.AskText(this, "New map", "Its name:", "Map") is not { Length: > 0 } name
+            || await Dialogs.AskText(this, "New map", "How big, in 63 m squares across (8 = 505 m):", "8") is not { } size
+            || !int.TryParse(size.Trim(), out int chunks) || chunks < 1)
+        {
+            return;
+        }
+        bool rolling = await Ask("New map", "Rolling ground, or flat?", "Rolling", "Flat");
+        MapProject made;
+        try
+        {
+            made = MapProject.Create(name, chunks, rolling, rolling ? 3f : 1f, Environment.TickCount & 0xFFFF, NewMapsFolder(), MapProject.Current);
+        }
+        catch (IOException ex)
+        {
+            await Tell(ex.Message);
+            return;
+        }
+        await ShowMap(made);
+    }
+
+    /// <summary>The map's rivers and lakes drawn again (and the save bar: they count as changes).</summary>
+    private void ShowWater()
+    {
+        if (Session?.Scene is { IsMap: true } s)
+        {
+            View.SetWater(s, MapWater.Shapes());
+            UpdateSaveBar();
+        }
+    }
+
+    /// <summary>Grow map: saves, makes the map's files bigger, opens it again.</summary>
+    internal async Task GrowMap(MapProject.Sides sides, int metres, bool generated, float flatHeight, int seed)
+    {
+        if (!InMap || Session is not { } s || MapProject.Current is not { } map)
+        {
+            return;
+        }
+        try
+        {
+            _ = map.Save(s.Scene);
+            map.Grow(sides, metres, generated, flatHeight, seed);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            await Tell("The map could not grow: " + ex.Message);
+            return;
+        }
+        _mapSaved = s.Edits.Version;
+        InMap = false;
+        Session = null;
+        await ShowMap();
+        var m = map.ReadRaster();
+        Msg(new Said($"{map.Name} is now {m.Cols} x {m.Rows} m (saved; the old files are kept as .bak).", $"{map.Name} is now {m.Cols} x {m.Rows} m."));
+    }
+
+    /// <summary>The Mask panel's paint rules named after the open map's layers (or numbered again).</summary>
+    private void LayerMaskNames(bool map)
+    {
+        int keep = MaskPanel.PaintBox.SelectedIndex;
+        string[] painted = map && MapProject.Current is { } open
+            ? [.. Enumerable.Range(1, 3).Select(k => open.Layers.ElementAtOrDefault(k)?.Name ?? Lang.T("mask.paint.layer", k + 1))]
+            : [.. Enumerable.Range(1, 3).Select(k => Lang.T("mask.paint.layer", k + 1))];
+        MaskPanel.PaintBox.ItemsSource = (string[])[Lang.T("mask.paint.any"), Lang.T("mask.paint.unpainted"), Lang.T("mask.paint.painted"), .. painted];
+        MaskPanel.PaintBox.SelectedIndex = keep;
+    }
+
+    /// <summary>Send to Unreal and Settle objects on the top bar (made once, beside Save), shown or hidden.</summary>
+    private void MapButtons(bool show)
+    {
+        if (_liveButton == null && SaveButton.Parent is Panel bar)
+        {
+            // Live: a pill with its state (UnrealLive)
+            _liveDot = new Avalonia.Controls.Shapes.Ellipse { Width = 8, Height = 8, Fill = Brushes.Gray, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
+            _liveStatus = new TextBlock { Text = "off", Foreground = Ui.Muted, FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
+            _liveButton = new Avalonia.Controls.Primitives.ToggleButton
+            {
+                Content = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 7, Children = { _liveDot, new TextBlock { Text = "Live", FontWeight = FontWeight.SemiBold, FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center }, _liveStatus } },
+                CornerRadius = new Avalonia.CornerRadius(14),
+                Padding = new Avalonia.Thickness(10, 4),
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            };
+            ToolTip.SetTip(_liveButton, "Live with Unreal, both ways: what you change here goes into the open Unreal level as you make it, and what is changed there comes here. Turning it on sends what Unreal does not have yet first.");
+            _liveButton.IsCheckedChanged += async (_, _) => await SetLive(_liveButton.IsChecked == true);
+            int at = bar.Children.IndexOf(SaveButton);
+            bar.Children.Insert(at, _liveButton);
+            // ⋯: what is not used often
+            _moreButton = new Button { Content = "⋯", FontSize = 15, Padding = new Avalonia.Thickness(10, 2), VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
+            ToolTip.SetTip(_moreButton, "More: send everything to Unreal, settle objects on changed ground");
+            var send = new MenuItem { Header = "Send everything to Unreal (full rebuild, about a minute)" };
+            send.Click += async (_, _) => await SendToUnreal();
+            var settle = new MenuItem { Header = "Settle objects on ground that changed" };
+            settle.Click += (_, _) => SettleObjects();
+            var grow = new MenuItem { Header = "Grow the map…" };
+            grow.Click += (_, _) =>
+            {
+                if (_growTool != null)
+                {
+                    Tools.ChooseMod(_growTool);
+                }
+            };
+            _moreButton.Flyout = new MenuFlyout { Items = { send, settle, grow } };
+            bar.Children.Insert(bar.Children.IndexOf(SaveButton) + 1, _moreButton);
+            // Layers and Checks: right-hand panels like History
+            _layersButton = new Button { Content = "Layers", FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
+            _layersButton.Click += (_, _) => ShowOwnRight("layers");
+            _checksButton = new Button { Content = "Checks", FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
+            _checksButton.Click += (_, _) => ShowOwnRight("checks");
+            int h = bar.Children.IndexOf(HistoryButton);
+            bar.Children.Insert(h, _checksButton);
+            bar.Children.Insert(h, _layersButton);
+            foreach (var other in new[] { HistoryButton, ViewButton, HelpButton })
+            {
+                other.Click += (_, _) => ShowOwnRight(null);
+            }
+            _ownRight = new ModToolPanel(Prefs);
+            _ownRightContext = new ModToolContext(View, _ownRight, Msg);
+            _ownRight.Changed += id =>
+            {
+                if (_ownRightTool is { } t)
+                {
+                    t.Control(_ownRightContext, id);
+                    UpdateSaveBar();
+                }
+            };
+            _ownRight.Card.Margin = new Avalonia.Thickness(10, 70, 10, 58);
+            _ownRight.Card.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
+            _ownRight.Card.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top;
+            _ownRight.Card.IsVisible = false;
+            var page = (Grid)_editorPage;
+            page.Children.Insert(page.Children.IndexOf(HelpCard) + 1, _ownRight.Card);
+            // The selection's actions, floating over the view while anything is selected
+            Button Act(string text, string tip, Action click, bool danger = false)
+            {
+                var b = new Button { Content = text, FontSize = 12, Padding = new Avalonia.Thickness(10, 4) };
+                if (danger)
+                {
+                    b.Foreground = new SolidColorBrush(Color.FromRgb(240, 128, 112));
+                }
+                ToolTip.SetTip(b, tip);
+                b.Click += (_, _) => click();
+                return b;
+            }
+            _selectionCount = new TextBlock { FontWeight = FontWeight.SemiBold, FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, Margin = new Avalonia.Thickness(4, 0, 6, 0) };
+            _selectionBar = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(235, 27, 30, 36)),
+                BorderBrush = Ui.Line,
+                BorderThickness = new Avalonia.Thickness(1),
+                CornerRadius = new Avalonia.CornerRadius(10),
+                Padding = new Avalonia.Thickness(8, 6),
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom,
+                Margin = new Avalonia.Thickness(0, 0, 0, 52),
+                IsVisible = false,
+                Child = new StackPanel
+                {
+                    Orientation = Avalonia.Layout.Orientation.Horizontal,
+                    Spacing = 6,
+                    Children =
+                    {
+                        _selectionCount,
+                        Act("Drop to ground", "Each selected object down onto the ground under it (End)", () => { View.SelectTool.Drop(); UpdateSaveBar(); }),
+                        Act("Settle", "The selected objects onto ground that changed since the map was opened", SettleObjects),
+                        Act("Save as stamp", "The selection as a named stamp: the Stamp tool then offers it", () => _ = SaveStampAsked()),
+                        Act("Duplicate", "Copy the selection and place the copy (Ctrl+C, Ctrl+V)", () => { Copy(); StartPaste(); }),
+                        Act("Delete", "Delete the selection (Del)", () => { View.SelectTool.Delete(); UpdateSaveBar(); }, danger: true),
+                    },
+                },
+            };
+            page.Children.Insert(page.Children.IndexOf(_ownRight.Card), _selectionBar);
+            _cameraBar = CameraBar();
+            page.Children.Insert(page.Children.IndexOf(_selectionBar), _cameraBar);
+            _drawer = new ObjectsDrawer(this);
+            page.Children.Insert(page.Children.IndexOf(_selectionBar), _drawer.Card);
+            _drawer.Card.SizeChanged += (_, _) => AboveDrawer();
+            Minimap = new Minimap(this);
+            page.Children.Insert(page.Children.IndexOf(_selectionBar), Minimap.Card);
+            Minimap.Card.SizeChanged += (_, _) => AboveDrawer();
+            _drawer.Card.PropertyChanged += (_, e) =>
+            {
+                if (e.Property == Avalonia.Visual.IsVisibleProperty)
+                {
+                    AboveDrawer();
+                }
+            };
+            View.SelectionChanged += things =>
+            {
+                _selectionBar.IsVisible = Session is { Scene.IsMap: true } && things.Count > 0;
+                // How many, and of what (the catalog's names, the most first).
+                var kinds = things.GroupBy(t => MapTools.GroupOf(t.Prefab).Label).OrderByDescending(g => g.Count()).ToList();
+                _selectionCount.Text = $"{things.Count} selected" + (kinds.Count switch
+                {
+                    0 => "",
+                    1 => $" · {kinds[0].Key}",
+                    _ => " · " + string.Join(", ", kinds.Take(2).Select(g => $"{g.Key} ×{g.Count()}")) + (kinds.Count > 2 ? $" +{kinds.Count - 2} more" : ""),
+                });
+            };
+        }
+        _drawer?.Card.IsVisible = show;
+        _cameraBar?.IsVisible = show;
+        Minimap?.Card.IsVisible = show;
+        ModToolPanel.PalettesElsewhere = show;
+        _liveButton?.IsVisible = show;
+        _moreButton?.IsVisible = show;
+        _layersButton?.IsVisible = show;
+        _checksButton?.IsVisible = show;
+        if (!show)
+        {
+            _selectionBar?.IsVisible = false;
+        }
+        SelectPanel.SetMap(show);
+        if (!show)
+        {
+            ShowOwnRight(null);
+            _liveButton?.IsChecked = false;
+        }
+    }
+
+    /// <summary>The open map's size, "505 × 505 m" (the line under its name).</summary>
+    private string _mapSize = "";
+
+    /// <summary>The map in the view's corner (Minimap), made once.</summary>
+    private Minimap? Minimap { get; set; }
+
+    /// <summary>Orbit / Top / Walk over the view (the map), made once.</summary>
+    private Border? _cameraBar;
+
+    /// <summary>
+    /// The camera's three ways over the view: Orbit (round a point), Top (straight down, the map as a plan) and Walk
+    /// (at a player's eye height; F cycles on to flying as before).
+    /// </summary>
+    private Border CameraBar()
+    {
+        var buttons = new List<(string Name, Avalonia.Controls.Primitives.ToggleButton Button)>();
+        void Eye(GlView.EyeMode want)
+        {
+            for (int i = 0; i < 3 && View.Eye != want; i++)
+            {
+                View.CycleEye();
+            }
+        }
+        void Mark()
+        {
+            bool top = View.Eye == GlView.EyeMode.Orbit && View.WorldCamera is { Pitch: > 1.45f };
+            foreach (var (name, b) in buttons)
+            {
+                b.IsChecked = name switch { "Top" => top, "Orbit" => View.Eye == GlView.EyeMode.Orbit && !top, _ => View.Eye != GlView.EyeMode.Orbit };
+            }
+        }
+        foreach (var (name, tip, act) in new (string, string, Action)[]
+        {
+            ("Orbit", "Turn round a point: right drag turns, wheel zooms", () =>
+            {
+                Eye(GlView.EyeMode.Orbit);
+                if (View.WorldCamera is { Pitch: > 1.45f } c)
+                {
+                    View.WorldCamera = (c.Yaw, 0.9f, c.Distance, c.World);
+                }
+            }),
+            ("Top", "Straight down: the map as a plan", () =>
+            {
+                Eye(GlView.EyeMode.Orbit);
+                if (View.WorldCamera is { } c)
+                {
+                    View.WorldCamera = (0, 1.55f, Math.Max(c.Distance, 160), c.World);
+                }
+            }),
+            ("Walk", "At a player's eye height: WASD walks, F flies", () => Eye(GlView.EyeMode.Walk)),
+        })
+        {
+            var b = new Avalonia.Controls.Primitives.ToggleButton { Content = name, FontSize = 12, Padding = new Avalonia.Thickness(12, 4) };
+            ToolTip.SetTip(b, tip);
+            b.Click += (_, _) =>
+            {
+                act();
+                Mark();
+            };
+            buttons.Add((name, b));
+        }
+        View.EyeChanged += _ => Mark();
+        Mark();
+        return new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(225, 27, 30, 36)),
+            BorderBrush = Ui.Line,
+            BorderThickness = new Avalonia.Thickness(1),
+            CornerRadius = new Avalonia.CornerRadius(10),
+            Padding = new Avalonia.Thickness(4),
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+            Margin = new Avalonia.Thickness(0, 70, 0, 0),
+            Child = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 4, Children = { buttons[0].Button, buttons[1].Button, buttons[2].Button } },
+        };
+    }
+
+    /// <summary>The tool column, the right-hand panels and the selection bar end above the drawer while it shows.</summary>
+    private void AboveDrawer()
+    {
+        double bottom = 58 + (_drawer is { Card.IsVisible: true } d ? d.Card.Bounds.Height + 8 : 0);
+        _toolColumn.Margin = new Avalonia.Thickness(10, 70, 10, bottom);
+        Minimap?.Card.Margin = new Avalonia.Thickness(0, 0, 10, bottom);
+        double map = Minimap is { Card.IsVisible: true } m ? m.Card.Bounds.Height + 8 : 0;
+        foreach (var right in new Control?[] { ViewPanelCard, History.Card, HelpCard, _ownRight?.Card })
+        {
+            right?.Margin = new Avalonia.Thickness(10, 70, 10, bottom + map);
+        }
+        _selectionBar?.Margin = new Avalonia.Thickness(0, 0, 0, bottom - 6);
+    }
+
+    /// <summary>The editor's own tools on the rail (Layers and Checks go to the right-hand panels).</summary>
+    private void MapRailTools()
+    {
+        var own = MapTools.For(this);
+        _ownRightTools = [.. own.Where(t => t.Info.Id is "layers" or "checks")];
+        // Grow is rare (it changes the map's size): in the ⋯ menu, not on the rail.
+        _growTool = own.FirstOrDefault(t => t.Info.Id == "grow");
+        Tools.SetModTools([.. ModExtensions.Tools, .. own.Where(t => t.Info.Id is not ("layers" or "checks" or "grow"))]);
+    }
+
+    /// <summary>Layers or Checks in the right-hand panel (null: hidden).</summary>
+    private void ShowOwnRight(string? id)
+    {
+        if (_ownRight == null || _ownRightContext == null)
+        {
+            return;
+        }
+        var tool = id == null ? null : _ownRightTools.FirstOrDefault(t => t.Info.Id == id);
+        bool same = tool != null && ReferenceEquals(tool, _ownRightTool) && _ownRight.Card.IsVisible;
+        if (tool == null || same)
+        {
+            _ownRight.Card.IsVisible = false;
+            _ownRightTool = null;
+            _layersButton?.Classes.Set("on", false);
+            _checksButton?.Classes.Set("on", false);
+            return;
+        }
+        ShowRight(null);
+        _ownRight.Show(tool);
+        _ownRight.Card.IsVisible = true;
+        _ownRightTool = tool;
+        tool.Chosen(_ownRightContext);
+        _layersButton?.Classes.Set("on", id == "layers");
+        _checksButton?.Classes.Set("on", id == "checks");
+    }
+
+    /// <summary>The Live pill's state: on (green) with what happened last, or off.</summary>
+    private void LiveState(string? text, bool error = false)
+    {
+        if (_liveDot == null || _liveStatus == null)
+        {
+            return;
+        }
+        // Off grey, sending amber, synced green, lost red.
+        var (dot, words) = error ? (Color.FromRgb(232, 98, 82), text ?? "lost Unreal")
+            : _live == null ? (Colors.Gray, "off")
+            : text is { } t && t.StartsWith("sending", StringComparison.Ordinal) ? (Color.FromRgb(240, 168, 58), t)
+            : (Color.FromRgb(76, 195, 138), text ?? $"synced {DateTime.Now:HH:mm:ss}");
+        _liveDot.Fill = new SolidColorBrush(dot);
+        _liveStatus.Text = words;
+        _liveStatus.Foreground = error ? new SolidColorBrush(dot) : Ui.Muted;
+    }
+
+    /// <summary>Save stamp: the selection as a named stamp; the Stamp tool then offers it.</summary>
+    private async Task SaveStampAsked()
+    {
+        if (Session is not { Scene.IsMap: true } s)
+        {
+            return;
+        }
+        var selected = View.Selected;
+        if (selected.Count == 0)
+        {
+            Msg(new Said("Select the objects for the stamp first (Select, E).", ""));
+            return;
+        }
+        if (await Dialogs.AskText(this, "Save stamp", $"A name for the stamp of {selected.Count} objects:", "My stamp") is not { Length: > 0 } name)
+        {
+            return;
+        }
+        int n = MapTools.SaveStamp(s.Scene, selected, name);
+        MapRailTools();
+        Msg(new Said($"Saved the stamp \"{name}\" ({n} objects): the Stamp tool has it.", ""));
+    }
+
+    /// <summary>Save as biome: the Brush's picked kinds as a named biome; the Biome tool then offers it.</summary>
+    internal async Task SaveBiomeAsked(IReadOnlyList<string> models)
+    {
+        if (models.Count == 0)
+        {
+            Msg(new Said("Pick the kinds for the biome first.", ""));
+            return;
+        }
+        if (await Dialogs.AskText(this, "Save as biome", $"A name for the biome of {models.Count} kinds (its ground is the first layer; the map's catalog changes it):", "My biome") is not { Length: > 0 } name)
+        {
+            return;
+        }
+        if (MapTools.SaveBiome(name, MapProject.Current?.Layers.FirstOrDefault()?.Name ?? "grass", models) is string why)
+        {
+            Msg(new Said(why, ""));
+            return;
+        }
+        MapRailTools();
+        Msg(new Said($"Saved the biome \"{name}\" ({models.Count} kinds): the Biome tool has it.", ""));
+    }
+
+    /// <summary>Live on (after sending what Unreal does not have yet, when anything is unsaved) or off.</summary>
+    private async Task SetLive(bool on)
+    {
+        if (!on)
+        {
+            _pullTimer?.Stop();
+            if (_live != null)
+            {
+                _live = null;
+                LiveState(null);
+                Msg(new Said("Live off: changes stay in the editor until Send to Unreal.", ""));
+            }
+            return;
+        }
+        if (Session is not { Scene.IsMap: true } s)
+        {
+            return;
+        }
+        if (MapProject.Current?.HasUnrealLevel != true)
+        {
+            _liveButton!.IsChecked = false;
+            LiveState($"lost Unreal {DateTime.Now:HH:mm}", error: true);
+            await Tell("This map has no Unreal level: Live needs map.json's unreal.project.");
+            return;
+        }
+        if (MapDirty)
+        {
+            await SendToUnreal();
+        }
+        var (live, why) = await UnrealLive.Connect(s.Scene);
+        if (live == null)
+        {
+            _liveButton!.IsChecked = false;
+            LiveState($"lost Unreal {DateTime.Now:HH:mm}", error: true);
+            await Tell(why ?? "Live could not start.");
+            return;
+        }
+        _live = live;
+        _pullTimer ??= new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+        _pullTimer.Tick -= PullTick;
+        _pullTimer.Tick += PullTick;
+        _pullTimer.Start();
+        LiveState(null);
+        Msg(new Said("LIVE both ways: what you change here goes into the open Unreal level, and what is changed there comes here.", ""));
+    }
+
+    private bool _pullingNow;
+
+    /// <summary>While live: brings in what was changed in Unreal.</summary>
+    private async void PullTick(object? sender, EventArgs e)
+    {
+        if (_live is not { } live || _pullingNow)
+        {
+            return;
+        }
+        _pullingNow = true;
+        try
+        {
+            if (await live.Pull() is { } said)
+            {
+                LiveState($"from Unreal {DateTime.Now:HH:mm:ss}");
+                Msg(new Said(said, ""));
+                UpdateSaveBar();
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or System.Text.Json.JsonException)
+        {
+            _pullTimer?.Stop();
+            _live = null;
+            _liveButton!.IsChecked = false;
+            LiveState($"lost Unreal {DateTime.Now:HH:mm}", error: true);
+            await Tell("Live stopped, Unreal did not answer: " + ex.Message);
+        }
+        finally
+        {
+            _pullingNow = false;
+        }
+    }
+
+    /// <summary>After a change while live: send it.</summary>
+    internal async Task LiveChanged()
+    {
+        if (_live is not { } live)
+        {
+            return;
+        }
+        try
+        {
+            LiveState("sending…");
+            if (await live.Sync() is { Length: > 0 } said)
+            {
+                Msg(new Said(said, ""));
+            }
+            LiveState(null);
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or IOException)
+        {
+            _live = null;
+            _liveButton!.IsChecked = false;
+            LiveState($"lost Unreal {DateTime.Now:HH:mm}", error: true);
+            await Tell("Live stopped, Unreal did not answer: " + e.Message);
+        }
+    }
+
+    /// <summary>Settle objects: the selection onto the ground, or every object by the ground's change under it.</summary>
+    internal void SettleObjects()
+    {
+        if (Session is not { Scene.IsMap: true } s || _mapGround is not { } before)
+        {
+            return;
+        }
+        var area = new SceneLayers.AreaView(s.Scene);
+        var selected = View.Selected;
+        var remove = new List<int>();
+        var add = new List<(NewObject, bool)>();
+        lock (s.Scene.Things)
+        {
+            var which = selected.Count > 0 ? selected : Enumerable.Range(0, s.Scene.Things.Count);
+            foreach (int i in which)
+            {
+                var t = s.Scene.Things[i];
+                if (t.Gone)
+                {
+                    continue;
+                }
+                float y;
+                if (selected.Count > 0)
+                {
+                    y = area.GroundHeight(t.Position.X, t.Position.Z);
+                }
+                else
+                {
+                    int gx = Math.Clamp((int)MathF.Round(t.Position.X - s.Scene.OriginX), 0, s.Scene.W - 1), gz = Math.Clamp((int)MathF.Round(t.Position.Z - s.Scene.OriginZ), 0, s.Scene.H - 1);
+                    float change = s.Scene.Heights[(gz * s.Scene.W) + gx] - before[(gz * s.Scene.W) + gx];
+                    if (MathF.Abs(change) < 0.02f)
+                    {
+                        continue;
+                    }
+                    y = t.Position.Y + change;
+                }
+                if (MathF.Abs(y - t.Position.Y) < 0.005f)
+                {
+                    continue;
+                }
+                remove.Add(i);
+                add.Add((new NewObject(0, t.Prefab, t.Position with { Y = y }, t.Rotation, t.Scale), t.Piece));
+            }
+        }
+        if (remove.Count > 0)
+        {
+            _ = s.Commit($"Settled {remove.Count} objects", null, remove, add);
+        }
+        if (selected.Count == 0)
+        {
+            _mapGround = (float[])s.Scene.Heights.Clone();
+        }
+        Msg(new Said(remove.Count == 0 ? "Nothing to settle." : $"Settled {remove.Count} objects (Ctrl+Z takes it back).", ""));
+        UpdateSaveBar();
+    }
+
+    /// <summary>Send to Unreal: saves, then runs the map's apply script (map.json's unreal.apply), its last line on the status bar.</summary>
+    internal async Task SendToUnreal()
+    {
+        if (Session is not { Scene.IsMap: true } || _moreButton is not { IsEnabled: true } button)
+        {
+            return;
+        }
+        if (MapProject.Current is not { UnrealApply: { } script } map)
+        {
+            await Tell("This map has no Unreal level (map.json's unreal.apply): Save keeps it in its own folder.");
+            return;
+        }
+        // Trusted as it is now: a changed script is asked about again, and what runs is the text read here (a change made
+        // after the check does not run), as bash -c with the script's path as $0.
+        string trust, text;
+        try
+        {
+            byte[] bytes = File.ReadAllBytes(script);
+            if (bytes.Length > 100_000 || bytes.Contains((byte)0))
+            {
+                await Tell($"{script} is not a script Send to Unreal runs (over 100 kB, or not text).");
+                return;
+            }
+            (text, trust) = (System.Text.Encoding.UTF8.GetString(bytes), map.Folder + "|" + script + "|" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            await Tell($"{script} could not be read: {ex.Message}");
+            return;
+        }
+        if (!Settings.TrustedScripts.Contains(trust))
+        {
+            if (!await Ask("Run this map's script?", $"Send to Unreal runs {script}, named in {map.Name}'s map.json. Run it only when you know where the map came from.", "Run it", Lang.T("common.cancel")))
+            {
+                return;
+            }
+            Settings.TrustedScripts.Add(trust);
+            SaveSettings(Settings);
+        }
+        if (!await SaveMap(quiet: true))
+        {
+            return;
+        }
+        button.IsEnabled = false;
+        LiveState("sending everything…");
+        var lines = new List<string>();
+        int code;
+        try
+        {
+            using var p = Process.Start(new ProcessStartInfo("bash", ["-c", text, script]) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
+            void Line(string? l)
+            {
+                if (!string.IsNullOrWhiteSpace(l))
+                {
+                    lock (lines)
+                    {
+                        lines.Add(l);
+                    }
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() => Msg(new Said("Unreal: " + l, "")));
+                }
+            }
+            p.OutputDataReceived += (_, e) => Line(e.Data);
+            p.ErrorDataReceived += (_, e) => Line(e.Data);
+            p.BeginOutputReadLine();
+            p.BeginErrorReadLine();
+            await p.WaitForExitAsync();
+            code = p.ExitCode;
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException)
+        {
+            lines.Add(ex.Message);
+            code = -1;
+        }
+        button.IsEnabled = true;
+        LiveState(null);
+        string tail = string.Join("\n", lines.TakeLast(6));
+        if (code == 0)
+        {
+            Msg(new Said("Sent to Unreal.", ""));
+        }
+        else
+        {
+            await Tell(lines.Any(l => l.Contains("no Unreal editor answered"))
+                ? "Unreal is not running (or not answering). Start it, wait until it has loaded the map's level, then send again."
+                : "Sending to Unreal failed:\n" + tail);
+        }
+    }
+
+    /// <summary>Save: the map's ground, objects and water into its files.</summary>
+    internal async Task<bool> SaveMap(bool quiet = false)
+    {
+        if (Session is not { } s || MapProject.Current is not { } map)
+        {
+            return false;
+        }
+        try
+        {
+            int objects = map.Save(s.Scene);
+            _mapObjects = objects;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            await Tell("The map could not be saved: " + ex.Message);
+            return false;
+        }
+        _mapSaved = s.Edits.Version;
+        UpdateSaveBar();
+        if (!quiet)
+        {
+            Msg(new Said($"Saved the ground, its colours, the rivers and {_mapObjects} objects (old files kept as .bak). Send to Unreal puts them in the game.", ""));
+        }
+        return true;
+    }
+
+    /// <summary>Start: back to the start page, asking first when the map is not saved.</summary>
+    private async Task LeaveMap()
+    {
+        if (MapDirty && !await Ask("Leave the map?", "Your changes to the map are not saved.", Lang.T("common.leaveAnyway"), Lang.T("common.stay")))
+        {
+            return;
+        }
+        InMap = false;
+        View.ShowNewMarkers = UnsavedBox.IsChecked == true;
+        if (View.Scene is { } shown)
+        {
+            View.SetWater(shown, []);
+        }
+        Brush.MapOpen = false;
+        Tools.RelabelPaints();
+        LayerMaskNames(false);
+        MapButtons(false);
+        Tools.SetMap(false);
+        _pendingPill.IsVisible = true;
+        SaveButton.Classes.Set("primary", true);
+        MapTools.Hidden.Clear();
+        View.HideOnly([]);
+        MapButton.Content = Icons.With("back", Lang.T("top.label.map"));
+        Session = null;
+        ShowStart();
+    }
+
+    /// <summary>The save bar while the map is open.</summary>
+    private void MapSaveBar()
+    {
+        bool dirty = MapDirty;
+        int steps = Session is { } s ? Math.Max(0, s.Edits.Version - _mapSaved) : 0;
+        PendingText.Text = !dirty ? "" : steps > 0 ? $"{steps} unsaved change{(steps == 1 ? "" : "s")}" : "Unsaved changes";
+        _pendingPill.IsVisible = dirty;
+        // Nothing to save reads as done (grey "Saved"), not as a dimmed call to action.
+        SaveButton.IsEnabled = dirty;
+        SaveButton.Content = dirty ? "Save" : "Saved";
+        SaveButton.Classes.Set("primary", dirty);
+        SetPendingPill(dirty);
+    }
+
+    /// <summary>Opens the map in a folder (one without a map says so).</summary>
+    internal async Task OpenMap(string folder)
+    {
+        MapProject map;
+        try
+        {
+            map = MapProject.Open(folder);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        {
+            await Tell($"{folder}: {ex.Message}");
+            return;
+        }
+        await ShowMap(map);
+    }
+
+    /// <summary>The last map opened that is still there (Settings' maps), or null.</summary>
+    internal MapProject? LastMap()
+    {
+        foreach (string f in Settings.Maps.Where(MapProject.IsMap))
+        {
+            try
+            {
+                return MapProject.Open(f);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or System.Text.Json.JsonException)
+            {
+                Log.Caught(ex, "reading the last map's map.json");
+            }
+        }
+        return null;
+    }
+
+    /// <summary>A map opened goes first in Settings' maps (the start page's list).</summary>
+    private void RememberMap(string folder)
+    {
+        if (Settings.Maps.FirstOrDefault() == folder)
+        {
+            return;
+        }
+        _ = Settings.Maps.Remove(folder);
+        Settings.Maps.Insert(0, folder);
+        SaveSettings(Settings);   // a failure is logged; the list stays in memory
+        StartPage?.ShowMaps();
+    }
+
+    /// <summary>Where new maps go: Settings' maps folder, else Documents/Groundwork.</summary>
+    internal string NewMapsFolder() => Settings.MapsFolder ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Groundwork");
+}

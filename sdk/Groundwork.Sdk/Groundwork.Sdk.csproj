@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- What a plugin builds an against: the interfaces the editor calls and the values it hands over,
+       nothing of the editor itself. Released with each editor version; the editor loads plugins against its own
+       copy. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Groundwork.Sdk</AssemblyName>
+    <RootNamespace>Groundwork.Sdk</RootNamespace>
+    <!-- The API's version, not the editor's: plugins bind to it, so it only changes when the API
+         breaks (SdkInfo.ApiVersion). -->
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Groundwork.Core" />
+    <InternalsVisibleTo Include="Groundwork" />
+    <InternalsVisibleTo Include="Core.Tests" />
+    <InternalsVisibleTo Include="Desktop.Tests" />
+  </ItemGroup>
+</Project>

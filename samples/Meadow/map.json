@@ -1,0 +1,37 @@
+{
+  "name": "Meadow",
+  "origin": [
+    -126,
+    -126
+  ],
+  "seaLevel": 0,
+  "files": {
+    "heights": "height.npy",
+    "layers": "layers.png",
+    "objects": "objects.json",
+    "water": "water.json"
+  },
+  "layers": [
+    {
+      "name": "Grass",
+      "colour": "#6b9945",
+      "channel": null
+    },
+    {
+      "name": "Sand",
+      "colour": "#ccbd85",
+      "channel": "r"
+    },
+    {
+      "name": "Dirt",
+      "colour": "#664f33",
+      "channel": "g"
+    },
+    {
+      "name": "Rock",
+      "colour": "#80807a",
+      "channel": "b"
+    }
+  ],
+  "catalog": "models/catalog.json"
+}

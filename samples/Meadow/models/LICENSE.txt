@@ -1,0 +1,4 @@
+The models and textures in this folder are from Quaternius's Stylized Nature MegaKit
+(https://quaternius.com), released under CC0 1.0 Universal (public domain dedication,
+https://creativecommons.org/publicdomain/zero/1.0/). Groundwork's sample uses a few of them, with smaller colour
+textures and without their normal maps.
