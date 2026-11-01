@@ -235,6 +235,38 @@ public sealed class MapProject
     private string Rel(string path) => Path.GetRelativePath(Folder, path) is var r && !r.StartsWith("..", StringComparison.Ordinal) ? r : path;
 
     /// <summary>
+    /// A new map like <see cref="Create"/>, its ground a whole zone (<see cref="ZoneGenerator"/>): hills, a rim, lakes,
+    /// woods and the layers painted by rule, planted with the catalog's kinds.
+    /// </summary>
+    /// <param name="name">Its name.</param>
+    /// <param name="chunks">How many 63 m chunks across.</param>
+    /// <param name="spec">The zone's numbers.</param>
+    /// <param name="planting">The kinds it is planted with.</param>
+    /// <param name="under">The folder it goes in.</param>
+    /// <param name="like">The map whose models it shares and whose catalog it copies.</param>
+    public static MapProject CreateZone(string name, int chunks, ZoneGenerator.Spec spec, ZoneGenerator.Planting planting, string under, MapProject? like = null)
+    {
+        var m = Create(name, chunks, generated: false, spec.Low, spec.Seed, under, like);
+        var map = m.ReadRaster();
+        var zone = ZoneGenerator.Generate(spec, map.Cols, map.Rows, map.X0, map.Y0, planting);
+        Write(m.HeightsFile, zone.Heights, map.Rows, map.Cols);
+        WriteMask(m.LayersFile, zone.Mask, map);
+        System.IO.File.WriteAllText(m.ObjectsFile, new JsonArray([.. zone.Objects.Select(o => (JsonNode)new JsonArray(o.Model, R(o.At.X), R(o.At.Y), R(o.At.Z), 0, R(o.Yaw), 0, R(o.Scale)))]).ToJsonString());
+        System.IO.File.WriteAllText(m.WaterFile, new JsonObject
+        {
+            ["rivers"] = new JsonArray(),
+            ["lakes"] = new JsonArray([.. zone.Lakes.Select((l, i) => (JsonNode)new JsonObject
+            {
+                ["name"] = $"Lake {i + 1}",
+                ["level"] = R(l.Level),
+                ["depth"] = R(l.Depth),
+                ["outline"] = new JsonArray([.. l.Outline.Select(p => (JsonNode)new JsonArray(R(p.X), R(p.Y)))]),
+            })]),
+        }.ToJsonString());
+        return m;
+    }
+
+    /// <summary>
     /// A new map in a folder of its own under <paramref name="under"/>: chunks x chunks of 63 m (Unreal's landscape
     /// components) plus one, centred on the origin, flat at a height or rolling ground, the first layer below 1.5 m;
     /// no objects. It shares <paramref name="like"/>'s models and starts with a copy of its catalog (no Unreal level).
@@ -256,7 +288,8 @@ public sealed class MapProject
         }
         _ = Directory.CreateDirectory(folder);
         int n = (Math.Clamp(chunks, 1, 64) * 63) + 1, x0 = -(n / 2);
-        var m = new MapProject(folder) { Name = name, X0 = x0, Y0 = x0, Models = like?.Models };
+        // like's models where they are: its own setting, else the models folder in its folder
+        var m = new MapProject(folder) { Name = name, X0 = x0, Y0 = x0, Models = like == null ? null : like.Models ?? Path.Combine(like.Folder, "models") };
         if (like?.Catalog is { } catalog && System.IO.File.Exists(catalog))   // a copy: what a map writes stays in its folder
         {
             m.Catalog = m.Abs("catalog.json");

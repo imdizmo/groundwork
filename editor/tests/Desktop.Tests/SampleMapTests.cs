@@ -36,4 +36,20 @@ public sealed class SampleMapTests
         Assert.Equal(Groundwork.App.ObjectKind.Plants, Groundwork.App.ObjectKinds.Of("Grass_Common_Short"));
         Assert.Equal("Plants", MapTools.GroupOf(Groundwork.App.AssetIds.Of("Grass_Common_Short")).Group);
     }
+
+    // A map made like the Meadow (whose models are in its own models folder) shares those models.
+    [AvaloniaFact]
+    public void AMapMadeLikeTheMeadowSharesItsModels()
+    {
+        string under = Path.Combine(Path.GetTempPath(), "gw-like-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var made = MapProject.Create("Like", 1, generated: false, height: 2, seed: 1, under: under, like: MapProject.Open(Meadow));
+            Assert.Equal(Path.Combine(Meadow, "models"), MapProject.Open(made.Folder).Models);
+        }
+        finally
+        {
+            Directory.Delete(under, true);
+        }
+    }
 }
