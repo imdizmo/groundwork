@@ -20,6 +20,9 @@ namespace Groundwork.Desktop;
 internal sealed class ObjectsDrawer
 {
     private const string BrushKey = "mod.Groundwork/brush.kinds";
+
+    /// <summary>The kinds picked, by model name (a list position would pick another kind in another map).</summary>
+    private const string PickedKey = "map.drawer.picked";
     private readonly MainWindow _w;
     private readonly List<MapTools.Kind> _kinds;
     private readonly List<int> _picked = [];
@@ -42,7 +45,8 @@ internal sealed class ObjectsDrawer
         _w = w;
         _kinds = MapTools.Catalog().Kinds;
         _tab = w.Prefs.Get("map.drawer.tab", "All");
-        _picked.AddRange(w.Prefs.Get(BrushKey, "").Split(',').Select(s => int.TryParse(s, out int i) ? i : -1).Where(i => i >= 0 && i < _kinds.Count));
+        var names = w.Prefs.Get(PickedKey, "").Split('|').ToHashSet(StringComparer.Ordinal);
+        _picked.AddRange(Enumerable.Range(0, _kinds.Count).Where(i => names.Contains(_kinds[i].Model)));
         _scroll = new ScrollViewer { Height = 124, Content = _wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         foreach (var (k, i) in _kinds.Select((k, i) => (k, i)))
         {
@@ -202,6 +206,7 @@ internal sealed class ObjectsDrawer
         _picked.Clear();
         _picked.AddRange(picked);
         _w.Prefs.Set(BrushKey, string.Join(",", _picked));
+        _w.Prefs.Set(PickedKey, string.Join("|", _picked.Select(i => _kinds[i].Model)));
         _w.Prefs.Set("mod.Groundwork/object.kind", string.Join(",", _picked.Take(1)));
         Marked();
         if (_w.Tools.ModTool is { } tool && tool.Info.Id is "object" or "brush")

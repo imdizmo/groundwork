@@ -14,6 +14,7 @@ public static partial class MapTools
     {
         private readonly List<Vector2> _points = [];
         private int _drag = -1;
+        private Vector2? _hover;
 
         /// <inheritdoc/>
         public override ToolInfo Info { get; } = new("path", "Path", "Click points along a path, road or ramp (drag one to move it, Shift+click to delete it), then Make it (Enter): the ground under it levelled, its shoulders blended into the ground round it, a layer painted on it, objects along its edges, in one step. Even slope with two points makes a ramp. Esc clears the line.") { Icon = "M8 21L11 3M16 21L13 3M12 6v2M12 11v2M12 16v2" };
@@ -89,6 +90,7 @@ public static partial class MapTools
                 return;
             }
             var at = new Vector2(p.X, p.Z);
+            _hover = at;
             int near = _points.FindIndex(q => Vector2.Distance(q, at) < MathF.Max(1.5f, ctx.Number("width") / 2));
             switch (input.Action)
             {
@@ -134,9 +136,20 @@ public static partial class MapTools
         {
             var area = ctx.Area;
             var shapes = new List<Shape>();
+            float mark = MathF.Max(1, ctx.Number("width") / 2);
             if (_points.Count > 0)
             {
-                shapes.Add(Dots(_points.Select(q => new Vector3(q.X, area.GroundHeight(q.X, q.Y) + 0.2f, q.Y)), 0.6f, new Vector4(1, 0.85f, 0.2f, 1)));
+                shapes.Add(Discs(_points.Select(q => new Vector3(q.X, area.GroundHeight(q.X, q.Y) + 0.3f, q.Y)), mark, new Vector4(1, 0.85f, 0.2f, 0.9f)));
+            }
+            // where the next point goes, and the stretch to it from the last one
+            if (_hover is Vector2 h && _drag < 0)
+            {
+                shapes.Add(Ring(area, new Vector3(h.X, area.GroundHeight(h.X, h.Y), h.Y), mark, new Vector4(1, 0.85f, 0.2f, 0.9f)));
+                if (_points.Count > 0)
+                {
+                    var (next, _) = Paths.Profile([_points[^1], h], area.GroundHeight, true, 0);
+                    shapes.Add(Band([.. next.Select(q => new Vector3(q.X, area.GroundHeight(q.X, q.Y) + 0.15f, q.Y))], ctx.Number("width"), new Vector4(1, 0.85f, 0.4f, 0.25f)));
+                }
             }
             if (_points.Count > 1)
             {

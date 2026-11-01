@@ -48,6 +48,32 @@ public sealed partial class EditSession
     /// </summary>
     public IReadOnlyList<Change> UndoList { get { lock (_lock) { return [.. _undo]; } } }
 
+    /// <summary>The step on top of the undo history (null: none).</summary>
+    public Change? TopStep { get { lock (_lock) { return _undo.Count > 0 ? _undo[^1] : null; } } }
+
+    /// <summary>
+    /// How many steps differ from the saved state: the history's steps after the one on top at the save (none: all of
+    /// them), or, when that one was undone or dropped, how far the history moved from it (at least one).
+    /// </summary>
+    /// <param name="undo">The undo history now.</param>
+    /// <param name="savedTop">The step on top of it at the save (null: it was empty).</param>
+    /// <param name="savedCount">How many steps it had then.</param>
+    public static int UnsavedSteps(IReadOnlyList<Change> undo, Change? savedTop, int savedCount)
+    {
+        if (savedTop == null)
+        {
+            return undo.Count;
+        }
+        for (int i = undo.Count - 1; i >= 0; i--)
+        {
+            if (ReferenceEquals(undo[i], savedTop))
+            {
+                return undo.Count - 1 - i;
+            }
+        }
+        return Math.Max(1, Math.Abs(undo.Count - savedCount));
+    }
+
     /// <summary>
     /// What was undone, the next redo last.
     /// </summary>

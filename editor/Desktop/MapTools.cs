@@ -165,22 +165,50 @@ public static partial class MapTools
         protected static Vector3 Normal(IAreaView area, float x, float z) => Vector3.Normalize(new Vector3(
             area.GroundHeight(x - 0.5f, z) - area.GroundHeight(x + 0.5f, z), 1f, area.GroundHeight(x, z - 0.5f) - area.GroundHeight(x, z + 0.5f)));
 
-        /// <summary>A ring on the ground.</summary>
+        /// <summary>A ring on the ground (wider for a bigger ring, so it reads from further away).</summary>
         protected static Shape Ring(IAreaView area, Vector3 c, float r, Vector4 colour)
         {
             int n = Math.Clamp((int)(r * 4), 24, 96);
+            float half = MathF.Max(0.15f, r * 0.02f);
             var v = new List<Vector3>();
             var t = new List<int>();
             for (int i = 0; i <= n; i++)
             {
                 float a = MathF.Tau * i / n, x = c.X + (r * MathF.Cos(a)), z = c.Z + (r * MathF.Sin(a));
                 float y = area.GroundHeight(x, z) + 0.15f;
-                v.Add(new Vector3(x - (MathF.Cos(a) * 0.15f), y, z - (MathF.Sin(a) * 0.15f)));
-                v.Add(new Vector3(x + (MathF.Cos(a) * 0.15f), y, z + (MathF.Sin(a) * 0.15f)));
+                v.Add(new Vector3(x - (MathF.Cos(a) * half), y, z - (MathF.Sin(a) * half)));
+                v.Add(new Vector3(x + (MathF.Cos(a) * half), y, z + (MathF.Sin(a) * half)));
                 if (i > 0)
                 {
                     int k = v.Count - 4;
                     t.AddRange([k, k + 1, k + 2, k + 1, k + 3, k + 2]);
+                }
+            }
+            return new Shape([.. v], [.. t], colour) { BothSides = true, WorldSpace = true };
+        }
+
+        /// <summary>A see-through disc lying on the ground (following it), as a brush's area.</summary>
+        protected static Shape Patch(IAreaView area, Vector3 c, float r, Vector4 colour)
+        {
+            const int Rings = 6, Spokes = 32;
+            var v = new List<Vector3> { c with { Y = area.GroundHeight(c.X, c.Z) + 0.1f } };
+            var t = new List<int>();
+            for (int k = 1; k <= Rings; k++)
+            {
+                for (int i = 0; i < Spokes; i++)
+                {
+                    float a = MathF.Tau * i / Spokes, d = r * k / Rings, x = c.X + (d * MathF.Cos(a)), z = c.Z + (d * MathF.Sin(a));
+                    v.Add(new Vector3(x, area.GroundHeight(x, z) + 0.1f, z));
+                    int me = 1 + ((k - 1) * Spokes) + i, next = 1 + ((k - 1) * Spokes) + ((i + 1) % Spokes);
+                    if (k == 1)
+                    {
+                        t.AddRange([0, me, next]);
+                    }
+                    else
+                    {
+                        int inMe = me - Spokes, inNext = next - Spokes;
+                        t.AddRange([inMe, me, next, inMe, next, inNext]);
+                    }
                 }
             }
             return new Shape([.. v], [.. t], colour) { BothSides = true, WorldSpace = true };
@@ -533,13 +561,36 @@ public static partial class MapTools
             var shapes = new List<Shape>();
             if (at is Vector3 c)
             {
+                shapes.Add(Patch(area, c, r, ring with { W = 0.2f }));
                 shapes.Add(Ring(area, c, r, ring));
+                if (input.Action == PointerAction.Move)
+                {
+                    ctx.SetText("status", Expected(ctx, r, erase));
+                }
             }
             if (_pending.Count > 0)
             {
                 shapes.Add(Dots(_pending, 0.2f, new Vector4(0.5f, 1f, 0.5f, 0.9f)));
             }
             ctx.Preview(shapes);
+        }
+
+        /// <summary>What one dab places at most on empty ground: so many of each group, from the kinds picked.</summary>
+        private string Expected(IToolContext ctx, float r, bool erase)
+        {
+            var picked = PickedKinds(ctx);
+            if (picked.Count == 0)
+            {
+                return "Pick kinds in the objects drawer (Ctrl+Space) to brush with.";
+            }
+            string names = string.Join(", ", picked.Take(3).Select(k => k.Label.Length > 0 ? k.Label : k.Model)) + (picked.Count > 3 ? $" +{picked.Count - 3}" : "");
+            if (erase)
+            {
+                return $"Takes away {names} under the brush.";
+            }
+            float times = ctx.Number("density") * (Chosen(ctx)?.Density ?? 1f), area = MathF.PI * r * r / 100f;
+            var each = picked.GroupBy(k => k.Category).Select(g => $"{MathF.Round(groups.GetValueOrDefault(g.Key, new Group(2, 2)).Density * times * area):0} {g.Key}");
+            return $"{names}: up to {string.Join(", ", each)} a dab, fewer where some stand.";
         }
 
         private void Begin(EditSession s, IToolContext ctx, bool erase)

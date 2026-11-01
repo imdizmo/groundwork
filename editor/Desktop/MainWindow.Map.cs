@@ -12,8 +12,8 @@ public partial class MainWindow
     /// <summary>Whether the map is open.</summary>
     internal bool InMap { get; private set; }
 
-    /// <summary>The edits' version when the map was last saved (or opened).</summary>
-    private int _mapSaved, _mapObjects;
+    /// <summary>How many objects the last save wrote.</summary>
+    private int _mapObjects;
 
     /// <summary>The ground's heights when the objects last stood on it (opened, or settled): Settle moves them by the change since.</summary>
     private float[]? _mapGround;
@@ -59,7 +59,21 @@ public partial class MainWindow
     private Avalonia.Threading.DispatcherTimer? _pullTimer;
 
     /// <summary>The map changed since it was last saved.</summary>
-    internal bool MapDirty => InMap && Session != null && (Session.Edits.Version != _mapSaved || MapWater.Dirty || MapAreas.Dirty);
+    internal bool MapDirty => InMap && Session != null && (UnsavedSteps > 0 || MapWater.Snapshot() != _savedWater || MapAreas.Snapshot() != _savedAreas);
+
+    /// <summary>The history's top step and length at the last save (or open), and the water and areas then.</summary>
+    private (EditSession.Change? Top, int Count) _saved;
+    private string _savedWater = "", _savedAreas = "";
+
+    /// <summary>How many steps the history is from the saved state (undoing back to it: none).</summary>
+    private int UnsavedSteps => Session is { } s ? EditSession.UnsavedSteps(s.UndoList, _saved.Top, _saved.Count) : 0;
+
+    /// <summary>The map as it is now is what its files hold.</summary>
+    private void MarkSaved(EditSession s)
+    {
+        _saved = (s.TopStep, s.UndoList.Count);
+        (_savedWater, _savedAreas) = (MapWater.Snapshot(), MapAreas.Snapshot());
+    }
 
     /// <summary>Opens a map (null: the current one again); it is the current map once it is open.</summary>
     internal async Task ShowMap(MapProject? chosen = null)
@@ -97,7 +111,7 @@ public partial class MainWindow
         ShowWater();
         TitleText.Text = map.HasUnrealLevel ? map.Name : map.Name + " (no Unreal level)";
         InMap = true;
-        _mapSaved = scene.Session!.Edits.Version;
+        MarkSaved(scene.Session!);
         MapButton.Content = Icons.With("back", Lang.T("top.label.start"));
         // The map's objects have ids of their own (negative, as new ones): no "not saved yet" marks on them.
         View.ShowNewMarkers = false;
@@ -167,7 +181,7 @@ public partial class MainWindow
             await Tell("The map could not grow: " + ex.Message);
             return;
         }
-        _mapSaved = s.Edits.Version;
+        MarkSaved(s);
         InMap = false;
         Session = null;
         await ShowMap();
@@ -202,6 +216,25 @@ public partial class MainWindow
         var (heights, cols, rows) = map.HeightsNow(scene);
         HeightmapExport.Write(file, heights, cols, rows);
         Msg(new Said($"Heightmap written: {Path.GetFileName(file)}, {cols} x {rows}, 0 m = 32768, 128 steps a metre (Unreal at Z scale 100).", ""));
+    }
+
+    /// <summary>The map the drawer holds the kinds of.</summary>
+    private string? _drawerFor;
+
+    /// <summary>The objects drawer for the map open, the panels above it moving with it.</summary>
+    private ObjectsDrawer NewDrawer()
+    {
+        var d = new ObjectsDrawer(this);
+        _drawerFor = MapProject.Current?.Folder;
+        d.Card.SizeChanged += (_, _) => AboveDrawer();
+        d.Card.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == Avalonia.Visual.IsVisibleProperty)
+            {
+                AboveDrawer();
+            }
+        };
+        return d;
     }
 
     /// <summary>Play here: the game started in Unreal at the ground the camera looks at (Walk and Fly: below the camera).</summary>
@@ -334,19 +367,11 @@ public partial class MainWindow
             page.Children.Insert(page.Children.IndexOf(_ownRight.Card), _selectionBar);
             _cameraBar = CameraBar();
             page.Children.Insert(page.Children.IndexOf(_selectionBar), _cameraBar);
-            _drawer = new ObjectsDrawer(this);
+            _drawer = NewDrawer();
             page.Children.Insert(page.Children.IndexOf(_selectionBar), _drawer.Card);
-            _drawer.Card.SizeChanged += (_, _) => AboveDrawer();
             Minimap = new Minimap(this);
             page.Children.Insert(page.Children.IndexOf(_selectionBar), Minimap.Card);
             Minimap.Card.SizeChanged += (_, _) => AboveDrawer();
-            _drawer.Card.PropertyChanged += (_, e) =>
-            {
-                if (e.Property == Avalonia.Visual.IsVisibleProperty)
-                {
-                    AboveDrawer();
-                }
-            };
             View.SelectionChanged += things =>
             {
                 _selectionBar.IsVisible = Session is { Scene.IsMap: true } && things.Count > 0;
@@ -359,6 +384,14 @@ public partial class MainWindow
                     _ => " · " + string.Join(", ", kinds.Take(2).Select(g => $"{g.Key} ×{g.Count()}")) + (kinds.Count > 2 ? $" +{kinds.Count - 2} more" : ""),
                 });
             };
+        }
+        // another map: its own kinds in the drawer
+        if (show && _drawer is { Card.Parent: Panel holder } old && _drawerFor != MapProject.Current?.Folder)
+        {
+            int at = holder.Children.IndexOf(old.Card);
+            holder.Children.RemoveAt(at);
+            _drawer = NewDrawer();
+            holder.Children.Insert(at, _drawer.Card);
         }
         _drawer?.Card.IsVisible = show;
         _cameraBar?.IsVisible = show;
@@ -836,7 +869,7 @@ public partial class MainWindow
             await Tell("The map could not be saved: " + ex.Message);
             return false;
         }
-        _mapSaved = s.Edits.Version;
+        MarkSaved(s);
         UpdateSaveBar();
         if (!quiet)
         {
@@ -876,7 +909,7 @@ public partial class MainWindow
     private void MapSaveBar()
     {
         bool dirty = MapDirty;
-        int steps = Session is { } s ? Math.Max(0, s.Edits.Version - _mapSaved) : 0;
+        int steps = UnsavedSteps;
         PendingText.Text = !dirty ? "" : steps > 0 ? $"{steps} unsaved change{(steps == 1 ? "" : "s")}" : "Unsaved changes";
         _pendingPill.IsVisible = dirty;
         // Nothing to save reads as done (grey "Saved"), not as a dimmed call to action.
