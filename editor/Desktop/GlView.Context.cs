@@ -16,6 +16,7 @@ public sealed partial class GlView
         _es = GlVersion.Type == GlProfileType.OpenGLES;
         _terrainProg = Program(Shaders.TerrainVs, Shaders.TerrainFs);
         _objectProg = Program(Shaders.ObjectVs, Shaders.ObjectFs);
+        _gl.VertexAttrib4(7, 1f, 1f, 1f, 1f);   // the vertex colour of meshes without one: white (an attribute off reads this)
         _waterProg = Program(Shaders.WaterVs, Shaders.WaterFs);
         Status?.Invoke(Said.Raw($"OpenGL {(_es ? "ES " : "")}{GlVersion.Major}.{GlVersion.Minor}: {_gl.GetStringS(StringName.Renderer)}"));
     }

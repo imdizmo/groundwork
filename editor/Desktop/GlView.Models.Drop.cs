@@ -17,6 +17,11 @@ public sealed partial class GlView
             }
         }
         _meshGl.Clear();
+        foreach (uint c in _meshColorGl.Values)
+        {
+            _own.DeleteBuffer(c);
+        }
+        _meshColorGl.Clear();
         _pickMeshes.Clear();
         _bothWays.Clear();
         _onGpu.Clear();

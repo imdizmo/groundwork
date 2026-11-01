@@ -89,6 +89,7 @@ public sealed partial class ModelStore
             }
             var verts = new List<float>();
             var subs = new List<uint[]>();
+            List<float>? colors = null;   // made at the first primitive that has vertex colours (white for those before it)
             foreach (var prim in root.LogicalMeshes[index].Primitives)
             {
                 uint first = (uint)(verts.Count / 8);
@@ -100,17 +101,27 @@ public sealed partial class ModelStore
                 }
                 var normal = prim.GetVertexAccessor("NORMAL")?.AsVector3Array();
                 var uv = prim.GetVertexAccessor("TEXCOORD_0")?.AsVector2Array();
+                var color = prim.GetVertexAccessor("COLOR_0")?.AsColorArray();
+                if (color != null && colors == null)
+                {
+                    colors = [.. Enumerable.Repeat(1f, (int)first * 4)];
+                }
                 for (int v = 0; v < pos.Count; v++)
                 {
                     var n = normal != null ? normal[v] : Vector3.UnitY;
                     var t = uv != null ? uv[v] : Vector2.Zero;
                     verts.AddRange([pos[v].X, pos[v].Y, pos[v].Z, n.X, n.Y, n.Z, t.X, t.Y]);
+                    if (colors != null)
+                    {
+                        var c = color != null ? color[v] : Vector4.One;
+                        colors.AddRange([c.X, c.Y, c.Z, c.W]);
+                    }
                 }
                 // glTF's front faces are counter-clockwise; the store turns every mesh's winding around (it is Unity's
                 // in the exporter's files), so it comes the other way here
                 subs.Add([.. prim.GetTriangleIndices().SelectMany(tri => new[] { first + (uint)tri.A, first + (uint)tri.C, first + (uint)tri.B })]);
             }
-            return new MeshData([.. verts], [.. subs]);
+            return new MeshData([.. verts], [.. subs]) { Colors = colors?.ToArray() };
         }
 
         /// <inheritdoc/>

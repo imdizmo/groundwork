@@ -33,6 +33,9 @@ public sealed partial class ModelStore
         /// </summary>
         public bool BothWays { get; init; }
 
+        /// <summary>Each vertex's colour (red, green, blue, alpha, linear; glTF's COLOR_0), multiplied into its material's; null: none (white).</summary>
+        public float[]? Colors { get; init; }
+
         /// <summary>
         /// The mesh's box (its vertices' smallest and largest coordinates).
         /// </summary>

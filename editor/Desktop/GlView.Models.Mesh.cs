@@ -26,6 +26,16 @@ public sealed partial class GlView
         {
             _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(md.Vertices.Length * 4), p, BufferUsageARB.StaticDraw);
         }
+        if (md.Colors is { } colors && colors.Length == md.Vertices.Length / 8 * 4)
+        {
+            uint cvbo = _own.Buffer();
+            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, cvbo);
+            fixed (float* p = colors)
+            {
+                _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(colors.Length * 4), p, BufferUsageARB.StaticDraw);
+            }
+            _meshColorGl[id] = cvbo;
+        }
         uint[] ebos = new uint[md.Submeshes.Length];
         int[] counts = new int[md.Submeshes.Length];
         for (int s = 0; s < ebos.Length; s++)
@@ -116,6 +126,13 @@ public sealed partial class GlView
         _gl.BindVertexArray(b.Vao);
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, mesh.Vbo);
         SetUpVertexLayout();
+        // vertex colours, where the mesh has them (else attribute 7 stays off: its constant white)
+        if (_meshColorGl.TryGetValue(meshId, out uint cvbo))
+        {
+            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, cvbo);
+            _gl.EnableVertexAttribArray(7);
+            _gl.VertexAttribPointer(7, 4, VertexAttribPointerType.Float, false, 16, (void*)0);
+        }
         _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, mesh.Ebos[sub]);
         b.InstanceVbo = _own.Buffer();
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);

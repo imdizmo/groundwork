@@ -46,6 +46,29 @@ public sealed class ModelStoreGltfTests : IDisposable
         Assert.Null(store.LoadModel("Barrel"));
     }
 
+    [Fact]
+    public void VertexColoursAreReadAndAMeshWithoutThemHasNone()
+    {
+        var mesh = new MeshBuilder<VertexPositionNormal, VertexColor1>("Painted");
+        var up = Vector3.UnitY;
+        mesh.UsePrimitive(new MaterialBuilder("Plain")).AddTriangle(
+            (new VertexPositionNormal(0, 0, 0, up.X, up.Y, up.Z), new VertexColor1(new Vector4(1, 0, 0, 1))),
+            (new VertexPositionNormal(0, 0, 1, up.X, up.Y, up.Z), new VertexColor1(new Vector4(0, 1, 0, 1))),
+            (new VertexPositionNormal(1, 0, 0, up.X, up.Y, up.Z), new VertexColor1(new Vector4(0, 0, 1, 0.5f))));
+        var scene = new SceneBuilder();
+        scene.AddRigidMesh(mesh, Matrix4x4.Identity);
+        scene.ToGltf2().SaveGLB(Path.Combine(_dir, "Painted.glb"));
+        Make(Path.Combine(_dir, "Crate.glb"));
+        var store = ModelStore.Of(_dir)!;
+
+        var painted = store.LoadMesh(store.LoadModel("Painted")!.Parts[0].Mesh)!;
+        Assert.NotNull(painted.Colors);
+        Assert.Equal(painted.Vertices.Length / 8 * 4, painted.Colors.Length);
+        var all = Enumerable.Range(0, painted.Colors.Length / 4).Select(i => new Vector4(painted.Colors[i * 4], painted.Colors[(i * 4) + 1], painted.Colors[(i * 4) + 2], painted.Colors[(i * 4) + 3])).ToList();
+        Assert.Contains(all, c => Vector4.Distance(c, new Vector4(0, 0, 1, 0.5f)) < 0.01f);   // stored as bytes: 0.5 comes back as 128/255
+        Assert.Null(store.LoadMesh(store.LoadModel("Crate")!.Parts[0].Mesh)!.Colors);
+    }
+
     /// <summary>A glb: a one-triangle mesh, red half (linear), with a 4 x 2 texture, at the root and again 2 m up.</summary>
     private static void Make(string file)
     {

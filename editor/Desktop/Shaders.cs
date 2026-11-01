@@ -68,15 +68,16 @@ public static class Shaders
 		layout(location = 1) in vec3 aNor;
 		layout(location = 2) in vec2 aUv;
 		layout(location = 3) in mat4 aModel;
+		layout(location = 7) in vec4 aColor;
 		uniform mat4 uViewProj;
-		out vec3 vNor; out vec2 vUv; out vec3 vPos; out vec3 vTint;
+		out vec3 vNor; out vec2 vUv; out vec3 vPos; out vec3 vTint; out vec4 vColor;
 		void main() {
 			// The support check's tint rides in the placement's unused corner (zero: none).
 			mat4 m = aModel;
 			vTint = vec3(m[0][3], m[1][3], m[2][3]);
 			m[0][3] = 0.0; m[1][3] = 0.0; m[2][3] = 0.0;
 			vec4 w = m * vec4(aPos, 1.0);
-			vNor = mat3(m) * aNor; vUv = aUv; vPos = w.xyz;
+			vNor = mat3(m) * aNor; vUv = aUv; vPos = w.xyz; vColor = aColor;
 			gl_Position = uViewProj * w;
 		}
 		""";
@@ -88,7 +89,7 @@ public static class Shaders
     /// selection's outline mask (GlView.Outline).
     /// </summary>
     public const string ObjectFs = Lighting.Common + """
-		in vec3 vNor; in vec2 vUv; in vec3 vPos; in vec3 vTint;
+		in vec3 vNor; in vec2 vUv; in vec3 vPos; in vec3 vTint; in vec4 vColor;
 		uniform sampler2D uMap; uniform int uHasMap;
 		uniform vec4 uColor; uniform float uCutoff; uniform vec4 uUv;
 		// Ghosts (the Place tool's preview): see-through and tinted.
@@ -105,7 +106,7 @@ public static class Shaders
 		out vec4 frag;
 		void main() {
 			if (uCut.x > 0.5 && uGhost < 0.5 && vPos.y > uCut.y) discard;
-			vec4 c = uColor;
+			vec4 c = uColor * vColor;   // the vertex colour (glTF COLOR_0; white when the mesh has none)
 			if (uHasMap == 1) c *= texture(uMap, vUv * uUv.xy + uUv.zw);
 			if (c.a < uCutoff) discard;
 			if (uFlat.a > 0.0) { frag = uFlat; return; }

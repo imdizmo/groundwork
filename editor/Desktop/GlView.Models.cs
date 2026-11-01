@@ -95,6 +95,9 @@ public sealed partial class GlView
     /// Each mesh on the graphics card, by name: its vertex buffer, and an index buffer and count per part.
     /// </summary>
     private readonly Dictionary<string, (uint Vbo, uint[] Ebos, int[] Counts)> _meshGl = [];
+
+    /// <summary>The meshes' vertex colour buffers, for those that have colours.</summary>
+    private readonly Dictionary<string, uint> _meshColorGl = [];
     /// <summary>
     /// A mesh kept for picking: its vertex positions (three floats each) and its submeshes' triangles, its box.
     /// </summary>
