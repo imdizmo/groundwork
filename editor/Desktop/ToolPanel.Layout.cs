@@ -65,7 +65,7 @@ public sealed partial class ToolPanel
 
         // The options: size and strength, the brush shape, and each tool's own.
         var sizeV = new TextBlock();
-        SizeSlider = Ui.Slide(1, 30, 0.5, Brush.Radius, sizeV, v => $"{v:0.#} m", v => Brush.Radius = (float)v);
+        SizeSlider = Ui.Slide(1, MaxRadius, 0.5, Brush.Radius, sizeV, v => $"{v:0.#} m", v => Brush.Radius = (float)v);
         var strengthV = new TextBlock();
         StrengthSlider = Ui.Slide(0.05, 1, 0.05, Brush.Strength, strengthV, v => $"{v:0.00}", v => Brush.Strength = (float)v);
         ShapeBox = new ComboBox { SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12, MaxDropDownHeight = 400 };

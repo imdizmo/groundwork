@@ -38,7 +38,10 @@ public sealed partial class ToolPanel
     /// <summary>Thermal erosion's rest angle, in degrees (10..60).</summary>
     internal Slider RestSlider { get; }
 
-    /// <summary>The brush radius in metres (1..30). For tests too.</summary>
+    /// <summary>The largest brush radius, metres: big enough to shape a zone's hills in a few strokes.</summary>
+    internal const double MaxRadius = 300;
+
+    /// <summary>The brush radius in metres (1..300). For tests too.</summary>
     internal Slider SizeSlider { get; }
     /// <summary>Naturalize: a new noise pattern for the next stroke (and natural paths).</summary>
     internal Button NewPatternButton { get; } = new() { Content = Lang.T("brush.label.newPattern"), FontSize = 12 };

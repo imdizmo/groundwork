@@ -426,7 +426,7 @@ public static partial class MapTools
                 ? new PaletteControl("kinds", "Kinds", [.. kinds.Select(k => (k.Category, k.Label, k.Icon))]) { Multi = true }
                 : new ChoiceControl("biome", "Biome", [.. biomes.Select(b => b.Name)]),
             .. (biomes == null ? new ToolControl[] { new ButtonControl("saveBiome", "Save the picked kinds as a biome") } : []),
-            new SliderControl("radius", "Radius", 1, 60, biomes == null ? 8 : 16) { Step = 0.5f, Unit = "m" },
+            new SliderControl("radius", "Radius", 1, 250, biomes == null ? 8 : 16) { Step = 0.5f, Unit = "m" },
             new SliderControl("density", "Density ×", 0.05f, 5, 1) { Step = 0.05f },
             new SliderControl("spacing", "Spacing ×", 0, 3, 1) { Step = 0.05f },
             new ToggleControl("erase", "Take away (as Shift)", false),

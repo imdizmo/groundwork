@@ -447,7 +447,7 @@
   "tip.top.view": "Show or hide kinds of objects on the map, and the look options (V).",
   "tip.top.help": "Mouse controls and keyboard shortcuts (?).",
   "tip.card.close": "Close this panel.",
-  "tip.brush.size": "Brush radius in metres. [ and ] change it.",
+  "tip.brush.size": "Brush radius in metres, up to 300. [ and ] (or Ctrl+wheel) change it by a tenth.",
   "tip.brush.strength": "How fast the brush works while you hold the mouse button.",
   "tip.brush.shape": "Shape of the brush: circle, square, ring (only a band around the middle: rims and moats), ragged (a noisy edge for natural-looking strokes), or a picture (stamps).",
   "tip.brush.falloff": "How the effect fades from the middle to the edge: smooth, linear, dome (round top), flat top (full strength almost to the edge), peak (strong in the middle only), or sharp edge (full strength right to the edge: steep walls, like the pickaxe).",

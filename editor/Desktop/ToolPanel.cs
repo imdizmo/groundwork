@@ -129,7 +129,14 @@ public sealed partial class ToolPanel
     /// <summary>The rail's buttons and captions.</summary>
     private readonly StackPanel _rail;
     /// <summary>[ and ]: the brush one metre smaller or bigger (within the Size slider's range).</summary>
-    internal void ResizeBrush(int metres) => SizeSlider.Value = Math.Clamp(SizeSlider.Value + metres, SizeSlider.Minimum, SizeSlider.Maximum);
+    /// <summary>The brush a tenth bigger or smaller for each step ([ and ], Ctrl+wheel), at least half a metre: fine when small, quick when large.</summary>
+    internal void ResizeBrush(int steps)
+    {
+        double now = SizeSlider.Value, scaled = now * Math.Pow(1.1, steps);
+        // at least half a metre a step, so the smallest sizes still move
+        double next = steps > 0 ? Math.Max(scaled, now + (0.5 * steps)) : Math.Min(scaled, now + (0.5 * steps));
+        SizeSlider.Value = Math.Clamp(Math.Round(next * 2) / 2, SizeSlider.Minimum, SizeSlider.Maximum);
+    }
 
     /// <summary>The flatten height follows the ground where a stroke started (shown rounded to 0.1 m).</summary>
     public void ShowTarget(float h) => TargetBox.Value = (decimal)MathF.Round(h, 1);
