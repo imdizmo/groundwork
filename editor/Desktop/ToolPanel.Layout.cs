@@ -84,6 +84,8 @@ public sealed partial class ToolPanel
         ShapeBox.Tip("brush.shape");
         FalloffBox.Tip("brush.falloff");
         LoadStampButton.Click += (_, _) => LoadStampAsked?.Invoke();
+        WholeMapButton.Click += (_, _) => WholeMapAsked?.Invoke();
+        WholeMapButton.Tip("brush.wholeMap");
         ForgetStampButton.Click += (_, _) =>
         {
             int i = ShapeBox.SelectedIndex - 4;
@@ -159,6 +161,7 @@ public sealed partial class ToolPanel
                 _flattenRows,
                 _naturalRows,
                 _erodeRows,
+                WholeMapButton,
             },
         });
         Choose(null);

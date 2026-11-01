@@ -26,6 +26,9 @@ public sealed partial class ToolPanel
     internal NumericUpDown StampHeightBox { get; } = new() { Value = 4, Increment = 0.5m, FormatString = "0.0#", FontSize = 12 };
     /// <summary>Load stamp…: the window picks the picture (and calls <c>AddStamp</c>).</summary>
     public event Action? LoadStampAsked;
+
+    /// <summary>Paint the whole map was pressed (the paint brush chosen).</summary>
+    public event Action? WholeMapAsked;
     /// <summary>A line for the window's message bar, in both languages.</summary>
     public event Action<Said>? Message;
     /// <summary>Erode's Thermal mode: slopes steeper than the rest angle slide down.</summary>
@@ -39,6 +42,9 @@ public sealed partial class ToolPanel
     internal Slider SizeSlider { get; }
     /// <summary>Naturalize: a new noise pattern for the next stroke (and natural paths).</summary>
     internal Button NewPatternButton { get; } = new() { Content = Lang.T("brush.label.newPattern"), FontSize = 12 };
+
+    /// <summary>Paint the whole map: the layer everywhere the Mask lets it (<c>WholeMapAsked</c>).</summary>
+    internal Button WholeMapButton { get; } = new() { Content = Lang.T("brush.label.wholeMap"), FontSize = 12 };
     /// <summary>The brush strength (0.05..1).</summary>
     internal Slider StrengthSlider { get; }
     /// <summary>The brush shape: the four shapes, then the stamps.</summary>

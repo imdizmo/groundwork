@@ -29,6 +29,9 @@ picture down with one click.
 | Layer 2, 3, 4 | `6` `7` `8` | Paint that layer of the map (named and coloured after it). |
 | Layer 1 | `9` | Take paint off: back to the first layer. |
 
+**Paint the whole map** lays the layer over the whole map in one step, where the [Mask](masks.md) lets it: sand on
+every beach, rock on every slope steeper than 30°.
+
 The layers and their colours are the map's: see [map.json](map.md#mapjson).
 
 ## Settings

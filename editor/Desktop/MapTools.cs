@@ -382,11 +382,11 @@ public static partial class MapTools
         private Dictionary<int, string> _groupOf = [];
         private Vector3? _last;
         private int _stroke, _dab;
-        private bool _erasing;
+        private bool _erasing, _whole;
 
         /// <inheritdoc/>
         public override ToolInfo Info { get; } = biomes == null
-            ? new("brush", "Brush", "Pick any kinds, then hold and drag. Each group (Trees, Bushes, Plants, Rocks...) fills to its own density and spacing (the catalog's categories) times the sliders, each kind at its own size times Size; it fills that far and no further. Patchy leaves clearings, Soft edge thins the rim; the Mask panel limits where. Shift takes the picked kinds away.") { Icon = "M5 8a2 2 0 1 0 4 0a2 2 0 1 0-4 0M14 6a2 2 0 1 0 4 0a2 2 0 1 0-4 0M10 14a2 2 0 1 0 4 0a2 2 0 1 0-4 0M4 18a2 2 0 1 0 4 0a2 2 0 1 0-4 0M16 17a2 2 0 1 0 4 0a2 2 0 1 0-4 0" }
+            ? new("brush", "Brush", "Pick any kinds, then hold and drag. Each group (Trees, Bushes, Plants, Rocks...) fills to its own density and spacing (the catalog's categories) times the sliders, each kind at its own size times Size; it fills that far and no further. Patchy leaves clearings, Soft edge thins the rim; the Mask panel limits where. Shift takes the picked kinds away. Fill the whole map does it everywhere at once.") { Icon = "M5 8a2 2 0 1 0 4 0a2 2 0 1 0-4 0M14 6a2 2 0 1 0 4 0a2 2 0 1 0-4 0M10 14a2 2 0 1 0 4 0a2 2 0 1 0-4 0M4 18a2 2 0 1 0 4 0a2 2 0 1 0-4 0M16 17a2 2 0 1 0 4 0a2 2 0 1 0-4 0" }
             : new("biome", "Biome", "Paint a biome (the catalog's biomes): its ground colour and its kinds, in one stroke. Same density, spacing, patches and mask as the Brush. Shift takes the biome's kinds away.") { Icon = "M3 20h18M6 20l4-9 3 5 2-3 3 7M15 6a2 2 0 1 0 4 0a2 2 0 1 0-4 0" };
 
         /// <inheritdoc/>
@@ -400,6 +400,7 @@ public static partial class MapTools
             new SliderControl("density", "Density ×", 0.05f, 5, 1) { Step = 0.05f },
             new SliderControl("spacing", "Spacing ×", 0, 3, 1) { Step = 0.05f },
             new ToggleControl("erase", "Take away (as Shift)", false),
+            new ButtonControl("fill", "Fill the whole map"),
             new TextControl("status", ""),
             new SectionControl("secSize", "Size") { Folded = true },
             new SliderControl("minSize", "Size × from", 0.2f, 3, 0.9f) { Step = 0.05f },
@@ -426,6 +427,10 @@ public static partial class MapTools
             {
                 _ = W.SaveBiomeAsked([.. PickedKinds(ctx).Select(k => k.Model)]);
             }
+            else if (id == "fill")
+            {
+                FillWhole(ctx);
+            }
         }
 
         private Biome? Chosen(IToolContext ctx) => biomes is { Count: > 0 } ? biomes[Math.Clamp(ctx.Choice("biome"), 0, biomes.Count - 1)] : null;
@@ -441,7 +446,7 @@ public static partial class MapTools
         {
             int seed = (int)ctx.Number("seed"), xi = (int)MathF.Floor(x * 2), zi = (int)MathF.Floor(z * 2);
             float soft = ctx.Number("soft");
-            if (soft > 0 && Hash01(xi, zi, seed + 11) > 1 - Step(1 - soft, 1, fromMiddle / r))
+            if (soft > 0 && !_whole && Hash01(xi, zi, seed + 11) > 1 - Step(1 - soft, 1, fromMiddle / r))
             {
                 return false;
             }
@@ -591,11 +596,36 @@ public static partial class MapTools
             }
         }
 
-        private void Dab(EditSession s, IToolContext ctx, Vector3 c)
+        /// <summary>
+        /// The whole map filled as one stroke of dabs 16 m round on a 22 m grid (overlapping: no gaps), with the
+        /// stroke's density, spacing, patches, slope, water and mask but no soft rims; one History step.
+        /// </summary>
+        private void FillWhole(IToolContext ctx)
+        {
+            if (Session is not { } s)
+            {
+                return;
+            }
+            const float R = 16, Grid = 22;
+            Begin(s, ctx, false);
+            _whole = true;
+            var a = ctx.Area;
+            for (float z = a.MinZ + (Grid / 2); z < a.MaxZ; z += Grid)
+            {
+                for (float x = a.MinX + (Grid / 2); x < a.MaxX; x += Grid)
+                {
+                    Dab(s, ctx, new Vector3(x, a.GroundHeight(x, z), z), R);
+                }
+            }
+            _whole = false;
+            Finish(s, ctx);
+        }
+
+        private void Dab(EditSession s, IToolContext ctx, Vector3 c, float? radius = null)
         {
             _last = c;
             _dab++;
-            float r = ctx.Number("radius");
+            float r = radius ?? ctx.Number("radius");
             _dabs.Add((c, r));
             if (_erasing)
             {

@@ -10,7 +10,8 @@ group. Click one and click the ground to place it, or drag it into the view.
 ## Brush
 
 **Brush** scatters a group of kinds under the brush at the catalog's density and spacing: trees for a wood, plants
-for a meadow. `Shift` + drag takes them away. **Keep from water** and **Random lean** shape where and how they stand.
+for a meadow. `Shift` + drag takes them away. **Keep from water** and **Random lean** shape where and how they stand. **Fill the whole map** does it everywhere at once, as one step: with the Mask on, only where it
+lets (rocks on every steep slope, reeds by every shore).
 
 ## Biome
 
