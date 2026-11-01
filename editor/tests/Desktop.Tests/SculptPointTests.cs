@@ -7,8 +7,9 @@ namespace Groundwork.Desktop.Tests;
 /// </summary>
 public class SculptPointTests
 {
-    private static readonly float[] Expected2 = [0f, 1f, 0f, 1f];
-    private static readonly float[] Expected1 = [1f, 0f, 0f, 1f];
+    // the fourth channel is the hole, which painting leaves as it is (0: ground)
+    private static readonly float[] Expected2 = [0f, 1f, 0f, 0f];
+    private static readonly float[] Expected1 = [1f, 0f, 0f, 0f];
     /// <summary>
     /// A 5 × 5 ground and its middle point (2, 2).
     /// </summary>
@@ -61,7 +62,7 @@ public class SculptPointTests
     }
 
     [Fact]
-    public void PaintPointMovesAllFourChannelsTowardsTheColourByTheStrength()
+    public void PaintPointMovesTheLayersTowardsTheColourAndLeavesTheHole()
     {
         var (g, p) = Point();
         Sculpt.PaintPoint(g, p, [0f, 1f, 0f, 1f], 1f);

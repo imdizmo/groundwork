@@ -35,6 +35,9 @@ public static partial class Sculpt
             case BrushTool.Natural:
                 g.SetHeight(p, h + (NaturalTarget(g, b, s, p) - h) * MathF.Min(1, 4 * rate * w));
                 break;
+            case BrushTool.Hole:
+                HolePoint(g, p, MathF.Min(1, 8 * rate * w), b.HoleFill);
+                break;
             case BrushTool.Terrace:
                 g.SetHeight(p, h + (TerraceTarget(h, b.TerraceStep) - h) * MathF.Min(1, 6 * rate * w));
                 break;
@@ -45,6 +48,16 @@ public static partial class Sculpt
                 PaintPoint(g, p, f.Colour!, MathF.Min(1, 8 * rate * w));
                 break;
         }
+    }
+
+    /// <summary>
+    /// The Hole brush: the point's fourth paint channel (0 ground, 1 a hole: Unreal's landscape visibility) towards a
+    /// hole, or back to ground (fill), by k.
+    /// </summary>
+    internal static void HolePoint(Ground g, int p, float k, bool fill)
+    {
+        g.StartPaint(p);
+        g.Paint[(p * 4) + 3] += ((fill ? 0 : 1) - g.Paint[(p * 4) + 3]) * k;
     }
 
     /// <summary>Restore: backs the point's edits and lift down towards the ground as the world generated it.</summary>
@@ -68,11 +81,11 @@ public static partial class Sculpt
         }
     }
 
-    /// <summary>The paint tools: moves the point's paint towards the tool's colour by k.</summary>
+    /// <summary>The paint tools: moves the point's paint towards the tool's colour by k (its hole stays as it is).</summary>
     internal static void PaintPoint(Ground g, int p, float[] colour, float k)
     {
         g.StartPaint(p);
-        for (int c = 0; c < 4; c++)
+        for (int c = 0; c < 3; c++)
         {
             g.Paint[p * 4 + c] += (colour[c] - g.Paint[p * 4 + c]) * k;
         }

@@ -227,4 +227,33 @@ public sealed class MapProjectTests : IDisposable
         var canal = again.Things.Single(t => Groundwork.App.AssetIds.NameOf(t.Prefab) == "Canal");
         Assert.Equal("0,0;10,0", again.Session!.Edits.FindAdded(canal.Id)!.Data!["path"]);
     }
+
+    // Holes are saved in holes.png (written only once there is one) and come back; a grown map keeps them in place.
+    [AvaloniaFact]
+    public void HolesAreSavedReadBackAndGrowWithTheMap()
+    {
+        var made = MapProject.Create("Holes", 1, generated: false, height: 2, seed: 1, under: _dir);
+        var scene = made.Read();
+        _ = made.Save(scene);
+        Assert.False(File.Exists(made.HolesFile));
+        var g = scene.Session!.Ground;
+        int p = (20 * g.W) + 20;
+        _ = scene.Session.EditGround("Hole", gr =>
+        {
+            Sculpt.HolePoint(gr, p, 1, fill: false);
+            return ([p], (19, 19, 21, 21));
+        });
+        _ = made.Save(scene);
+        Assert.True(File.Exists(made.HolesFile));
+        var again = MapProject.Open(made.Folder).Read();
+        Assert.True(again.Session!.Ground.MaskOf(p, 3) > 0.5f);
+        Assert.True(again.Session.Ground.MaskOf(p + 1, 3) < 0.5f);
+        var world = (again.Session.Ground.OriginX + 20, again.Session.Ground.OriginZ + 20);
+
+        var map = MapProject.Open(made.Folder);
+        map.Grow(MapProject.Sides.West, 63, generated: false, flatHeight: 2, seed: 1);
+        var grown = MapProject.Open(made.Folder).Read().Session!.Ground;
+        int q = ((int)(world.Item2 - grown.OriginZ) * grown.W) + (int)(world.Item1 - grown.OriginX);
+        Assert.True(grown.MaskOf(q, 3) > 0.5f);
+    }
 }

@@ -31,4 +31,6 @@ public enum BrushTool
     PaintLayer1,
     /// <summary>Shelves a step apart joined by steep rises (last: the others keep their numbers).</summary>
     Terrace,
+    /// <summary>Takes the ground away: a hole (a cave mouth, a pit), or fills one back.</summary>
+    Hole,
 }

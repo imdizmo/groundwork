@@ -26,6 +26,8 @@ plugin speak a numbered protocol: **Live** refuses a plugin of another version a
 - **Objects**: added and taken away, as instances of the mesh the models folder's `names.json` names for the asset
   (a new mesh is placed as an actor in the `Groundwork/Objects` folder). A marker becomes an actor of its catalog
   class, tagged `gw_marker:<id>`.
+- **Holes**: the landscape's visibility where the Hole brush took the ground away. The landscape material needs a
+  *Landscape Visibility Mask* node (into Opacity Mask, Masked blend mode) for Unreal to show them.
 - **Rivers and lakes**: the level's river and lake bodies labelled `unreal.waterPrefix` + the river's name (spaces as
   `_`; `GW_Water_` by default; the prefix must be 3 or more letters, digits or `_`, ending in `_`) are rewritten in
   place; a new one is made like the first of its kind already there

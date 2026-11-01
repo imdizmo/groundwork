@@ -21,6 +21,7 @@ public static class Icons
         ["smooth"] = "M3 14c3-4 6 4 9 0s6 4 9 0",
         ["natural"] = "M3 18l5-8 4 5 3-4 6 7z",
         ["terrace"] = "M3 20h5v-4h5v-4h5V8h3",
+        ["hole"] = "M3 12h4M17 12h4M7 12a5 3 0 1 0 10 0a5 3 0 1 0-10 0",
         ["restore"] = "M4 12a8 8 0 1 0 8-8M4 4v5h5",
         ["erode"] = "M3 6c3 0 4 3 7 3s4-3 7-3 4 2 4 2M3 12c3 0 4 3 7 3s4-3 7-3M8 18l2 3 2-3",
         ["shape"] = "M3 19l6-11 4 6 2-3 6 8z",

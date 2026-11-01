@@ -17,7 +17,7 @@ with a copy of its catalog.
   "name": "Coast",
   "origin": [-252, -252],
   "seaLevel": 0,
-  "files": { "heights": "height.npy", "layers": "layers.png", "objects": "objects.json", "water": "water.json", "areas": "areas.json" },
+  "files": { "heights": "height.npy", "layers": "layers.png", "objects": "objects.json", "water": "water.json", "areas": "areas.json", "holes": "holes.png" },
   "layers": [
     { "name": "Grass", "colour": "#6b9945" },
     { "name": "Sand", "colour": "#ccbd85", "channel": "r" }
@@ -38,6 +38,7 @@ with a copy of its catalog.
 | `files.objects` | The objects: a JSON list of `[asset, x, y, z, turn x, y, z, scale]`, and an object of [plugin data](plugins.md) when there is any. |
 | `files.water` | The rivers and lakes ([Rivers and lakes](water.md)). |
 | `files.areas` | The areas ([Areas](areas.md)). |
+| `files.holes` | The holes: a grey `.png` the size of the heightmap, white where the ground is taken away; written once there is a hole. |
 | `layers` | Up to four: the first is the ground everywhere, the others are painted over it from a channel (`r`, `g`, `b`). |
 | `catalog` | The kinds the object tools offer and the categories the View panel sorts by. |
 | `models` | The model folder the 3D view draws objects with (it may be anywhere; see [Objects](objects.md#models)). |

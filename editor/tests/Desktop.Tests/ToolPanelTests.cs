@@ -53,7 +53,7 @@ public class ToolPanelTests
         var names = rail.Children.Where(c => c is not StackPanel && c.IsVisible).Select(c => c is TextBlock t ? t.Text : ((TextBlock)((StackPanel)((Grid)((Button)c).Content!).Children[0]).Children[1]).Text).ToList();
         Assert.Equal(
             [
-                "SCULPT", "Raise", "Lower", "Flatten", "Smooth", "Natural", "Erode", "Terrace", "Restore",
+                "SCULPT", "Raise", "Lower", "Flatten", "Smooth", "Natural", "Erode", "Terrace", "Hole", "Restore",
                 "PAINT", "Layer 2", "Layer 3", "Layer 4", "Layer 1",
                 "TOOLS", "Select", "Measure", "View",
             ],

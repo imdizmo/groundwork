@@ -32,7 +32,7 @@ public static class Shaders
 		uniform vec4 uHoleGrid;
 		out vec4 frag;
 		void main() {
-			if (vCut > 0.5) discard;
+			if (vCut > 0.5 || vCol.r < 0.0) discard;
 			if (uHolesOn > 0.5) {
 				ivec2 c = ivec2(floor(vec2(vView.x + uHoleGrid.x, -vView.y + uHoleGrid.y)));
 				if (c.x >= 0 && c.y >= 0 && float(c.x) < uHoleGrid.z && float(c.y) < uHoleGrid.w && texelFetch(uHoles, c, 0).r > 0.0) discard;

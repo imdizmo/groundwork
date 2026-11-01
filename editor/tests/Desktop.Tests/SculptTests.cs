@@ -125,7 +125,7 @@ public class SculptTests
         Stroke(s, BrushTool.PaintLayer4, 64, 64, 60);
         int g = 64 * s.Ground.W + 64;
         Assert.Equal(1, s.Ground.PMod[g]);
-        Assert.Equal(new[] { 0f, 0, 1, 1 }, s.Ground.Paint[(g * 4)..(g * 4 + 4)].Select(v => MathF.Round(v, 2)).ToArray());
+        Assert.Equal(new[] { 0f, 0, 1, 0 }, s.Ground.Paint[(g * 4)..(g * 4 + 4)].Select(v => MathF.Round(v, 2)).ToArray());
         Assert.Equal(255, s.Scene.Mask[g * 4 + 2]);
         Assert.Equal(0, s.Scene.Mask[g * 4]);
     }

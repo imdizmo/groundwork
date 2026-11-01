@@ -131,6 +131,10 @@ public sealed partial class ToolPanel
         var stepV = new TextBlock();
         _terraceRows = Ui.Row(Lang.T("brush.label.terraceStep"), Ui.Slide(0.5, 20, 0.5, Brush.TerraceStep, stepV, v => $"{v:0.#} m", v => Brush.TerraceStep = (float)v).Tip("brush.terraceStep"), stepV);
 
+        var fill = new CheckBox { Content = Lang.T("brush.label.holeFill"), FontSize = 12, IsChecked = Brush.HoleFill }.Tip("brush.holeFill");
+        fill.IsCheckedChanged += (_, _) => Brush.HoleFill = fill.IsChecked == true;
+        _holeRows = fill;
+
         var restV = new TextBlock();
         RestSlider = Ui.Slide(10, 60, 1, Brush.RestAngle, restV, v => $"{v:0}°", v => Brush.RestAngle = (float)v).Tip("erode.rest");
         var restRow = Ui.Row(Lang.T("brush.label.restAngle"), RestSlider, restV);
@@ -164,6 +168,7 @@ public sealed partial class ToolPanel
                 _flattenRows,
                 _naturalRows,
                 _terraceRows,
+                _holeRows,
                 _erodeRows,
                 WholeMapButton,
             },

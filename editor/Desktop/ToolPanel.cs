@@ -77,7 +77,7 @@ public sealed partial class ToolPanel
     /// <summary>The keys of the web editor's rail.</summary>
     public static readonly (BrushTool Tool, string Key)[] Keys =
     [
-        (BrushTool.Raise, "1"), (BrushTool.Lower, "2"), (BrushTool.Flatten, "3"), (BrushTool.Smooth, "4"), (BrushTool.Natural, "0"), (BrushTool.Erode, "O"), (BrushTool.Terrace, "T"), (BrushTool.Restore, "5"),
+        (BrushTool.Raise, "1"), (BrushTool.Lower, "2"), (BrushTool.Flatten, "3"), (BrushTool.Smooth, "4"), (BrushTool.Natural, "0"), (BrushTool.Erode, "O"), (BrushTool.Terrace, "T"), (BrushTool.Hole, ""), (BrushTool.Restore, "5"),
         (BrushTool.PaintLayer2, "6"), (BrushTool.PaintLayer3, "7"), (BrushTool.PaintLayer4, "8"), (BrushTool.PaintLayer1, "9"),
     ];
 
@@ -102,6 +102,7 @@ public sealed partial class ToolPanel
         BrushTool.Erode => ("erode", null),
         BrushTool.Restore => ("restore", null),
         BrushTool.Terrace => ("terrace", null),
+        BrushTool.Hole => ("hole", null),
         _ when Brush.MapOpen && Brush.LayerOf(t) is int k and >= 0 && MapProject.Current?.Layers.ElementAtOrDefault(k) is { } layer => (null, new SolidColorBrush(Srgb(layer.Colour))),
         BrushTool.PaintLayer2 => (null, new SolidColorBrush(Color.Parse("#8a6a46"))),
         BrushTool.PaintLayer3 => (null, new SolidColorBrush(Color.Parse("#4e3622"))),

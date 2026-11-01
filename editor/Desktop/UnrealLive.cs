@@ -51,6 +51,22 @@ public sealed class UnrealLive
         // the areas go at the first push when there are any (Unreal's are the editor's: rebuilt from them)
         _areas = MapAreas.All.Count > 0 ? "" : MapAreas.Snapshot();
         _areaKinds = MapTools.AreaKinds();
+        _holes = Holes();
+    }
+
+    /// <summary>The holes as last sent: a byte a ground point (255: a hole).</summary>
+    private byte[] _holes;
+
+    /// <summary>The ground's holes now, a byte a point.</summary>
+    private byte[] Holes()
+    {
+        var g = _scene.Session!.Ground;
+        byte[] h = new byte[g.W * g.H];
+        for (int p = 0; p < h.Length; p++)
+        {
+            h[p] = Byte(g.MaskOf(p, 3));
+        }
+        return h;
     }
 
     /// <summary>The areas as last sent, and their kinds' Unreal classes.</summary>
@@ -62,6 +78,7 @@ public sealed class UnrealLive
     {
         (_heights, _mask, _gone, _count) = Snapshot();
         _water = MapWater.Snapshot();
+        _holes = Holes();
     }
 
     /// <summary>A live link to the running Unreal editor, from now on (what is already there is taken as in sync), or why not.</summary>
@@ -288,6 +305,30 @@ public sealed class UnrealLive
             said.Add(await Post("/groundwork/water", body));
             _water = water;
         }
+        // holes: the landscape's visibility over the rectangle of changed points
+        byte[] holes = Holes();
+        int hx0 = int.MaxValue, hz0 = int.MaxValue, hx1 = -1, hz1 = -1;
+        for (int p = 0; p < holes.Length; p++)
+        {
+            if (holes[p] != _holes[p])
+            {
+                int gx = p % g.W, gz = p / g.W;
+                (hx0, hz0, hx1, hz1) = (Math.Min(hx0, gx), Math.Min(hz0, gz), Math.Max(hx1, gx), Math.Max(hz1, gz));
+            }
+        }
+        if (hx1 >= 0 && Pixels(g, hx0, hz0, hx1, hz1) is var (hcol, hrow, hw, hh) && hw > 0)
+        {
+            byte[] weights = new byte[hw * hh];
+            for (int r = 0; r < hh; r++)
+            {
+                for (int c = 0; c < hw; c++)
+                {
+                    weights[(r * hw) + c] = holes[GridOf(g, hcol + c, hrow + r)];
+                }
+            }
+            said.Add(await Post("/groundwork/holes", new JsonObject { ["x0"] = _map.X0, ["y0"] = _map.Y0, ["col"] = hcol, ["row"] = hrow, ["w"] = hw, ["h"] = hh, ["weights"] = Convert.ToBase64String(weights) }));
+        }
+        _holes = holes;
         // areas: volumes tagged gw_area:<name>, rebuilt from the map's
         if (MapAreas.Snapshot() is var areas && areas != _areas)
         {

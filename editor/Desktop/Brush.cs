@@ -43,6 +43,8 @@ public sealed partial class Brush
     public Noise Noise { get; set; } = new(Random.Shared.Next());
     /// <summary>Erode: rain (Water) instead of sliding to the rest angle (Thermal).</summary>
     public bool ErodeWater { get; set; }
+    /// <summary>Hole: fills holes back instead of making them.</summary>
+    public bool HoleFill { get; set; }
     /// <summary>Terrace: how far apart its shelves are, in metres.</summary>
     public float TerraceStep { get; set; } = 3;
     /// <summary>Erode, Thermal: the slope ground slides down to, in degrees.</summary>
@@ -84,6 +86,7 @@ public sealed partial class Brush
         BrushTool.Erode => Lang.T("brush.label.erode"),
         BrushTool.Restore => Lang.T("brush.label.restore"),
         BrushTool.Terrace => Lang.T("brush.label.terrace"),
+        BrushTool.Hole => Lang.T("brush.label.hole"),
         _ => Lang.T("brush.label.layer", LayerOf(t) + 1),
     };
 
@@ -98,6 +101,7 @@ public sealed partial class Brush
         BrushTool.Erode => Lang.T("brush.help.erode"),
         BrushTool.Restore => Lang.T("brush.help.restore"),
         BrushTool.Terrace => Lang.T("brush.help.terrace"),
+        BrushTool.Hole => Lang.T("brush.help.hole"),
         BrushTool.PaintLayer1 => Lang.T("brush.help.layer1"),
         _ => Lang.T("brush.help.layer"),
     };

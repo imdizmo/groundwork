@@ -19,6 +19,7 @@ ground. Each stroke is one step in History.
 | Natural | `0` | Adds rolling bumps. |
 | Erode | `O` | Weathers it: slopes slide to their rest angle (Thermal), or rain runs down and carries it (Water). |
 | Terrace | `T` | Pulls it into flat shelves **Step** metres apart, joined by steep rises. |
+| Hole | | Takes the ground away (a cave mouth, a pit): not drawn, and hidden in Unreal. **Fill holes back instead** puts it back, as Restore does. |
 
 **Erode the whole map** (on Erode's card) weathers all of it at once, at the brush's Strength, where the Mask lets
 it.

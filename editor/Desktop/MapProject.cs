@@ -53,6 +53,8 @@ public sealed class MapProject
     public string WaterFile { get; private set; } = "";
     /// <summary>The areas (boxes that become Unreal volumes).</summary>
     public string AreasFile { get; private set; } = "";
+    /// <summary>The holes: a grey picture the heightmap's size, white where the ground is taken away (written once there are any).</summary>
+    public string HolesFile { get; private set; } = "";
     /// <summary>
     /// The ground's layers: the first is the ground everywhere, the others (up to three) are painted over it, each from a
     /// channel of the layers file (ponytail: one RGBA file, so four layers; a second file when a map needs more).
@@ -116,6 +118,7 @@ public sealed class MapProject
         m.ObjectsFile = m.Inside(S(f?["objects"]) ?? "objects.json");
         m.WaterFile = m.Inside(S(f?["water"]) ?? "water.json");
         m.AreasFile = m.Inside(S(f?["areas"]) ?? "areas.json");
+        m.HolesFile = m.Inside(S(f?["holes"]) ?? "holes.png");
         m.Catalog = S(j["catalog"]) is string c ? m.Inside(c) : null;
         m.Models = S(j["models"]) is string mo ? m.Abs(mo) : null;
         m.Stamps = S(j["stamps"]) is string st ? m.Inside(st) : null;
@@ -143,7 +146,7 @@ public sealed class MapProject
             ["name"] = Name,
             ["origin"] = new JsonArray(X0, Y0),
             ["seaLevel"] = SeaLevel,
-            ["files"] = new JsonObject { ["heights"] = Rel(HeightsFile), ["layers"] = Rel(LayersFile), ["objects"] = Rel(ObjectsFile), ["water"] = Rel(WaterFile), ["areas"] = Rel(AreasFile) },
+            ["files"] = new JsonObject { ["heights"] = Rel(HeightsFile), ["layers"] = Rel(LayersFile), ["objects"] = Rel(ObjectsFile), ["water"] = Rel(WaterFile), ["areas"] = Rel(AreasFile), ["holes"] = Rel(HolesFile) },
         };
         j["layers"] = new JsonArray([.. Layers.Select(l => (JsonNode)new JsonObject
         {
@@ -252,7 +255,7 @@ public sealed class MapProject
             m.Catalog = m.Abs("catalog.json");
             System.IO.File.Copy(catalog, m.Catalog);
         }
-        (m.HeightsFile, m.LayersFile, m.ObjectsFile, m.WaterFile, m.AreasFile) = (m.Abs("height.npy"), m.Abs("layers.png"), m.Abs("objects.json"), m.Abs("water.json"), m.Abs("areas.json"));
+        (m.HeightsFile, m.LayersFile, m.ObjectsFile, m.WaterFile, m.AreasFile, m.HolesFile) = (m.Abs("height.npy"), m.Abs("layers.png"), m.Abs("objects.json"), m.Abs("water.json"), m.Abs("areas.json"), m.Abs("holes.png"));
         var raster = new Raster(n, n, x0, x0);
         float[] heights = new float[n * n];
         byte[] mask = new byte[n * n * 4];
@@ -300,6 +303,7 @@ public sealed class MapProject
         var map = ReadRaster();
         float[] heights = Read(HeightsFile, out _, out _);
         byte[] mask = ReadMask(LayersFile, map);
+        byte[]? holes = System.IO.File.Exists(HolesFile) ? ReadMask(HolesFile, map) : null;
         // Zones of 64 m (centred on multiples of 64) round the map, editor x = X, z = -Y.
         int zx0 = (int)MathF.Floor((map.X0 + 32f) / 64f), zx1 = (int)MathF.Floor((map.X0 + map.Cols - 1 + 32f) / 64f);
         int zz0 = (int)MathF.Floor((-(map.Y0 + map.Rows - 1) + 32f) / 64f), zz1 = (int)MathF.Floor((-map.Y0 + 32f) / 64f);
@@ -317,7 +321,8 @@ public sealed class MapProject
                 {
                     ground.BaseMask[(g * 4) + k - 1] = mask[(px * 4) + Layers[k].Channel] / 255f;
                 }
-                ground.BaseMask[(g * 4) + 3] = 1f;
+                // the fourth channel: a hole (Unreal's landscape visibility), 0 where the ground is
+                ground.BaseMask[(g * 4) + 3] = holes != null ? holes[px * 4] / 255f : 0;
             }
         }
         var scene = new WorldScene
@@ -382,6 +387,8 @@ public sealed class MapProject
         var map = ReadRaster();
         float[] heights = Read(HeightsFile, out _, out _);
         byte[] mask = ReadMask(LayersFile, map);
+        byte[] holes = System.IO.File.Exists(HolesFile) ? ReadMask(HolesFile, map) : new byte[map.Cols * map.Rows * 4];
+        bool anyHole = System.IO.File.Exists(HolesFile);
         for (int gz = 0; gz < g.H; gz++)
         {
             for (int gx = 0; gx < g.W; gx++)
@@ -395,6 +402,9 @@ public sealed class MapProject
                     {
                         mask[(px * 4) + Layers[k].Channel] = Byte(g.MaskOf(p, k - 1));
                     }
+                    byte hole = Byte(g.MaskOf(p, 3));
+                    (holes[px * 4], holes[(px * 4) + 1], holes[(px * 4) + 2], holes[(px * 4) + 3]) = (hole, hole, hole, 255);
+                    anyHole |= hole > 127;
                 }
             }
         }
@@ -420,6 +430,11 @@ public sealed class MapProject
         }
         Write(HeightsFile, heights, map.Rows, map.Cols);
         WriteMask(LayersFile, mask, map);
+        if (anyHole)
+        {
+            KeepOld(HolesFile);
+            WriteMask(HolesFile, holes, map);
+        }
         System.IO.File.WriteAllText(ObjectsFile, objects.ToJsonString());
         MapWater.Save(WaterFile);
         MapAreas.Save(AreasFile);
@@ -484,6 +499,21 @@ public sealed class MapProject
         }
         Write(HeightsFile, heights, grown.Rows, grown.Cols);
         WriteMask(LayersFile, mask, grown);
+        if (System.IO.File.Exists(HolesFile))
+        {
+            byte[] oldHoles = ReadMask(HolesFile, map), holes = new byte[heights.Length * 4];
+            for (int px = 0; px < heights.Length; px++)
+            {
+                int oc = (px % grown.Cols) - wst, or = (px / grown.Cols) - n;
+                holes[(px * 4) + 3] = 255;
+                if (map.Holds(oc, or))
+                {
+                    Array.Copy(oldHoles, ((or * map.Cols) + oc) * 4, holes, px * 4, 4);
+                }
+            }
+            KeepOld(HolesFile);
+            WriteMask(HolesFile, holes, grown);
+        }
         (X0, Y0) = (grown.X0, grown.Y0);
         WriteJson();
     }
