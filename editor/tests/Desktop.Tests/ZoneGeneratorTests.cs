@@ -23,8 +23,10 @@ public class ZoneGeneratorTests
     public void TheRimRisesAtTheEdgeAndIsSteep()
     {
         var z = Make(new ZoneGenerator.Spec(Low: 20, High: 60, RimHeight: 200, RimWidth: 80, LakeHectares: []));
-        Assert.True(z.Heights[(5 * 400) + 200] > 150, $"{z.Heights[(5 * 400) + 200]}");   // near the north edge
-        Assert.True(z.Heights[(200 * 400) + 200] < 61);                                      // the middle
+        // the rim changes along the edge (high in places, low in others): its highest ground near the edge is far up
+        float edge = Enumerable.Range(0, 400).Max(c => MathF.Max(z.Heights[(5 * 400) + c], z.Heights[(394 * 400) + c]));
+        Assert.True(edge > 150, $"{edge}");
+        Assert.True(z.Heights[(200 * 400) + 200] < 61);   // the middle
         int steep = Enumerable.Range(0, 400 * 400).Count(p => ZoneGenerator.Slope(z.Heights, 400, 400, p % 400, p / 400) > 30);
         Assert.True(steep > 400 * 400 / 20, $"{steep}");
     }

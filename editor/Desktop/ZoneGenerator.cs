@@ -66,13 +66,15 @@ public static class ZoneGenerator
                 float rim = 0;
                 if (spec.RimHeight > 0 && spec.RimWidth > 0)
                 {
-                    float wander = 1 + (0.45f * Fbm(x / (spec.RimWidth * 2), y / (spec.RimWidth * 2), spec.Seed + 7, 3));
+                    // its width and height change along the edge: high peaks in places, low hills or a gap in others
+                    float wander = 1 + (0.6f * Fbm(x / (spec.RimWidth * 2.5f), y / (spec.RimWidth * 2.5f), spec.Seed + 7, 3));
+                    float tall = 0.5f + (0.5f * Smooth(-0.35f, 0.45f, Fbm(x / 900, y / 900, spec.Seed + 3, 2)));
                     float d = Edge(c, r) / (spec.RimWidth * wander);
                     if (d < 1)
                     {
-                        float rise = Smooth(1, 0.35f, d);
-                        float ridges = 0.65f + (0.35f * Ridged(x / 90, y / 90, spec.Seed + 11, 4));
-                        rim = spec.RimHeight * rise * ridges;
+                        float rise = MathF.Pow(Smooth(1, 0.25f, d), 1.25f);   // foothills first, then steep
+                        float ridges = 0.6f + (0.4f * Ridged(x / 110, y / 110, spec.Seed + 11, 4));
+                        rim = spec.RimHeight * tall * rise * ridges;
                     }
                 }
                 h[(r * cols) + c] = ground + rim;
@@ -123,8 +125,10 @@ public static class ZoneGenerator
             }
             // the surface just under the lowest shore, so the water stays in; the bed down from it, shallow at the edge
             float level = outline.Min(p => At(h, cols, rows, p.X, p.Y)) - 0.4f, depth = MathF.Min(8, 2 + (radius / 40));
-            int c0 = Math.Max(0, (int)(b.At.X - (radius * 1.4f))), c1 = Math.Min(cols - 1, (int)(b.At.X + (radius * 1.4f)));
-            int r0 = Math.Max(0, (int)(b.At.Y - (radius * 1.4f))), r1 = Math.Min(rows - 1, (int)(b.At.Y + (radius * 1.4f)));
+            // as far out as the banks may reach (the ground round a lake can stand far above its water)
+            float reach = (radius * 1.4f) + 200;
+            int c0 = Math.Max(0, (int)(b.At.X - reach)), c1 = Math.Min(cols - 1, (int)(b.At.X + reach));
+            int r0 = Math.Max(0, (int)(b.At.Y - reach)), r1 = Math.Min(rows - 1, (int)(b.At.Y + reach));
             for (int r = r0; r <= r1; r++)
             {
                 for (int c = c0; c <= c1; c++)
@@ -135,9 +139,9 @@ public static class ZoneGenerator
                     {
                         h[p] = MathF.Min(h[p], level - (depth * Math.Clamp(inside / 15, 0.12f, 1)));
                     }
-                    else if (inside > -10)
+                    else
                     {
-                        h[p] = MathF.Min(h[p], level + 0.3f + (-inside * 0.25f));   // a gentle shore
+                        h[p] = MathF.Min(h[p], level + 0.3f + (-inside * 0.15f));   // the banks slope down to the water (about 9°)
                     }
                 }
             }
@@ -240,7 +244,10 @@ public static class ZoneGenerator
                 {
                     continue;
                 }
-                var kind = from[rng.Next(from.Count)];
+                // stands of one kind (as woods grow), a few of the others among them
+                var kind = from.Count > 1 && rng.NextSingle() > 0.2f
+                    ? from[Math.Clamp((int)(((Fbm(fc / 220, fr / 220, spec.Seed + 53 + from.Count, 2) * 0.5f) + 0.5f) * from.Count), 0, from.Count - 1)]
+                    : from[rng.Next(from.Count)];
                 float s = (kind.MinScale + (rng.NextSingle() * (kind.MaxScale - kind.MinScale))) * times;
                 // editor axes: x = X, z = -Y
                 placed.Add((kind.Model, new Vector3(fc + x0, At(h, cols, rows, fc, fr), -(fr + y0)), rng.NextSingle() * 360, s));
