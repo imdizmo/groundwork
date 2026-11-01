@@ -93,7 +93,7 @@ public static class ZoneGenerator
         var lakes = new List<Lake>();
         foreach (float ha in (spec.LakeHectares ?? []).OrderDescending())
         {
-            float radius = MathF.Sqrt(ha * 10000 / MathF.PI), margin = (spec.RimHeight > 0 ? spec.RimWidth : 0) + radius + 30;
+            float radius = MathF.Sqrt(ha * 10000 / MathF.PI), margin = (spec.RimHeight > 0 ? spec.RimWidth * 0.6f : 0) + radius + 30;   // at the rim's foot, not on it
             (Vector2 At, float Low)? best = null;
             for (int k = 0; k < 400; k++)
             {
@@ -126,7 +126,7 @@ public static class ZoneGenerator
             // the surface just under the lowest shore, so the water stays in; the bed down from it, shallow at the edge
             float level = outline.Min(p => At(h, cols, rows, p.X, p.Y)) - 0.4f, depth = MathF.Min(8, 2 + (radius / 40));
             // as far out as the banks may reach (the ground round a lake can stand far above its water)
-            float reach = (radius * 1.4f) + 200;
+            float reach = (radius * 1.4f) + 100;
             int c0 = Math.Max(0, (int)(b.At.X - reach)), c1 = Math.Min(cols - 1, (int)(b.At.X + reach));
             int r0 = Math.Max(0, (int)(b.At.Y - reach)), r1 = Math.Min(rows - 1, (int)(b.At.Y + reach));
             for (int r = r0; r <= r1; r++)
@@ -141,7 +141,9 @@ public static class ZoneGenerator
                     }
                     else
                     {
-                        h[p] = MathF.Min(h[p], level + 0.3f + (-inside * 0.15f));   // the banks slope down to the water (about 9°)
+                        // the banks slope down to the water (about 9°) near it, the ground as it was further out
+                        float bank = MathF.Min(h[p], level + 0.3f + (-inside * 0.15f));
+                        h[p] = bank + ((h[p] - bank) * Smooth(25, 90, -inside));
                     }
                 }
             }
