@@ -48,7 +48,14 @@ public sealed class UnrealLive
         _map = _project.ReadRaster();
         (_heights, _mask, _gone, _count) = Snapshot();
         _water = MapWater.Snapshot();
+        // the areas go at the first push when there are any (Unreal's are the editor's: rebuilt from them)
+        _areas = MapAreas.All.Count > 0 ? "" : MapAreas.Snapshot();
+        _areaKinds = MapTools.AreaKinds();
     }
+
+    /// <summary>The areas as last sent, and their kinds' Unreal classes.</summary>
+    private string _areas;
+    private readonly IReadOnlyList<MapAreas.Kind> _areaKinds;
 
     /// <summary>Takes the scene as it is now as in sync with Unreal (after something came from it).</summary>
     private void Rebaseline()
@@ -280,6 +287,12 @@ public sealed class UnrealLive
             body["prefix"] = _project.UnrealWaterPrefix;
             said.Add(await Post("/groundwork/water", body));
             _water = water;
+        }
+        // areas: volumes tagged gw_area:<name>, rebuilt from the map's
+        if (MapAreas.Snapshot() is var areas && areas != _areas)
+        {
+            said.Add(await Post("/groundwork/areas", MapAreas.ForUnreal(_areaKinds)));
+            _areas = areas;
         }
         return said.Count == 0 ? "" : "Live: " + string.Join("; ", said);
     }

@@ -13,6 +13,7 @@ drawer runs along the bottom; the minimap sits in the corner.
 | Place | **Object**, **Brush**, **Biome**, **Stamp**: see [Objects](objects.md). |
 | Water | **Rivers**: see [Rivers and lakes](water.md). |
 | Paths | **Path**: paths, roads and ramps, see [Paths and ramps](paths.md). |
+| Game | **Areas**: boxes that become Unreal volumes, see [Areas](areas.md). |
 | Tools | **Measure** (`M`) and **View** (`Esc` or `H`). |
 
 Plugins add their own tools below (see [Plugins](plugins.md)).

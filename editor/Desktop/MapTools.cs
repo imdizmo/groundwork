@@ -84,6 +84,7 @@ public static partial class MapTools
             ModExtensions.BuiltIn(Own, new StampTool(w, Stamps())),
             ModExtensions.BuiltIn(Own, new RiverTool(w)),
             ModExtensions.BuiltIn(Own, new PathTool(w, [.. kinds.Where(k => k.Category != "Markers")])),
+            ModExtensions.BuiltIn(Own, new AreasTool(w, AreaKinds())),
             ModExtensions.BuiltIn(Own, new GrowTool(w)),
             ModExtensions.BuiltIn(Own, new LayersTool(w, GroupNames(kinds))),
             ModExtensions.BuiltIn(Own, new ChecksTool(w)),

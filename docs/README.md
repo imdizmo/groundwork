@@ -23,6 +23,7 @@ bottom.*
 - [Objects](objects.md)
 - [Rivers and lakes](water.md)
 - [Paths and ramps](paths.md)
+- [Areas](areas.md)
 - [Measure](measure.md)
 - [The Mask](masks.md)
 

@@ -51,6 +51,8 @@ public sealed class MapProject
     public string ObjectsFile { get; private set; } = "";
     /// <summary>The rivers and lakes.</summary>
     public string WaterFile { get; private set; } = "";
+    /// <summary>The areas (boxes that become Unreal volumes).</summary>
+    public string AreasFile { get; private set; } = "";
     /// <summary>
     /// The ground's layers: the first is the ground everywhere, the others (up to three) are painted over it, each from a
     /// channel of the layers file (ponytail: one RGBA file, so four layers; a second file when a map needs more).
@@ -113,6 +115,7 @@ public sealed class MapProject
         m.LayersFile = m.Inside(S(f?["layers"]) ?? "layers.png");
         m.ObjectsFile = m.Inside(S(f?["objects"]) ?? "objects.json");
         m.WaterFile = m.Inside(S(f?["water"]) ?? "water.json");
+        m.AreasFile = m.Inside(S(f?["areas"]) ?? "areas.json");
         m.Catalog = S(j["catalog"]) is string c ? m.Inside(c) : null;
         m.Models = S(j["models"]) is string mo ? m.Abs(mo) : null;
         m.Stamps = S(j["stamps"]) is string st ? m.Inside(st) : null;
@@ -140,7 +143,7 @@ public sealed class MapProject
             ["name"] = Name,
             ["origin"] = new JsonArray(X0, Y0),
             ["seaLevel"] = SeaLevel,
-            ["files"] = new JsonObject { ["heights"] = Rel(HeightsFile), ["layers"] = Rel(LayersFile), ["objects"] = Rel(ObjectsFile), ["water"] = Rel(WaterFile) },
+            ["files"] = new JsonObject { ["heights"] = Rel(HeightsFile), ["layers"] = Rel(LayersFile), ["objects"] = Rel(ObjectsFile), ["water"] = Rel(WaterFile), ["areas"] = Rel(AreasFile) },
         };
         j["layers"] = new JsonArray([.. Layers.Select(l => (JsonNode)new JsonObject
         {
@@ -249,7 +252,7 @@ public sealed class MapProject
             m.Catalog = m.Abs("catalog.json");
             System.IO.File.Copy(catalog, m.Catalog);
         }
-        (m.HeightsFile, m.LayersFile, m.ObjectsFile, m.WaterFile) = (m.Abs("height.npy"), m.Abs("layers.png"), m.Abs("objects.json"), m.Abs("water.json"));
+        (m.HeightsFile, m.LayersFile, m.ObjectsFile, m.WaterFile, m.AreasFile) = (m.Abs("height.npy"), m.Abs("layers.png"), m.Abs("objects.json"), m.Abs("water.json"), m.Abs("areas.json"));
         var raster = new Raster(n, n, x0, x0);
         float[] heights = new float[n * n];
         byte[] mask = new byte[n * n * 4];
@@ -347,6 +350,7 @@ public sealed class MapProject
             ObjectKinds.Of(p.Name) == ObjectKind.Buildings))]);
         scene.Session.ForgetHistory();
         MapWater.Load(WaterFile);
+        MapAreas.Load(AreasFile);
         return scene;
     }
 
@@ -410,7 +414,7 @@ public sealed class MapProject
                 }
             }
         }
-        foreach (string f in new[] { HeightsFile, LayersFile, ObjectsFile, WaterFile })
+        foreach (string f in new[] { HeightsFile, LayersFile, ObjectsFile, WaterFile, AreasFile })
         {
             KeepOld(f);
         }
@@ -418,6 +422,7 @@ public sealed class MapProject
         WriteMask(LayersFile, mask, map);
         System.IO.File.WriteAllText(ObjectsFile, objects.ToJsonString());
         MapWater.Save(WaterFile);
+        MapAreas.Save(AreasFile);
         WriteJson();
         return objects.Count;
     }

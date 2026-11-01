@@ -59,7 +59,7 @@ public partial class MainWindow
     private Avalonia.Threading.DispatcherTimer? _pullTimer;
 
     /// <summary>The map changed since it was last saved.</summary>
-    internal bool MapDirty => InMap && Session != null && (Session.Edits.Version != _mapSaved || MapWater.Dirty);
+    internal bool MapDirty => InMap && Session != null && (Session.Edits.Version != _mapSaved || MapWater.Dirty || MapAreas.Dirty);
 
     /// <summary>Opens a map (null: the current one again); it is the current map once it is open.</summary>
     internal async Task ShowMap(MapProject? chosen = null)
