@@ -26,6 +26,7 @@ public static class Shaders
     public const string TerrainFs = """
 		in vec3 vNor; in vec3 vCol; in float vY; in float vCut; in vec2 vView;
 		uniform vec3 uSun;
+		uniform float uSteep;
 		uniform float uHolesOn;
 		uniform sampler2D uHoles;
 		uniform vec4 uHoleGrid;
@@ -37,7 +38,9 @@ public static class Shaders
 				if (c.x >= 0 && c.y >= 0 && float(c.x) < uHoleGrid.z && float(c.y) < uHoleGrid.w && texelFetch(uHoles, c, 0).r > 0.0) discard;
 			}
 			float l = 0.35 + 0.8 * max(dot(normalize(vNor), uSun), 0.0);
-			frag = vec4(pow(vCol * l, vec3(1.0 / 2.2)), 1.0);
+			// Steep ground: red where the ground is steeper than the View panel's angle (uSteep: its cosine; 0: off)
+			vec3 col = uSteep > 0.0 && normalize(vNor).y < uSteep ? mix(vCol, vec3(0.75, 0.04, 0.02), 0.65) : vCol;
+			frag = vec4(pow(col * l, vec3(1.0 / 2.2)), 1.0);
 		}
 		""";
 

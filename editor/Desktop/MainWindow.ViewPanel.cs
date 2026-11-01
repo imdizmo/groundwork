@@ -26,6 +26,12 @@ public sealed partial class MainWindow
     /// </summary>
     internal CheckBox SeeThroughBox { get; } = new() { Content = Lang.T("view.label.seeThrough"), FontSize = 12 };
 
+    /// <summary>Steep ground: the ground steeper than SteepBox's degrees drawn red.</summary>
+    internal CheckBox SteepCheck { get; } = new() { Content = Lang.T("view.label.steep"), FontSize = 12 };
+
+    /// <summary>Steep ground's angle.</summary>
+    internal NumericUpDown SteepBox { get; } = new() { Value = 35, Minimum = 5, Maximum = 85, Increment = 5, FormatString = "0", FontSize = 12, MinWidth = 80 };
+
     /// <summary>
     /// The 3D view's resolution: the screen's, balanced, or fast.
     /// </summary>
@@ -96,6 +102,8 @@ public sealed partial class MainWindow
         ResolutionBox.Tip("view.res3d");
         list.Children.Add(ModelsBox);
         list.Children.Add(SeeThroughBox);
+        SteepCheck.Tip("view.steep");
+        list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { SteepCheck, SteepBox, new TextBlock { Text = "°", FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } });
         list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = Lang.T("view.label.res3d"), FontSize = 12 }, ResolutionBox } });
         list.Children.Add(Heading(Lang.T("view.head.objects")));
         foreach (var k in ObjectKinds.All)
@@ -138,6 +146,9 @@ public sealed partial class MainWindow
     {
         ModelsBox.IsCheckedChanged += (_, _) => View.ModelsOn = ModelsBox.IsChecked == true;
         SeeThroughBox.IsCheckedChanged += (_, _) => View.SeeThroughBuildings = SeeThroughBox.IsChecked == true;
+        void Steep() => View.SteepAngle = SteepCheck.IsChecked == true ? (float)(SteepBox.Value ?? 35) : 0;
+        SteepCheck.IsCheckedChanged += (_, _) => Steep();
+        SteepBox.ValueChanged += (_, _) => Steep();
         ResolutionBox.SelectionChanged += (_, _) =>
         {
             View.Resolution3D = (GlView.Resolution)Math.Max(0, ResolutionBox.SelectedIndex);

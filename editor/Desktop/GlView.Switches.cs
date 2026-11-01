@@ -18,6 +18,10 @@ public sealed partial class GlView
         _marksDirty = true;
         Wake();
     }
+    /// <summary>Steep ground: the ground steeper than this many degrees is drawn red (0: off).</summary>
+    public float SteepAngle { get => _steepAngle; set { _steepAngle = value; Wake(); } }
+    private volatile float _steepAngle;
+
     /// <summary>Whether the water is drawn.</summary>
     private volatile bool _showWater = true;
     /// <summary>Whether the water is drawn.</summary>

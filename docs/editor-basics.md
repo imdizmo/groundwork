@@ -38,7 +38,8 @@ chip, and **Take back Claude's changes** removes them all.
 ## View panel
 
 **View** (`V`) shows or hides each kind of object (from the map's catalog: Trees, Rocks, Bushes, Plants, Props,
-Buildings, Markers, Other) and the water. Hidden objects cannot be picked. Plants and Markers start hidden.
+Buildings, Markers, Other) and the water. Hidden objects cannot be picked. Plants and Markers start hidden. **Slopes over** draws the
+ground steeper than its angle red: where a player cannot walk up, where the cliffs are.
 
 ## Settings
 

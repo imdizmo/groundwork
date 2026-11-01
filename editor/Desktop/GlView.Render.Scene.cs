@@ -92,5 +92,6 @@ public sealed partial class GlView
         _gl.UseProgram(_terrainProg);
         _gl.UniformMatrix4(_u.At(_terrainProg, "uViewProj"), 1, false, (float*)&vp);
         _gl.Uniform3(_u.At(_terrainProg, "uSun"), sun.X, sun.Y, sun.Z);
+        _gl.Uniform1(_u.At(_terrainProg, "uSteep"), SteepAngle > 0 ? MathF.Cos(SteepAngle * MathF.PI / 180) : 0f);
     }
 }
