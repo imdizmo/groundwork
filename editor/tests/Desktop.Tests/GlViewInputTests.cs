@@ -70,6 +70,15 @@ public class GlViewInputTests
     }
 
     [AvaloniaFact]
+    public void CtrlSpaceIsLeftToTheWindowsShortcuts()
+    {
+        // Space slides the view; Ctrl + Space is a shortcut (the objects drawer), which the view must let through.
+        var (w, v) = Open();
+        w.KeyPress(Key.Space, RawInputModifiers.Control, PhysicalKey.Space, " ");
+        Assert.DoesNotContain(Key.Space, v.KeysHeld);
+    }
+
+    [AvaloniaFact]
     public void KeysHeldWhenTheEditorIsHiddenAreLetGo()
     {
         var (w, v) = Open();

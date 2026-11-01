@@ -13,7 +13,8 @@ public sealed partial class GlView
     /// <param name="down">True for the press, false for the release.</param>
     private void OnSpaceKey(Control surface, KeyEventArgs e, bool down)
     {
-        if (e.Key != Key.Space || !TakesKey(surface, e))
+        // Ctrl + Space is a shortcut (the objects drawer), not the slide: left to the window's keys
+        if (e.Key != Key.Space || (down && e.KeyModifiers.HasFlag(KeyModifiers.Control)) || !TakesKey(surface, e))
         {
             return;
         }
