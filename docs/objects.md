@@ -1,7 +1,8 @@
 # Objects
 
 The objects drawer along the bottom (`Ctrl+Space`) holds the map's assets, from its catalog and model folder, by
-group. Click one and click the ground to place it, or drag it into the view.
+group. Click one and click the ground to place it, or drag it into the view. A kind with no icon in the catalog gets a
+picture drawn from its model.
 
 ## Object
 

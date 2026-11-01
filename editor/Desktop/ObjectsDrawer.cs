@@ -27,6 +27,9 @@ internal sealed class ObjectsDrawer
     private readonly List<MapTools.Kind> _kinds;
     private readonly List<int> _picked = [];
     private readonly List<(int Index, Border Tile)> _tiles = [];
+
+    /// <summary>The kinds with no icon, and where their own picture goes once it is drawn.</summary>
+    private readonly List<(string Model, Image Image)> _unpictured = [];
     private readonly WrapPanel _wrap = new();
     private readonly StackPanel _tabs = new() { Orientation = Orientation.Horizontal, Spacing = 3 };
     private readonly TextBox _search = new() { PlaceholderText = "Search objects", Width = 170, FontSize = 12 };
@@ -74,6 +77,7 @@ internal sealed class ObjectsDrawer
         Tabs();
         Opened();
         Marked();
+        Pictures();
     }
 
     /// <summary>The drawer.</summary>
@@ -104,9 +108,11 @@ internal sealed class ObjectsDrawer
     private Border Tile(MapTools.Kind k, int i)
     {
         var content = new StackPanel { Width = 84, Spacing = 2 };
-        if (ModToolPanel.Picture(k.Icon) is { } bmp)
+        var image = new Image { Source = ModToolPanel.Picture(k.Icon), Width = 64, Height = 64, HorizontalAlignment = HorizontalAlignment.Center };
+        content.Children.Add(image);
+        if (image.Source == null)
         {
-            content.Children.Add(new Image { Source = bmp, Width = 64, Height = 64, HorizontalAlignment = HorizontalAlignment.Center });
+            _unpictured.Add((k.Model, image));
         }
         content.Children.Add(new TextBlock { Text = k.Label, FontSize = 11, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center });
         var star = new TextBlock { Text = "★", FontSize = 11, Foreground = Ui.Accent, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, IsVisible = Favourite(k.Model) };
@@ -136,6 +142,42 @@ internal sealed class ObjectsDrawer
         tile.PointerReleased += (_, e) => Released(e);
         tile.ContextRequested += (_, _) => tile.ContextMenu = Menu(k, i);
         return tile;
+    }
+
+    /// <summary>
+    /// Draws the kinds with no icon from their models, one after another off the UI thread, each shown as it is done.
+    /// A store of its own (the view's isn't for other threads), each mesh let go once drawn.
+    /// </summary>
+    private void Pictures()
+    {
+        if (_unpictured.Count == 0 || ModelStore.Of(ModelStore.MapModels) is not { } store)
+        {
+            return;
+        }
+        var todo = _unpictured.ToList();
+        _ = Task.Run(() =>
+        {
+            foreach (var (model, image) in todo)
+            {
+                byte[]? png = null;
+                try
+                {
+                    png = ModelThumb.Png(store, model);
+                }
+                catch (Exception e) when (e is not OutOfMemoryException)
+                {
+                    Log.CaughtBrief(e, $"drawing the picture of {model}");
+                }
+                foreach (var part in store.LoadModel(model)?.Parts ?? [])
+                {
+                    store.Forget(part.Mesh);
+                }
+                if (png != null)
+                {
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() => image.Source = new Avalonia.Media.Imaging.Bitmap(new MemoryStream(png)));
+                }
+            }
+        });
     }
 
     /// <summary>A picture held: once it leaves the drawer it is dragged, the Object tool's ghost following it.</summary>
