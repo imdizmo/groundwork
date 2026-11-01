@@ -22,6 +22,7 @@ bottom.*
 - [Select](select.md)
 - [Objects](objects.md)
 - [Rivers and lakes](water.md)
+- [Paths and ramps](paths.md)
 - [Measure](measure.md)
 - [The Mask](masks.md)
 

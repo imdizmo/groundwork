@@ -10,7 +10,7 @@ namespace Groundwork.Desktop;
 /// menu), Brush (scatters any kinds picked), River (rivers and lakes) and Grow (a bigger map). The kinds and
 /// groups come from the model folder's catalog.json and its models; nothing here names one.
 /// </summary>
-public static class MapTools
+public static partial class MapTools
 {
     /// <summary>The add-on name the editor's own tools go under (their prefs are "mod.Groundwork/…").</summary>
     internal const string Own = "Groundwork";
@@ -83,6 +83,7 @@ public static class MapTools
             ModExtensions.BuiltIn(Own, new ObjectTool(w, kinds)),
             ModExtensions.BuiltIn(Own, new StampTool(w, Stamps())),
             ModExtensions.BuiltIn(Own, new RiverTool(w)),
+            ModExtensions.BuiltIn(Own, new PathTool(w, [.. kinds.Where(k => k.Category != "Markers")])),
             ModExtensions.BuiltIn(Own, new GrowTool(w)),
             ModExtensions.BuiltIn(Own, new LayersTool(w, GroupNames(kinds))),
             ModExtensions.BuiltIn(Own, new ChecksTool(w)),

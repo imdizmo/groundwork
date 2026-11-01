@@ -154,6 +154,7 @@ public sealed partial class ToolPanel
     private static string OwnSection(string id) => id switch
     {
         "river" => "WATER",
+        "path" => "PATHS",
         "grow" or "layers" or "checks" => "MAP",
         _ => "PLACE",
     };

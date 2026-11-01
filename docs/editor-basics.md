@@ -12,6 +12,7 @@ drawer runs along the bottom; the minimap sits in the corner.
 | Ground | **Sculpt** (`1`) and **Paint** (`6`): see [Sculpt and paint](terrain.md). |
 | Place | **Object**, **Brush**, **Biome**, **Stamp**: see [Objects](objects.md). |
 | Water | **Rivers**: see [Rivers and lakes](water.md). |
+| Paths | **Path**: paths, roads and ramps, see [Paths and ramps](paths.md). |
 | Tools | **Measure** (`M`) and **View** (`Esc` or `H`). |
 
 Plugins add their own tools below (see [Plugins](plugins.md)).
@@ -37,7 +38,7 @@ chip, and **Take back Claude's changes** removes them all.
 ## View panel
 
 **View** (`V`) shows or hides each kind of object (from the map's catalog: Trees, Rocks, Bushes, Plants, Props,
-Buildings, Markers, Other) and the water. Hidden objects cannot be picked. Plants, Markers and Other start hidden.
+Buildings, Markers, Other) and the water. Hidden objects cannot be picked. Plants and Markers start hidden.
 
 ## Settings
 
