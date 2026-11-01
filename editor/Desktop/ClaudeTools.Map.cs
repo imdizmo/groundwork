@@ -190,8 +190,8 @@ public sealed partial class ClaudeTools
     });
 
     /// <inheritdoc/>
-    [McpServerTool(Name = "map_catalog", Title = "The map's kinds, biomes, markers and stamps")]
-    [Description("What the map tools can place: kinds (model, label, group, size range), the groups' base density (per 100 m2) and spacing, biomes, markers (kinds of the group Markers), stamps, rivers and lakes.")]
+    [McpServerTool(Name = "map_catalog", Title = "The map's kinds, biomes, markers, stamps, layers and areas")]
+    [Description("What the map tools can place: kinds (model, label, group, size range), the groups' base density (per 100 m2) and spacing, biomes, markers (kinds of the group Markers), stamps, rivers and lakes, the ground layers (map_path, map_paint_whole), the area kinds and the areas there are (map_area).")]
     public static Task<string> MapCatalog() => OnUi(() =>
     {
         var (kinds, groups, biomes) = MapTools.Catalog();
@@ -201,6 +201,9 @@ public sealed partial class ClaudeTools
             groups = groups.ToDictionary(g => g.Key, g => new { density = g.Value.Density, spacing = g.Value.Spacing }),
             biomes = biomes.Select(b => new { name = b.Name, ground = b.Paint, density = b.Density, kinds = b.Kinds.Count }),
             stamps = MapTools.Stamps().Select(s => new { name = s.Name, objects = s.Parts.Count }),
+            layers = MapProject.Current?.Layers.Select(l => l.Name),
+            areaKinds = MapTools.AreaKinds().Select(k => new { kind = k.Id, label = k.Label, unreal = k.Unreal }),
+            areas = MapAreas.All.Select(a => new { name = a.Name, kind = a.Kind, x = a.X, z = -a.Y, width = a.Width, depth = a.Depth, bottom = a.Bottom, top = a.Top, turn = a.Yaw }),
             rivers = MapWater.Rivers.Select((r, i) => new { number = i + 1, name = r.Name, points = r.Points.Count, top = r.Top, end = r.End }),
             lakes = MapWater.Lakes.Select((l, i) => new { number = i + 1, name = l.Name, points = l.Outline.Count, level = l.Level }),
         });
