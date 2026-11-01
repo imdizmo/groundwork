@@ -53,6 +53,7 @@ public partial class MainWindow
     private UnrealLive? _live;
 
     private Avalonia.Controls.Primitives.ToggleButton? _liveButton;
+    private Button? _playButton;
 
     /// <summary>While live: looks every 1.5 s for changes made in Unreal.</summary>
     private Avalonia.Threading.DispatcherTimer? _pullTimer;
@@ -183,6 +184,20 @@ public partial class MainWindow
         MaskPanel.PaintBox.SelectedIndex = keep;
     }
 
+    /// <summary>Play here: the game started in Unreal at the ground the camera looks at (Walk and Fly: below the camera).</summary>
+    private async Task PlayHere()
+    {
+        if (Session is not { Scene: var scene })
+        {
+            return;
+        }
+        var (yaw, _, _, target) = View.Camera;
+        var at = View.Eye == GlView.EyeMode.Orbit ? target : View.EyePosition;
+        float x = at.X + scene.Cx, z = -at.Z + scene.Cz;
+        string said = await UnrealLive.Play(new System.Numerics.Vector3(x, new SceneLayers.AreaView(scene).GroundHeight(x, z), z), yaw);
+        Msg(new Said(said, ""));
+    }
+
     /// <summary>Send to Unreal and Settle objects on the top bar (made once, beside Save), shown or hidden.</summary>
     private void MapButtons(bool show)
     {
@@ -202,6 +217,11 @@ public partial class MainWindow
             _liveButton.IsCheckedChanged += async (_, _) => await SetLive(_liveButton.IsChecked == true);
             int at = bar.Children.IndexOf(SaveButton);
             bar.Children.Insert(at, _liveButton);
+            // Play here: the game started in Unreal where the camera looks
+            _playButton = new Button { Content = "▶ Play here", FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
+            ToolTip.SetTip(_playButton, "Starts the game in the open Unreal level (Play In Editor) at the ground the camera looks at (Walk: where you stand), facing the camera's way. Needs the Groundwork Bridge plugin; stop it in Unreal (Esc).");
+            _playButton.Click += async (_, _) => await PlayHere();
+            bar.Children.Insert(at + 1, _playButton);
             // ⋯: what is not used often
             _moreButton = new Button { Content = "⋯", FontSize = 15, Padding = new Avalonia.Thickness(10, 2), VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
             ToolTip.SetTip(_moreButton, "More: send everything to Unreal, settle objects on changed ground");
@@ -320,6 +340,7 @@ public partial class MainWindow
         Minimap?.Card.IsVisible = show;
         ModToolPanel.PalettesElsewhere = show;
         _liveButton?.IsVisible = show;
+        _playButton?.IsVisible = show && MapProject.Current?.HasUnrealLevel == true;
         _moreButton?.IsVisible = show;
         _layersButton?.IsVisible = show;
         _checksButton?.IsVisible = show;

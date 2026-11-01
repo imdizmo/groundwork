@@ -594,6 +594,44 @@ public sealed class UnrealLive
         return new Quaternion(q[0], q[1], q[2], (u[c, b] - u[b, c]) / sq);
     }
 
+    /// <summary>
+    /// Where Play here starts the game in Unreal: the ground point in Unreal centimetres, 1.2 m up (the player's capsule
+    /// stands on the ground), facing the way the camera looks (its yaw: 0 looks north, +z).
+    /// </summary>
+    internal static (float X, float Y, float Z, float Yaw) PlayStart(Vector3 ground, float cameraYaw) =>
+        (ground.X * 100, -ground.Z * 100, (ground.Y + 1.2f) * 100, MathF.Atan2(-MathF.Cos(cameraYaw), -MathF.Sin(cameraYaw)) * 180 / MathF.PI);
+
+    /// <summary>
+    /// Starts the game in the open Unreal level (Play In Editor) at a ground point, facing the camera's way: what Unreal
+    /// answered, or why not.
+    /// </summary>
+    public static async Task<string> Play(Vector3 ground, float cameraYaw)
+    {
+        string file = Path.Combine(Project, "Saved/GroundworkBridge.json");
+        if (Project.Length == 0 || !File.Exists(file))
+        {
+            return "Unreal is not running with the Groundwork Bridge plugin (no Saved/GroundworkBridge.json).";
+        }
+        var cfg = JsonNode.Parse(File.ReadAllText(file))!;
+        var (x, y, z, yaw) = PlayStart(ground, cameraYaw);
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"http://127.0.0.1:{cfg["port"]!.GetValue<int>()}/groundwork/play")
+        {
+            Content = new StringContent(new JsonObject { ["x"] = x, ["y"] = y, ["z"] = z, ["yaw"] = yaw }.ToJsonString(), Encoding.UTF8, "application/json"),
+        };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", cfg["token"]!.GetValue<string>());
+        try
+        {
+            using var r = await Http.SendAsync(req);
+            return r.StatusCode == System.Net.HttpStatusCode.NotFound ? "This Groundwork Bridge plugin cannot Play here: update it."
+                : !r.IsSuccessStatusCode ? $"Unreal answered {(int)r.StatusCode}: restart Unreal so the token is fresh."
+                : await r.Content.ReadAsStringAsync();
+        }
+        catch (HttpRequestException e)
+        {
+            return "Unreal does not answer: " + e.Message;
+        }
+    }
+
     private async Task<string> Post(string path, JsonNode body)
     {
         using var req = new HttpRequestMessage(HttpMethod.Post, _url + path) { Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json") };

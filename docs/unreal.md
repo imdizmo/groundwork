@@ -34,6 +34,12 @@ plugin speak a numbered protocol: **Live** refuses a plugin of another version a
 Changes made in Unreal by hand come back as a step of their own ("From Unreal"): ground, objects of the meshes in
 `names.json`, markers, and the rivers and lakes with the prefix.
 
+## Play here
+
+**▶ Play here** on the top bar starts the game in the open Unreal level (Play In Editor, in its level viewport) with the
+player on the ground the camera looks at (in **Walk**: where you stand), facing the camera's way. Stop it in Unreal
+(`Esc`). It needs the Groundwork Bridge plugin; Live need not be on.
+
 ## Send to Unreal
 
 **Send to Unreal** saves the map, then runs the script `unreal.apply` names, its last line shown on the status bar.
