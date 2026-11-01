@@ -686,6 +686,56 @@ public sealed class UnrealLive
         }
     }
 
+    /// <summary>
+    /// The map's heights (metres) as an Unreal landscape's 16-bit values (little-endian, 32768 at 0) and the Z scale that
+    /// holds them: Unreal's usual 100 (±256 m), more for a map that reaches further, to 10 cm.
+    /// </summary>
+    internal static (float ZScale, byte[] Data) LandscapeHeights(float[] heights)
+    {
+        float most = heights.Length > 0 ? heights.Max(MathF.Abs) : 0;
+        float z = MathF.Max(100, MathF.Ceiling(most * 100 / 250 / 10) * 10);
+        byte[] data = new byte[heights.Length * 2];
+        for (int i = 0; i < heights.Length; i++)
+        {
+            ushort v = (ushort)Math.Clamp(MathF.Round((heights[i] * 100 / z * 128) + 32768), 0, 65535);
+            (data[i * 2], data[(i * 2) + 1]) = ((byte)(v & 0xFF), (byte)(v >> 8));
+        }
+        return (z, data);
+    }
+
+    /// <summary>
+    /// Makes the map's landscape in the open Unreal level (replace: rebuilds the one it has, at the map's size): what
+    /// Unreal answered, or why not.
+    /// </summary>
+    public static async Task<string> MakeLandscape(MapProject map, WorldScene scene, bool replace)
+    {
+        string file = Path.Combine(Project, "Saved/GroundworkBridge.json");
+        if (Project.Length == 0 || !File.Exists(file))
+        {
+            return "Unreal is not running with the Groundwork Bridge plugin (no Saved/GroundworkBridge.json).";
+        }
+        var cfg = JsonNode.Parse(File.ReadAllText(file))!;
+        var (heights, cols, rows) = map.HeightsNow(scene);
+        var (z, data) = LandscapeHeights(heights);
+        var body = new JsonObject { ["x0"] = map.X0, ["y0"] = map.Y0, ["cols"] = cols, ["rows"] = rows, ["zscale"] = z, ["heights"] = Convert.ToBase64String(data), ["replace"] = replace };
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"http://127.0.0.1:{cfg["port"]!.GetValue<int>()}/groundwork/landscape")
+        {
+            Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
+        };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", cfg["token"]!.GetValue<string>());
+        try
+        {
+            using var r = await Http.SendAsync(req);
+            return r.StatusCode == System.Net.HttpStatusCode.NotFound ? "This Groundwork Bridge plugin cannot make landscapes: update it."
+                : !r.IsSuccessStatusCode ? $"Unreal answered {(int)r.StatusCode}: restart Unreal so the token is fresh."
+                : await r.Content.ReadAsStringAsync();
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+        {
+            return "Unreal does not answer: " + e.Message;
+        }
+    }
+
     private async Task<string> Post(string path, JsonNode body)
     {
         using var req = new HttpRequestMessage(HttpMethod.Post, _url + path) { Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json") };

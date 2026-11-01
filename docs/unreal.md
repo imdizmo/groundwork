@@ -36,6 +36,14 @@ plugin speak a numbered protocol: **Live** refuses a plugin of another version a
 Changes made in Unreal by hand come back as a step of their own ("From Unreal"): ground, objects of the meshes in
 `names.json`, markers, and the rivers and lakes with the prefix.
 
+## Making the landscape
+
+**⋯ → Make the Unreal landscape from this map** makes the map's landscape in the open level: its size (the map's 63 m
+squares, one component each), its place and its heights as they are now. A level that has a landscape already is asked
+about first: rebuilding it keeps its material, edit layers and water brushes, and gives it the map's size and heights.
+Maps higher than about 250 m get a larger height scale, so they fit. Nothing is saved in Unreal until you save the level;
+Live then works on the new landscape.
+
 ## Play here
 
 **▶ Play here** on the top bar starts the game in the open Unreal level (Play In Editor, in its level viewport) with the

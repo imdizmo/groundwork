@@ -206,6 +206,25 @@ public partial class MainWindow
         MaskPanel.PaintBox.SelectedIndex = keep;
     }
 
+    /// <summary>
+    /// The map's landscape made in the open Unreal level from its heights as they are now; a level that has one already is
+    /// asked about first (rebuilt at the map's size, its material, edit layers and water kept).
+    /// </summary>
+    private async Task MakeLandscape()
+    {
+        if (Session is not { Scene: var scene } || MapProject.Current is not { } map)
+        {
+            return;
+        }
+        string said = await UnrealLive.MakeLandscape(map, scene, replace: false);
+        if (said.Contains("has one already", StringComparison.Ordinal)
+            && await Ask("Unreal landscape", "The open level has a landscape already. Rebuild it from this map, at the map's size? Its material, edit layers and water stay; its heights and paint are the map's. Nothing is saved in Unreal until you save the level.", "Rebuild it", "Leave it"))
+        {
+            said = await UnrealLive.MakeLandscape(map, scene, replace: true);
+        }
+        Msg(new Said(said, ""));
+    }
+
     /// <summary>The map's heights as they are now into a 16-bit PNG or raw .r16 (Unreal's import formats), where the user picks.</summary>
     private async Task ExportHeightmap()
     {
@@ -298,7 +317,9 @@ public partial class MainWindow
             };
             var export = new MenuItem { Header = "Export the heightmap (16-bit PNG or .r16)…" };
             export.Click += async (_, _) => await ExportHeightmap();
-            _moreButton.Flyout = new MenuFlyout { Items = { send, settle, grow, export } };
+            var landscape = new MenuItem { Header = "Make the Unreal landscape from this map…" };
+            landscape.Click += async (_, _) => await MakeLandscape();
+            _moreButton.Flyout = new MenuFlyout { Items = { send, settle, grow, export, landscape } };
             bar.Children.Insert(bar.Children.IndexOf(SaveButton) + 1, _moreButton);
             // Layers and Checks: right-hand panels like History
             _layersButton = new Button { Content = "Layers", FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
