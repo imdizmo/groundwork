@@ -29,6 +29,8 @@ public sealed partial class WorldScene
     public required float[] Heights { get; init; }
     /// <summary>The map's layers' colours (linear): the first everywhere, the others painted over it (<see cref="Mask"/>).</summary>
     public IReadOnlyList<Vector3> LayerColours { get; init; } = [new(0.5f, 0.5f, 0.5f)];
+    /// <summary>Each layer's picture drawn instead of its colour (null: none) and how many metres it repeats over.</summary>
+    public IReadOnlyList<(string? Texture, float Size)> LayerTextures { get; init; } = [];
 
     /// <summary>The ground colour (linear) a grid point is drawn with: the first layer's, the painted layers' over it by their weight.</summary>
     /// <param name="g">The grid point.</param>

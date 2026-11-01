@@ -20,7 +20,7 @@ with a copy of its catalog.
   "files": { "heights": "height.npy", "layers": "layers.png", "objects": "objects.json", "water": "water.json", "areas": "areas.json", "holes": "holes.png" },
   "layers": [
     { "name": "Grass", "colour": "#6b9945" },
-    { "name": "Sand", "colour": "#ccbd85", "channel": "r" }
+    { "name": "Sand", "colour": "#ccbd85", "channel": "r", "texture": "textures/sand.png", "size": 4 }
   ],
   "catalog": "catalog.json",
   "models": "/path/to/models",
@@ -39,7 +39,7 @@ with a copy of its catalog.
 | `files.water` | The rivers and lakes ([Rivers and lakes](water.md)). |
 | `files.areas` | The areas ([Areas](areas.md)). |
 | `files.holes` | The holes: a grey `.png` the size of the heightmap, white where the ground is taken away; written once there is a hole. |
-| `layers` | Up to four: the first is the ground everywhere, the others are painted over it from a channel (`r`, `g`, `b`). |
+| `layers` | Up to four: the first is the ground everywhere, the others are painted over it from a channel (`r`, `g`, `b`). A layer's `texture` (a picture in the map's folder) is drawn instead of its colour, repeated every `size` metres (4 by default). |
 | `catalog` | The kinds the object tools offer and the categories the View panel sorts by. |
 | `models` | The model folder the 3D view draws objects with (it may be anywhere; see [Objects](objects.md#models)). |
 | `unreal` | The Unreal project [Live](unreal.md) talks to, the script **Send to Unreal** runs, the texture the layers go into (else paint layers by name), the water bodies' label prefix. |

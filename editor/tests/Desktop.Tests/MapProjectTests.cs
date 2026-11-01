@@ -256,4 +256,23 @@ public sealed class MapProjectTests : IDisposable
         int q = ((int)(world.Item2 - grown.OriginZ) * grown.W) + (int)(world.Item1 - grown.OriginX);
         Assert.True(grown.MaskOf(q, 3) > 0.5f);
     }
+
+    // A layer's picture (map.json's layers: texture, size) is read inside the map's folder and written back as it was.
+    [AvaloniaFact]
+    public void ALayersPictureIsReadAndWrittenBack()
+    {
+        var made = MapProject.Create("Pictures", 1, generated: false, height: 2, seed: 1, under: _dir);
+        string json = Path.Combine(made.Folder, "map.json");
+        var j = JsonNode.Parse(File.ReadAllText(json))!;
+        j["layers"]![1]!["texture"] = "textures/sand.png";
+        j["layers"]![1]!["size"] = 6;
+        File.WriteAllText(json, j.ToJsonString());
+        var map = MapProject.Open(made.Folder);
+        Assert.Equal((Path.Combine(made.Folder, "textures", "sand.png"), 6f), (map.Layers[1].Texture, map.Layers[1].Size));
+        Assert.Null(map.Layers[0].Texture);
+        map.WriteJson();
+        var again = JsonNode.Parse(File.ReadAllText(json))!["layers"]![1]!;
+        Assert.Equal(("textures/sand.png", 6f), (again["texture"]!.GetValue<string>(), again["size"]!.GetValue<float>()));
+        Assert.Equal((Path.Combine(made.Folder, "textures", "sand.png"), 6f), map.Read().LayerTextures[1]);
+    }
 }

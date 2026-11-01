@@ -41,6 +41,7 @@ public sealed partial class GlView
         }
         _gl.EnableVertexAttribArray(7);
         _gl.VertexAttribPointer(7, 1, VertexAttribPointerType.Float, false, 4, (void*)0);
+        BuildGroundTextures(s);
         _terrainIndexCount = (uint)idx.Length;
         // The sea: one quad over the area, at the water level.
         float hw = w / 2f + 400, hh = h / 2f + 400, y = s.Water;

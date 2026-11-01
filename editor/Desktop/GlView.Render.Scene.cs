@@ -39,6 +39,8 @@ public sealed partial class GlView
         _gl.DrawElements(PrimitiveType.Triangles, _terrainIndexCount, DrawElementsType.UnsignedInt, (void*)0);
         if (Scene is { } scene && _layerMeshes.Count > 0)
         {
+            // the extensions' meshes have their own colours, no layer weights
+            _gl.Uniform1(_u.At(_terrainProg, "uTexOn"), 0f);
             DrawLayerMeshes(scene, _terrainProg, _ => true);
         }
     }
@@ -93,5 +95,6 @@ public sealed partial class GlView
         _gl.UniformMatrix4(_u.At(_terrainProg, "uViewProj"), 1, false, (float*)&vp);
         _gl.Uniform3(_u.At(_terrainProg, "uSun"), sun.X, sun.Y, sun.Z);
         _gl.Uniform1(_u.At(_terrainProg, "uSteep"), SteepAngle > 0 ? MathF.Cos(SteepAngle * MathF.PI / 180) : 0f);
+        UseGroundTextures();
     }
 }

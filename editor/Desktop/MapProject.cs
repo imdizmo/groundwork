@@ -61,8 +61,11 @@ public sealed class MapProject
     /// </summary>
     public List<Layer> Layers { get; private set; } = DefaultLayers;
 
-    /// <summary>A ground layer: its name, its colour (linear) and the layers file's channel it is read from (0 to 2; the first layer has none).</summary>
-    public sealed record Layer(string Name, System.Numerics.Vector3 Colour, int Channel);
+    /// <summary>
+    /// A ground layer: its name, its colour (linear), the layers file's channel it is read from (0 to 2; the first layer
+    /// has none), and the picture drawn for it instead of its colour (null: none) repeated every Size metres.
+    /// </summary>
+    public sealed record Layer(string Name, System.Numerics.Vector3 Colour, int Channel, string? Texture = null, float Size = 4);
 
     /// <summary>A new map's layers.</summary>
     private static List<Layer> DefaultLayers =>
@@ -129,7 +132,9 @@ public sealed class MapProject
                 S(l?["colour"]) is string c && c.Length == 7 && c[0] == '#' && int.TryParse(c[1..], System.Globalization.NumberStyles.HexNumber, null, out int rgb)
                     ? Linear(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f)
                     : Linear(0.5f, 0.5f, 0.5f),
-                i == 0 ? -1 : S(l?["channel"]) is string ch ? "rgb".IndexOf(ch[0]) is int k and >= 0 ? k : i - 1 : i - 1))];
+                i == 0 ? -1 : S(l?["channel"]) is string ch ? "rgb".IndexOf(ch[0]) is int k and >= 0 ? k : i - 1 : i - 1,
+                S(l?["texture"]) is string t ? m.Inside(t) : null,
+                l?["size"]?.GetValue<float>() is float size && size > 0 ? size : 4))];
         }
         m.UnrealProject = S(j["unreal"]?["project"]) is string up ? m.Abs(up) : null;
         m.UnrealApply = S(j["unreal"]?["apply"]) is string ua ? m.Abs(ua) : null;
@@ -153,6 +158,8 @@ public sealed class MapProject
             ["name"] = l.Name,
             ["colour"] = $"#{Srgb(l.Colour.X):x2}{Srgb(l.Colour.Y):x2}{Srgb(l.Colour.Z):x2}",
             ["channel"] = l.Channel < 0 ? null : "rgb"[l.Channel].ToString(),
+            ["texture"] = l.Texture == null ? null : Rel(l.Texture),
+            ["size"] = l.Texture == null ? null : l.Size,
         })]);
         if (Catalog != null)
         {
@@ -338,6 +345,7 @@ public sealed class MapProject
             Things = [],
             Mask = new byte[w * h * 4],
             LayerColours = [.. Layers.Select(l => l.Colour)],
+            LayerTextures = [.. Layers.Select(l => (l.Texture, l.Size))],
             Cx = 0,
             Cz = 0,
             Water = SeaLevel,

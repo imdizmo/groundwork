@@ -14,9 +14,10 @@ public static class Shaders
 		layout(location = 1) in vec3 aNor;
 		layout(location = 2) in vec3 aCol;
 		layout(location = 7) in float aCut;
+		layout(location = 8) in vec3 aW;
 		uniform mat4 uViewProj;
-		out vec3 vNor; out vec3 vCol; out float vY; out float vCut; out vec2 vView;
-		void main() { vNor = aNor; vCol = aCol; vY = aPos.y; vCut = aCut; vView = aPos.xz; gl_Position = uViewProj * vec4(aPos, 1.0); }
+		out vec3 vNor; out vec3 vCol; out float vY; out float vCut; out vec2 vView; out vec3 vW;
+		void main() { vNor = aNor; vCol = aCol; vY = aPos.y; vCut = aCut; vView = aPos.xz; vW = aW; gl_Position = uViewProj * vec4(aPos, 1.0); }
 		""";
 
     /// <summary>
@@ -24,8 +25,14 @@ public static class Shaders
     /// extension cuts the ground (GroundCuts) or its layers stand in for a ground cell (SceneLayers).
     /// </summary>
     public const string TerrainFs = """
-		in vec3 vNor; in vec3 vCol; in float vY; in float vCut; in vec2 vView;
+		in vec3 vNor; in vec3 vCol; in float vY; in float vCut; in vec2 vView; in vec3 vW;
 		uniform vec3 uSun;
+		// the layers' pictures (uTexOn: any; uHas: which layers have one; uSize: metres each repeats over), their colours
+		uniform float uTexOn;
+		uniform vec4 uHas;
+		uniform vec4 uSize;
+		uniform vec3 uCol0; uniform vec3 uCol1; uniform vec3 uCol2; uniform vec3 uCol3;
+		uniform sampler2D uTex0; uniform sampler2D uTex1; uniform sampler2D uTex2; uniform sampler2D uTex3;
 		uniform float uSteep;
 		uniform float uHolesOn;
 		uniform sampler2D uHoles;
@@ -39,7 +46,15 @@ public static class Shaders
 			}
 			float l = 0.35 + 0.8 * max(dot(normalize(vNor), uSun), 0.0);
 			// Steep ground: red where the ground is steeper than the View panel's angle (uSteep: its cosine; 0: off)
-			vec3 col = uSteep > 0.0 && normalize(vNor).y < uSteep ? mix(vCol, vec3(0.75, 0.04, 0.02), 0.65) : vCol;
+			vec3 col = vCol;
+			if (uTexOn > 0.5) {
+				vec3 l0 = uHas.x > 0.5 ? texture(uTex0, vView / uSize.x).rgb : uCol0;
+				vec3 l1 = uHas.y > 0.5 ? texture(uTex1, vView / uSize.y).rgb : uCol1;
+				vec3 l2 = uHas.z > 0.5 ? texture(uTex2, vView / uSize.z).rgb : uCol2;
+				vec3 l3 = uHas.w > 0.5 ? texture(uTex3, vView / uSize.w).rgb : uCol3;
+				col = mix(mix(mix(l0, l1, vW.x), l2, vW.y), l3, vW.z);
+			}
+			col = uSteep > 0.0 && normalize(vNor).y < uSteep ? mix(col, vec3(0.75, 0.04, 0.02), 0.65) : col;
 			frag = vec4(pow(col * l, vec3(1.0 / 2.2)), 1.0);
 		}
 		""";

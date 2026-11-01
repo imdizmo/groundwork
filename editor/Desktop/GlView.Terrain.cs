@@ -70,6 +70,7 @@ public sealed partial class GlView
             }
         }
         TerrainPoints(s, x0, z0, x1, z1, vs);
+        UpdateWeights(s, x0, z0, x1, z1);
         // Whole rows are one run in the buffers; a narrower rectangle is a run per row.
         int runs = n == s.W ? 1 : rows, perRun = n == s.W ? n * rows : n;
         fixed (float* v = vs)
@@ -89,6 +90,7 @@ public sealed partial class GlView
         DropLayers();
         _own.DeleteVertexArray(_terrainVao);
         _own.DeleteVertexArray(_waterVao);
+        DeleteGroundTextures();
         foreach (uint b in new[] { _terrainVbo, _terrainEbo, _terrainCutVbo, _waterVbo, _waterEbo })
         {
             _own.DeleteBuffer(b);
