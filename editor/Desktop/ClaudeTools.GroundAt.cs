@@ -8,9 +8,18 @@ public sealed partial class ClaudeTools
     /// <summary>The most points ground_at answers for at once.</summary>
     private const int MostPoints = 500;
 
+    /// <summary>The ground's slope at a grid point, degrees (from its neighbours a metre either way).</summary>
+    internal static float SlopeAt(Ground g, int gx, int gz)
+    {
+        int l = Math.Max(0, gx - 1), r = Math.Min(g.W - 1, gx + 1), u = Math.Max(0, gz - 1), d = Math.Min(g.H - 1, gz + 1);
+        float dx = (g.HeightOf((gz * g.W) + r) - g.HeightOf((gz * g.W) + l)) / Math.Max(1, r - l);
+        float dz = (g.HeightOf((d * g.W) + gx) - g.HeightOf((u * g.W) + gx)) / Math.Max(1, d - u);
+        return MathF.Atan(MathF.Sqrt((dx * dx) + (dz * dz))) * 180 / MathF.PI;
+    }
+
     /// <summary>ground_at: the ground at world points of the open area: its height now, as generated, its biome.</summary>
     [McpServerTool(Name = "ground_at", ReadOnly = true, Title = "The ground at points")]
-    [Description("The ground at points of the open map, exactly: its height now (between the 1 m grid points, as the editor draws it), its height when the map was opened (the difference is what edits changed), the layer it mostly is, and how deep water stands there (0: dry). Up to 500 points at once. Use it to set objects' heights, check slopes and levels, and read a place exactly.")]
+    [Description("The ground at points of the open map, exactly: its height now (between the 1 m grid points, as the editor draws it), its height when the map was opened (the difference is what edits changed), the layer it mostly is, its slope in degrees, and how deep water stands there (0: dry). Up to 500 points at once. Use it to set objects' heights, check slopes and levels, and read a place exactly.")]
     public Task<string> GroundAtPoints(
         [Description("The points: [[x, z], [x, z], …].")] float[][] points) => OnUi(() =>
     {
@@ -41,6 +50,7 @@ public sealed partial class ClaudeTools
                 height = MathF.Round(h, 3),
                 original = MathF.Round(s.Ground.Original(i), 3),
                 layer = MapProject.Current?.Layers.ElementAtOrDefault(scene.LayerAt(i))?.Name ?? scene.LayerAt(i).ToString(),
+                slope = MathF.Round(SlopeAt(s.Ground, gx, gz), 1),
                 water = MathF.Round(MathF.Max(0, scene.Water - h), 2),
             };
         }));

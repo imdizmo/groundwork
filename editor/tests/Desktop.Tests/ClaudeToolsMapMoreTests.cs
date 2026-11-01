@@ -68,4 +68,18 @@ public sealed class ClaudeToolsMapMoreTests : IDisposable
         Assert.Contains("painted on", said);
         Assert.Equal(3, s.UndoList.Count(c => c.Points.Length > 0) + 1);   // the empty sand step made none
     }
+
+    [AvaloniaFact]
+    public async Task ChecksFindAFloatingTreeAndTheGroundHasASlope()
+    {
+        string meadow = Path.GetFullPath(Path.Combine(Groundwork.Tests.Fixtures.Editor, "..", "samples", "Meadow"));
+        var map = MapProject.Create("Checks", 2, generated: false, height: 10, seed: 1, under: _dir, like: MapProject.Open(meadow));
+        var s = map.Read().Session!;
+        var t = new ClaudeTools(TestWindows.Editing(s));
+        _ = s.Commit("Place", null, [], [(new NewObject(0, Groundwork.App.AssetIds.Of("Pine_1"), new System.Numerics.Vector3(3, 12, 3), System.Numerics.Vector3.Zero, 1), false)]);
+        string found = await t.MapChecks();
+        Assert.Contains("\"problems\":1", found.Replace(" ", ""));
+        Assert.Contains("floating 2.0 m", found);
+        Assert.Contains("\"slope\":0", (await t.GroundAtPoints([[0, 0]])).Replace(" ", ""));
+    }
 }

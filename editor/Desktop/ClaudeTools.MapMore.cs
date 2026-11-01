@@ -293,4 +293,29 @@ public sealed partial class ClaudeTools
         }
         return await UnrealLive.MakeLandscape(MapProject.Current!, _w.Session!.Scene, replace);
     });
+
+    /// <inheritdoc/>
+    [McpServerTool(Name = "map_checks", ReadOnly = true, Title = "Find misplaced trees, plants and rocks")]
+    [Description("As the Checks panel: trees, plants and rocks floating above the ground (more than floatBy metres), buried in it (more than buriedBy; rocks may be), standing under water (reeds aside), and trees on ground steeper than steepTrees degrees. Counts by problem, then each (object id, what is wrong, x, z), nearest first when near is given. map_settle puts floating and buried ones back on the ground; select picks them in the editor.")]
+    public Task<string> MapChecks(float floatBy = 0.3f, float buriedBy = 1, float steepTrees = 40, bool underWater = true, int limit = 50,
+        [Description("[x, z]: list the nearest to it first.")] float[]? near = null, [Description("Select them all in the editor.")] bool select = false) => OnUi(() =>
+    {
+        if (NoMap() is string why)
+        {
+            return why;
+        }
+        var s = _w.Session!;
+        var found = MapTools.ChecksTool.FindProblems(s, new SceneLayers.AreaView(s.Scene), s.Scene.Water, floatBy, buriedBy, steepTrees, underWater);
+        if (select)
+        {
+            _w.View.Select(found.Select(f => f.Index));
+        }
+        var listed = near is { Length: >= 2 } ? found.OrderBy(f => System.Numerics.Vector2.Distance(new(f.At.X, f.At.Z), new(near[0], near[1]))) : found.AsEnumerable();
+        return ToJson(new
+        {
+            problems = found.Count,
+            by = found.GroupBy(f => f.Problem.Contains("floating") ? "floating" : f.Problem.Contains("buried") ? "buried" : f.Problem.Contains("water") ? "under water" : "on steep ground").ToDictionary(g => g.Key, g => g.Count()),
+            first = listed.Take(Math.Clamp(limit, 1, 500)).Select(f => new { id = s.Scene.Things[f.Index].Id, problem = f.Problem, x = MathF.Round(f.At.X, 1), z = MathF.Round(f.At.Z, 1) }),
+        });
+    });
 }

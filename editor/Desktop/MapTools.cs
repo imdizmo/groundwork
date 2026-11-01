@@ -1501,8 +1501,22 @@ public static partial class MapTools
 
         private void Find(IToolContext ctx, EditSession s)
         {
-            var area = ctx.Area;
-            float floatBy = ctx.Number("float"), buriedBy = ctx.Number("buried"), steep = ctx.Number("steep");
+            var found = FindProblems(s, ctx.Area, Sea, ctx.Number("float"), ctx.Number("buried"), ctx.Number("steep"), ctx.IsOn("water"));
+            _found = found;
+            W.ChecksFound(found.Count);
+            _next = 0;
+            // A card per kind of problem: how many, and the kinds of object most often in it.
+            ctx.SetList("groups", [.. Groups().Select(g => (g.Key, string.Join(", ", g.GroupBy(f => f.Problem.Split(" floating")[0].Split(" buried")[0].Split(" under water")[0].Split(" on steep")[0]).OrderByDescending(k => k.Count()).Take(3).Select(k => $"{k.Key} {k.Count()}")), $"{g.Count():N0}"))], -1);
+            ctx.SetText("result", found.Count == 0 ? "No problems found." : $"{found.Count:N0} problems.");
+            ctx.Status(found.Count == 0 ? "No problems found." : "Next jumps to them one by one.");
+        }
+
+        /// <summary>
+        /// The trees, plants and rocks floating above the ground, buried in it, under water (water: reeds aside) or (trees)
+        /// on ground steeper than steep degrees: each one's index, what is wrong, where.
+        /// </summary>
+        internal static List<(int Index, string Problem, Vector3 At)> FindProblems(EditSession s, IAreaView area, float sea, float floatBy, float buriedBy, float steep, bool water)
+        {
             var found = new List<(int, string, Vector3)>();
             lock (s.Scene.Things)
             {
@@ -1517,7 +1531,7 @@ public static partial class MapTools
                     float ground = area.GroundHeight(t.Position.X, t.Position.Z), up = t.Position.Y - ground;
                     string? problem = up > floatBy ? $"{label} floating {up:0.0} m"
                         : group != "Rocks" && -up > buriedBy ? $"{label} buried {-up:0.0} m"
-                        : ctx.IsOn("water") && group != "Rocks" && ground < Sea - 0.05f && !label.Contains("Reed", StringComparison.OrdinalIgnoreCase) && !label.Contains("Grass Wide", StringComparison.OrdinalIgnoreCase) ? $"{label} under water"
+                        : water && group != "Rocks" && ground < sea - 0.05f && !label.Contains("Reed", StringComparison.OrdinalIgnoreCase) && !label.Contains("Grass Wide", StringComparison.OrdinalIgnoreCase) ? $"{label} under water"
                         : group == "Trees" && MathF.Acos(Math.Clamp(Normal(area, t.Position.X, t.Position.Z).Y, -1, 1)) * 180 / MathF.PI > steep ? $"{label} on steep ground"
                         : null;
                     if (problem != null)
@@ -1526,13 +1540,7 @@ public static partial class MapTools
                     }
                 }
             }
-            _found = found;
-            W.ChecksFound(found.Count);
-            _next = 0;
-            // A card per kind of problem: how many, and the kinds of object most often in it.
-            ctx.SetList("groups", [.. Groups().Select(g => (g.Key, string.Join(", ", g.GroupBy(f => f.Problem.Split(" floating")[0].Split(" buried")[0].Split(" under water")[0].Split(" on steep")[0]).OrderByDescending(k => k.Count()).Take(3).Select(k => $"{k.Key} {k.Count()}")), $"{g.Count():N0}"))], -1);
-            ctx.SetText("result", found.Count == 0 ? "No problems found." : $"{found.Count:N0} problems.");
-            ctx.Status(found.Count == 0 ? "No problems found." : "Next jumps to them one by one.");
+            return found;
         }
 
         /// <inheritdoc/>
