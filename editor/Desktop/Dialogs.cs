@@ -71,6 +71,75 @@ public static class Dialogs
         return result;
     }
 
+    /// <summary>
+    /// A zone's numbers for a new map so many metres across (null: cancelled): its hills, rim, lakes and woods, the
+    /// defaults scaled to its size.
+    /// </summary>
+    /// <param name="owner">The window it is modal to.</param>
+    /// <param name="metres">How wide the map will be.</param>
+    public static async Task<ZoneGenerator.Spec?> AskZone(Window owner, int metres)
+    {
+        ZoneGenerator.Spec? result = null;
+        var dialog = Modal("New zone", 460);
+        NumericUpDown Box(double value, double min, double max, double step) =>
+            new() { Value = (decimal)value, Minimum = (decimal)min, Maximum = (decimal)max, Increment = (decimal)step, FormatString = "0.##", FontSize = 13, MinWidth = 130 };
+        var low = Box(20, -100, 2000, 5);
+        var high = Box(70, -100, 2000, 5);
+        var hills = Box(300, 30, 3000, 25);
+        var rimHeight = Box(200, 0, 3000, 10);
+        var rimWidth = Box(Math.Round(metres * 0.12 / 10) * 10, 0, metres / 2.0, 10);
+        var lakes = new TextBox { Text = metres >= 800 ? $"{Math.Round(metres * metres / 1e6 * 4)}" : "", PlaceholderText = "none", FontSize = 13, MinWidth = 130 };
+        var woods = Box(35, 0, 100, 5);
+        var density = Box(20, 0, 500, 1);
+        var treeScale = Box(1, 0.2, 10, 0.1);
+        var seed = Box(Random.Shared.Next(1, 10000), 0, 1e9, 1);
+        Control Row(string label, Control box, string unit) => new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("190,*,60"),
+            ColumnSpacing = 8,
+            Children =
+            {
+                new TextBlock { Text = label, FontSize = 13, VerticalAlignment = VerticalAlignment.Center },
+                Ui.Col(box, 1),
+                Ui.Col(new TextBlock { Text = unit, FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center }, 2),
+            },
+        };
+        var ok = new Button { Content = "Make it", IsDefault = true };
+        ok.Click += (_, _) =>
+        {
+            float F(NumericUpDown b) => (float)(b.Value ?? 0);
+            float[] ha = [.. (lakes.Text ?? "").Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => float.TryParse(t, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v) ? v : 0).Where(v => v > 0)];
+            result = new ZoneGenerator.Spec(Low: F(low), High: MathF.Max(F(low), F(high)), HillSize: F(hills), RimHeight: F(rimHeight), RimWidth: F(rimWidth),
+                LakeHectares: ha, Woods: F(woods) / 100, WoodDensity: F(density), TreeScale: F(treeScale), Seed: (int)F(seed));
+            dialog.Close();
+        };
+        var cancel = new Button { Content = Lang.T("common.cancel"), IsCancel = true }.Tip("dialog.cancel");
+        cancel.Click += (_, _) => dialog.Close();
+        dialog.Content = new StackPanel
+        {
+            Margin = new Thickness(18),
+            Spacing = 10,
+            Children =
+            {
+                new TextBlock { Text = "Rolling hills, a mountain rim round the edge, lakes in the low ground and woods, the ground painted by slope and height. The same numbers with another seed make another zone.", TextWrapping = TextWrapping.Wrap, FontSize = 13 },
+                Row("Hills from", low, "m"),
+                Row("Hills up to", high, "m"),
+                Row("Hills apart", hills, "m"),
+                Row("Mountain rim height", rimHeight, "m (0: none)"),
+                Row("Mountain rim width", rimWidth, "m"),
+                Row("Lakes", lakes, "ha each"),
+                Row("Wooded", woods, "%"),
+                Row("Trees in the woods", density, "per ha"),
+                Row("Tree size", treeScale, "×"),
+                Row("Seed", seed, ""),
+                ButtonRow(ok, cancel),
+            },
+        };
+        await dialog.ShowDialog(owner);
+        return result;
+    }
+
     /// <summary>A dark modal window as tall as its content.</summary>
     /// <param name="title">Its title.</param>
     /// <param name="width">Its width.</param>

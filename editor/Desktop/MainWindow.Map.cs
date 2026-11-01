@@ -141,10 +141,16 @@ public partial class MainWindow
             return;
         }
         bool rolling = await Ask("New map", "Rolling ground, or flat?", "Rolling", "Flat");
+        // a whole zone: hills, a rim, lakes and woods (planted with the open map's kinds)
+        var zone = rolling && await Ask("New map", "A whole zone (hills, a mountain rim, lakes and woods, planted with the open map's objects), or gentle rolling ground?", "A zone", "Gentle")
+            ? await Dialogs.AskZone(this, (chunks * 63) + 1)
+            : null;
         MapProject made;
         try
         {
-            made = MapProject.Create(name, chunks, rolling, rolling ? 3f : 1f, Environment.TickCount & 0xFFFF, NewMapsFolder(), MapProject.Current);
+            made = zone != null
+                ? MapProject.CreateZone(name, chunks, zone, ZoneGenerator.Planting.From(MapTools.Catalog().Kinds), NewMapsFolder(), MapProject.Current)
+                : MapProject.Create(name, chunks, rolling, rolling ? 3f : 1f, Environment.TickCount & 0xFFFF, NewMapsFolder(), MapProject.Current);
         }
         catch (IOException ex)
         {

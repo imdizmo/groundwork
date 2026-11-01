@@ -10,6 +10,22 @@ whether the ground is rolling or flat. The map goes in the maps folder (**Settin
 choose another), centred on the origin, its first layer under 1.5 m. It shares the open map's model folder and starts
 with a copy of its catalog.
 
+Rolling ground can be **a whole zone** instead of gentle bumps. A form asks for its numbers:
+
+| Setting | What it does |
+|---|---|
+| Hills from, up to | The rolling ground's lowest and highest heights, metres. |
+| Hills apart | How far apart the hills are, metres. |
+| Mountain rim height, width | A rim of ridged mountains round the edge, high in places and lower in others (0: none). |
+| Lakes | Each lake's size in hectares (`35, 18` makes two), set in the low ground with banks sloping to the water. |
+| Wooded | The share of the ground under woods (not cliffs, not lakes); the woods grow in stands of one kind. |
+| Trees in the woods | Trees per hectare in the woods; a few more stand in the open. |
+| Tree size | How much bigger the trees are than their kinds' own size. A game's trees are often several times a real tree's: the share of ground under the crowns, not the count, is what makes a wood. |
+| Seed | Another seed, the same numbers: another zone. |
+
+The ground is painted by rule: rock on steep ground (less under trees), dirt under the woods and in patches, grass
+elsewhere. The zone is planted with the open map's Trees, Bushes, Rocks and Plants.
+
 ## map.json
 
 ```json
