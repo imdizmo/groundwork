@@ -736,6 +736,52 @@ public sealed class UnrealLive
         }
     }
 
+    /// <summary>
+    /// A camera looking at an editor point from a compass yaw (0: looking north, 90: east), a pitch down and a distance
+    /// (metres), as Unreal's: its place in centimetres, its yaw and pitch in degrees (pitch below 0 looks down).
+    /// </summary>
+    internal static (Vector3 At, float Yaw, float Pitch) CameraFor(Vector3 target, float yawDegrees, float pitchDegrees, float distance)
+    {
+        float y = yawDegrees * MathF.PI / 180, p = pitchDegrees * MathF.PI / 180;
+        var look = new Vector3(MathF.Sin(y) * MathF.Cos(p), -MathF.Sin(p), MathF.Cos(y) * MathF.Cos(p));   // editor x east, y up, z north
+        var eye = target - (look * distance);
+        return (new Vector3(eye.X * 100, -eye.Z * 100, eye.Y * 100), MathF.Atan2(-look.Z, look.X) * 180 / MathF.PI, -pitchDegrees);
+    }
+
+    /// <summary>A picture of the open Unreal level from a camera (see CameraFor) as the game draws it: a PNG, or why not.</summary>
+    public static async Task<(byte[]? Png, string Said)> Screenshot(Vector3 target, float yawDegrees, float pitchDegrees, float distance, float fov, int width, int height)
+    {
+        string file = Path.Combine(Project, "Saved/GroundworkBridge.json");
+        if (Project.Length == 0 || !File.Exists(file))
+        {
+            return (null, "Unreal is not running with the Groundwork Bridge plugin (no Saved/GroundworkBridge.json).");
+        }
+        var cfg = JsonNode.Parse(File.ReadAllText(file))!;
+        var (at, yaw, pitch) = CameraFor(target, yawDegrees, pitchDegrees, distance);
+        var body = new JsonObject { ["x"] = at.X, ["y"] = at.Y, ["z"] = at.Z, ["yaw"] = yaw, ["pitch"] = pitch, ["fov"] = fov, ["width"] = width, ["height"] = height };
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"http://127.0.0.1:{cfg["port"]!.GetValue<int>()}/groundwork/screenshot")
+        {
+            Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
+        };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", cfg["token"]!.GetValue<string>());
+        try
+        {
+            using var r = await Http.SendAsync(req);
+            if (r.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return (null, "This Groundwork Bridge plugin cannot take pictures: update it.");
+            }
+            var j = JsonNode.Parse(await r.Content.ReadAsStringAsync());
+            return j?["png"]?.GetValue<string>() is string png
+                ? (Convert.FromBase64String(png), j["playing"]?.GetValue<bool>() == true ? "From the running game." : "From the editor's level.")
+                : (null, "Unreal took no picture: " + (j?["error"]?.GetValue<string>() ?? "no answer"));
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            return (null, "Unreal does not answer: " + e.Message);
+        }
+    }
+
     private async Task<string> Post(string path, JsonNode body)
     {
         using var req = new HttpRequestMessage(HttpMethod.Post, _url + path) { Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json") };

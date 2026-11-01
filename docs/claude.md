@@ -20,5 +20,6 @@ Claude on another computer connect; the token is asked for on every address.
 Claude opens your maps (only ones you opened yourself), looks at the 3D view and the ground, lists and selects objects,
 sculpts and paints with the brushes, places, moves, copies and removes objects, edits rivers and lakes, lays paths and
 ramps, draws areas, makes holes and terraces, paints, fills or erodes the whole map, makes new zones, and saves. With
-Unreal open it can start the game at a point (Play here); making the Unreal landscape asks you first. Every
+Unreal open it can start the game at a point (Play here) and look at the level as the game draws it (fog, lighting,
+real materials); making the Unreal landscape asks you first. Every
 change is a step marked as Claude's in History; **Take back Claude's changes** removes them.

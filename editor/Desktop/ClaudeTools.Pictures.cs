@@ -57,6 +57,20 @@ public sealed partial class ClaudeTools
         }
     }
 
+    /// <summary>unreal_screenshot: the open Unreal level from a camera, as the game draws it.</summary>
+    [McpServerTool(Name = "unreal_screenshot", ReadOnly = true, Title = "See the Unreal level")]
+    [Description("A picture of the open Unreal level as the game draws it (real materials, fog, lighting, post-process), from a camera looking at x, z (editor coordinates, as screenshot) from yaw degrees round (0: looking north), pitch degrees down and distance metres away. While the game is playing (map_play_here), from the running game. Use it to judge the mood and the light, which the editor's own view does not show. Needs Unreal with the Groundwork Bridge plugin.")]
+    public async Task<ModelContextProtocol.Protocol.CallToolResult> UnrealScreenshot(float x, float z, float yaw = 45, float pitch = 20, float distance = 40,
+        [Description("Height of the point looked at (optional: the ground's, plus 2 m).")] float? height = null, float fov = 70)
+    {
+        float? ground = await OnUi(() => _w.Session is { } s ? new SceneLayers.AreaView(s.Scene).GroundHeight(x, z) : (float?)null);
+        var target = new System.Numerics.Vector3(x, height ?? (ground ?? 0) + 2, z);
+        var (png, said) = await UnrealLive.Screenshot(target, yaw, pitch, distance, fov, 1280, 720);
+        return png == null
+            ? new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = said } } }
+            : new() { Content = { ModelContextProtocol.Protocol.ImageContentBlock.FromBytes(Shrink(png), "image/jpeg"), new ModelContextProtocol.Protocol.TextContentBlock { Text = said } } };
+    }
+
     /// <summary>
     /// Saves a picture of the 3D view to <paramref name="path"/>, from the camera <paramref name="orbit"/> points (none: the
     /// view as it is), and puts the user's camera back afterwards, so that a look does not move it. On the window's thread,
