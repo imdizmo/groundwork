@@ -156,7 +156,7 @@ public sealed partial class GlView
 
     /// <summary><see cref="IsPickable"/> for an index in range, without the lock (the picking loops, every object).</summary>
     /// <param name="i">The object.</param>
-    private bool Pickable(int i) => _known[i] && _shown[(int)_kinds[i]] && !_hidden.Contains(i) && PickFilterLets(_kinds[i]);
+    private bool Pickable(int i) => _known[i] && _shown[(int)_kinds[i]] && !_hidden.Contains(i) && !_locked.Contains(i) && PickFilterLets(_kinds[i]);
 
     /// <summary>A thing's box (view space) and the position it was made at (world coordinates).</summary>
     internal (Vector3 Min, Vector3 Max, Vector3 At) BoxOf(int i)

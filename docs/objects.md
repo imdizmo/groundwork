@@ -41,6 +41,13 @@ again, each object as high above the ground as it was.
 **Checks** finds trees, plants and rocks floating above the ground, buried in it, standing under water or on ground
 too steep, and selects them one by one or all at once. **Settle objects** puts them back on the ground.
 
+## The objects list
+
+**Objects** on the top bar lists every kind standing on the map and how many; type in **Find** to narrow it by name or
+group. Pick a kind, then **Select them all**, **Go to the nearest** (the one nearest the camera, selected and framed),
+**Lock or unlock them** (drawn, but clicks and boxes go past them: a forest you work around) or **Hide or show them**.
+To place an object exactly, select it and type its position and turn on the Select card.
+
 ## The catalog
 
 The map's `catalog.json` lists the kinds (their model, label, category and size range), the groups' density and

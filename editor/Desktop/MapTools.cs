@@ -88,6 +88,7 @@ public static partial class MapTools
             ModExtensions.BuiltIn(Own, new GrowTool(w)),
             ModExtensions.BuiltIn(Own, new LayersTool(w, GroupNames(kinds))),
             ModExtensions.BuiltIn(Own, new ChecksTool(w)),
+            ModExtensions.BuiltIn(Own, new ObjectsTool(w)),
         };
         tools.Insert(1, ModExtensions.BuiltIn(Own, new ScatterTool(w, kinds, groups, null)));
         if (biomes.Count > 0)

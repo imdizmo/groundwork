@@ -50,7 +50,7 @@ public sealed partial class GlView
     {
         // Only what a click can pick: drawn and not deleted (a deleted object stays under the pointer).
         if (!SelectMode || Tool != null || HoverObject is not int i || i >= _bounds.Length || _selection.Contains(i)
-            || !_known[i] || !_shown[(int)_kinds[i]] || Scene is not { } sc || i >= sc.Things.Count || sc.Things[i].Gone)
+            || !_known[i] || !_shown[(int)_kinds[i]] || _locked.Contains(i) || Scene is not { } sc || i >= sc.Things.Count || sc.Things[i].Gone)
         {
             return;
         }

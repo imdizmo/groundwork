@@ -1,7 +1,7 @@
 # The window
 
 The top bar holds **Start** (back to your maps), the map's name and size, undo and redo, **Live**, **Save**, and the
-panels: **Layers**, **Checks**, **History**, **View** and **?**. The rail on the left holds the tools; the objects
+panels: **Layers**, **Checks**, **Objects**, **History**, **View** and **?**. The rail on the left holds the tools; the objects
 drawer runs along the bottom; the minimap sits in the corner.
 
 ## The tool rail

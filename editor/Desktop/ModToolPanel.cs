@@ -19,6 +19,7 @@ public sealed class ModToolPanel
     private readonly Dictionary<string, float> _numbers = [];
     private readonly Dictionary<string, int> _choices = [];
     private readonly Dictionary<string, bool> _toggles = [];
+    private readonly Dictionary<string, string> _typed = [];
     private readonly Dictionary<string, TextBlock> _texts = [];
     private readonly Dictionary<string, List<int>> _picked = [];
     private readonly Dictionary<string, Slider> _sliders = [];
@@ -48,6 +49,9 @@ public sealed class ModToolPanel
 
     /// <summary>A choice's index (0 for one the card does not have).</summary>
     public int Choice(string id) => _picked.TryGetValue(id, out var p) ? p.FirstOrDefault(-1) : _choices.GetValueOrDefault(id);
+
+    /// <summary>What is typed in a text box (empty for one the card does not have).</summary>
+    public string Typed(string id) => _typed.GetValueOrDefault(id) ?? "";
 
     /// <summary>A palette's picked items (indices).</summary>
     public IReadOnlyList<int> Picked(string id) => _picked.TryGetValue(id, out var p) ? p : [];
@@ -229,6 +233,7 @@ public sealed class ModToolPanel
         ButtonControl b => Button(b),
         PaletteControl p => Palette(p),
         ListControl l => List(l),
+        TextBoxControl tb => TypedBox(tb),
         _ => Text((TextControl)c),
     };
 
@@ -295,6 +300,18 @@ public sealed class ModToolPanel
             Changed?.Invoke(ch.Id);
         };
         return Ui.Row(ch.Label, box, null, "70,*,0");
+    }
+
+    private Grid TypedBox(TextBoxControl t)
+    {
+        _typed[t.Id] = "";
+        var box = new TextBox { PlaceholderText = t.Placeholder, FontSize = 12 };
+        box.TextChanged += (_, _) =>
+        {
+            _typed[t.Id] = box.Text ?? "";
+            Changed?.Invoke(t.Id);
+        };
+        return Ui.Row(t.Label, box, null, "70,*,0");
     }
 
     private CheckBox Toggle(ToggleControl t)

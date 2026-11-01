@@ -156,6 +156,23 @@ public sealed class SectionControl : ToolControl
     public bool Folded { get; set; }
 }
 
+/// <summary>A one-line text box (<see cref="IToolContext.Typed"/>); each change of its text is a change of the control.</summary>
+public sealed class TextBoxControl : ToolControl
+{
+    /// <summary>A text box.</summary>
+    /// <param name="id">Its id.</param>
+    /// <param name="label">What it is called on the card.</param>
+    /// <param name="placeholder">What it says while empty.</param>
+    public TextBoxControl(string id, string label, string placeholder = "")
+        : base(id, label)
+    {
+        Placeholder = placeholder;
+    }
+
+    /// <summary>What it says while empty.</summary>
+    public string Placeholder { get; }
+}
+
 /// <summary>A line of text on the card, which the tool changes (<see cref="IToolContext.SetText"/>).</summary>
 public sealed class TextControl : ToolControl
 {

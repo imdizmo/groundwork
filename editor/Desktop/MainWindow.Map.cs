@@ -19,7 +19,7 @@ public partial class MainWindow
     private float[]? _mapGround;
 
     /// <summary>Send to Unreal and Settle objects, on the top bar while the map is open.</summary>
-    private Button? _moreButton, _layersButton, _checksButton;
+    private Button? _moreButton, _layersButton, _checksButton, _objectsButton;
 
     private Avalonia.Controls.Shapes.Ellipse? _liveDot;
 
@@ -266,7 +266,10 @@ public partial class MainWindow
             _layersButton.Click += (_, _) => ShowOwnRight("layers");
             _checksButton = new Button { Content = "Checks", FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
             _checksButton.Click += (_, _) => ShowOwnRight("checks");
+            _objectsButton = new Button { Content = "Objects", FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
+            _objectsButton.Click += (_, _) => ShowOwnRight("objects");
             int h = bar.Children.IndexOf(HistoryButton);
+            bar.Children.Insert(h, _objectsButton);
             bar.Children.Insert(h, _checksButton);
             bar.Children.Insert(h, _layersButton);
             foreach (var other in new[] { HistoryButton, ViewButton, HelpButton })
@@ -366,6 +369,7 @@ public partial class MainWindow
         _moreButton?.IsVisible = show;
         _layersButton?.IsVisible = show;
         _checksButton?.IsVisible = show;
+        _objectsButton?.IsVisible = show;
         if (!show)
         {
             _selectionBar?.IsVisible = false;
@@ -473,10 +477,10 @@ public partial class MainWindow
     private void MapRailTools()
     {
         var own = MapTools.For(this);
-        _ownRightTools = [.. own.Where(t => t.Info.Id is "layers" or "checks")];
+        _ownRightTools = [.. own.Where(t => t.Info.Id is "layers" or "checks" or "objects")];
         // Grow is rare (it changes the map's size): in the ⋯ menu, not on the rail.
         _growTool = own.FirstOrDefault(t => t.Info.Id == "grow");
-        Tools.SetModTools([.. ModExtensions.Tools, .. own.Where(t => t.Info.Id is not ("layers" or "checks" or "grow"))]);
+        Tools.SetModTools([.. ModExtensions.Tools, .. own.Where(t => t.Info.Id is not ("layers" or "checks" or "objects" or "grow"))]);
     }
 
     /// <summary>Layers or Checks in the right-hand panel (null: hidden).</summary>
@@ -494,6 +498,7 @@ public partial class MainWindow
             _ownRightTool = null;
             _layersButton?.Classes.Set("on", false);
             _checksButton?.Classes.Set("on", false);
+            _objectsButton?.Classes.Set("on", false);
             return;
         }
         ShowRight(null);
@@ -503,6 +508,7 @@ public partial class MainWindow
         tool.Chosen(_ownRightContext);
         _layersButton?.Classes.Set("on", id == "layers");
         _checksButton?.Classes.Set("on", id == "checks");
+        _objectsButton?.Classes.Set("on", id == "objects");
     }
 
     /// <summary>The Live pill's state: on (green) with what happened last, or off.</summary>

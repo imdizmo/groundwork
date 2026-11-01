@@ -78,7 +78,7 @@ public sealed partial class GlView
         for (int i = 0; i < s.Things.Count && i < _known.Length; i++)
         {
             var t = s.Things[i];
-            if (t.Gone || !_known[i] || !_shown[(int)_kinds[i]])
+            if (t.Gone || !_known[i] || !_shown[(int)_kinds[i]] || _locked.Contains(i))
             {
                 continue;
             }

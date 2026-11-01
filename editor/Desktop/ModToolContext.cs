@@ -22,6 +22,9 @@ internal sealed class ModToolContext(GlView view, ModToolPanel panel, Action<Sai
     public float Number(string id) => panel.Number(id);
 
     /// <inheritdoc/>
+    public string Typed(string id) => panel.Typed(id);
+
+    /// <inheritdoc/>
     public int Choice(string id) => panel.Choice(id);
 
     /// <inheritdoc/>

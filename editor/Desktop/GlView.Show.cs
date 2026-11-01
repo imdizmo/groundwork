@@ -28,6 +28,7 @@ public sealed partial class GlView
         }
         SelectionDone();
         _hidden = [];
+        _locked = [];
         _sceneDirty = true;
         _marksDirty = true;
         // The last area's session is not followed any more: its late events hold its indices, not this scene's.

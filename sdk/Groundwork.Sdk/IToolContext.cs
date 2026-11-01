@@ -59,6 +59,10 @@ public interface IToolContext
     /// <summary>The items picked in a <see cref="PaletteControl"/> (indices into its items).</summary>
     /// <param name="id">The palette's id.</param>
     IReadOnlyList<int> Picked(string id);
+
+    /// <summary>What is typed in a <see cref="TextBoxControl"/> (empty: nothing, or no such box).</summary>
+    /// <param name="id">The text box's id.</param>
+    string Typed(string id) => "";
 }
 
 /// <summary>

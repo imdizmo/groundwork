@@ -11,6 +11,30 @@ public sealed partial class GlView
     /// </summary>
     private HashSet<int> _hidden = [];
 
+    /// <summary>The objects locked: drawn, but not picked (replaced whole on a change, as _hidden).</summary>
+    private HashSet<int> _locked = [];
+
+    /// <summary>Whether an object is locked (drawn, not picked).</summary>
+    internal bool IsLocked(int i) => _locked.Contains(i);
+
+    /// <summary>Locks these objects (drawn, not picked; out of the selection) or unlocks them.</summary>
+    internal void Lock(IEnumerable<int> things, bool on)
+    {
+        var list = things.ToList();
+        _locked = on ? [.. _locked.Concat(list)] : [.. _locked.Except(list)];
+        if (on)
+        {
+            Unselect(list);
+        }
+        Wake();
+    }
+
+    /// <summary>Shows these hidden objects again.</summary>
+    internal void Unhide(IEnumerable<int> things) => SetHidden([.. _hidden.Except(things)]);
+
+    /// <summary>Whether an object is hidden in the view.</summary>
+    internal bool IsHidden(int i) => _hidden.Contains(i);
+
     /// <summary>How many objects are hidden in the view.</summary>
     internal int HiddenCount => _hidden.Count;
 
