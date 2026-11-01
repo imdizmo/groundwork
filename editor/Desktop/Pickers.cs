@@ -13,6 +13,15 @@ internal static class Pickers
     internal static async Task<string?> File(IStorageProvider storage, string title, FilePickerFileType? type = null) =>
         LocalPath(await storage.OpenFilePickerAsync(new FilePickerOpenOptions { Title = title, FileTypeFilter = type == null ? null : [type] }));
 
+    /// <summary>A file to write, chosen with the system's save picker.</summary>
+    /// <param name="storage">The window's storage provider.</param>
+    /// <param name="title">The picker's title.</param>
+    /// <param name="name">The name offered.</param>
+    /// <param name="types">The kinds of file offered.</param>
+    /// <returns>Its local path; null when cancelled or not a local file.</returns>
+    internal static async Task<string?> SaveFile(IStorageProvider storage, string title, string name, IReadOnlyList<FilePickerFileType> types) =>
+        await storage.SaveFilePickerAsync(new FilePickerSaveOptions { Title = title, SuggestedFileName = name, FileTypeChoices = types }) is { Path.IsFile: true } f ? f.Path.LocalPath : null;
+
     /// <summary>A folder chosen with the system's picker.</summary>
     /// <param name="storage">The window's storage provider.</param>
     /// <param name="title">The picker's title.</param>

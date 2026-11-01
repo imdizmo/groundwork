@@ -30,7 +30,9 @@ public sealed partial class ToolPanel
             _flattenRows.IsVisible = tool == BrushTool.Flatten;
             _naturalRows.IsVisible = tool == BrushTool.Natural;
             _erodeRows.IsVisible = tool == BrushTool.Erode;
-            WholeMapButton.IsVisible = IsPaint(tool);
+            _terraceRows.IsVisible = tool == BrushTool.Terrace;
+            WholeMapButton.IsVisible = IsPaint(tool) || tool == BrushTool.Erode;
+            WholeMapButton.Content = Lang.T(tool == BrushTool.Erode ? "brush.label.erodeWholeMap" : "brush.label.wholeMap");
             SyncStamp();
         }
         ToolChanged?.Invoke(t);

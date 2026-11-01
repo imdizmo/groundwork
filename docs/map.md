@@ -57,3 +57,9 @@ first, then opens the bigger map.
 | `Ctrl+S` | Save the map. |
 | `Ctrl+Space` | Show or hide the objects drawer. |
 | `F1` | This help, at the page of what you are using. |
+
+## Exporting the heightmap
+
+**⋯ → Export the heightmap** writes the map's heights as they are now to a 16-bit grey PNG or a raw `.r16` file
+(Unreal's landscape import formats, and most terrain tools'): 32768 is 0 m, 128 steps a metre, as an Unreal landscape
+at Z scale 100 reads them. The first row is the map's first (its origin's) row.

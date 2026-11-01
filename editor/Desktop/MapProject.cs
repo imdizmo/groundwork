@@ -350,6 +350,26 @@ public sealed class MapProject
         return scene;
     }
 
+    /// <summary>The map's heights as they are now (its file's, with the open ground's over them): rows of cols.</summary>
+    public (float[] Heights, int Cols, int Rows) HeightsNow(WorldScene s)
+    {
+        var g = s.Session!.Ground;
+        var map = ReadRaster();
+        float[] heights = Read(HeightsFile, out _, out _);
+        for (int gz = 0; gz < g.H; gz++)
+        {
+            for (int gx = 0; gx < g.W; gx++)
+            {
+                var (col, row) = map.Pixel(g.OriginX + gx, g.OriginZ + gz);
+                if (map.Holds(col, row))
+                {
+                    heights[(row * map.Cols) + col] = g.HeightOf((gz * g.W) + gx);
+                }
+            }
+        }
+        return (heights, map.Cols, map.Rows);
+    }
+
     /// <summary>The ground, its colours, the objects and the water as they are now back into the map's files.</summary>
     /// <returns>How many objects were written.</returns>
     public int Save(WorldScene s)

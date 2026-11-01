@@ -56,7 +56,7 @@ public partial class MainWindow
             Take([Key.Escape], KeyMods.NoCtrl, _ => InMode(ToolMode.Measure) && View.Tape.A != null, _ => View.Tape.Clear()),
             // The rail's keys: the tool panel acts on them, and they stay unhandled.
             Pass([Key.Escape], KeyMods.NoCtrl, null, _ => Tools.Key("Escape")),
-            Pass([Key.E, Key.M, Key.O, Key.H], KeyMods.NoCtrl, null, p => Tools.Key(p.Key.ToString())),
+            Pass([Key.E, Key.M, Key.O, Key.T, Key.H], KeyMods.NoCtrl, null, p => Tools.Key(p.Key.ToString())),
             Pass(Digits(Key.D0), KeyMods.NoCtrl, null, p => Tools.Key((p.Key - Key.D0).ToString())),
             Pass(Digits(Key.NumPad0), KeyMods.NoCtrl, null, p => Tools.Key((p.Key - Key.NumPad0).ToString())),
         ];

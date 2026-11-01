@@ -18,6 +18,10 @@ ground. Each stroke is one step in History.
 | Restore | `5` | Takes it back towards the ground as the map was opened. |
 | Natural | `0` | Adds rolling bumps. |
 | Erode | `O` | Weathers it: slopes slide to their rest angle (Thermal), or rain runs down and carries it (Water). |
+| Terrace | `T` | Pulls it into flat shelves **Step** metres apart, joined by steep rises. |
+
+**Erode the whole map** (on Erode's card) weathers all of it at once, at the brush's Strength, where the Mask lets
+it.
 
 A brush can be a circle, a square or a stamp: a picture whose grey makes the height. **Stamp once** puts the whole
 picture down with one click.

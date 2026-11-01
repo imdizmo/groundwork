@@ -29,11 +29,22 @@ public sealed partial class MainWindow
     /// </summary>
     private void PaintWholeMap()
     {
-        if (Session is not { } s || Tools.Tool is not { } tool || Brush.PaintOf(tool) is not { } colour)
+        if (Session is not { } s || Tools.Tool is not { } tool)
         {
             return;
         }
         var mask = s.MaskNow();
+        if (tool == BrushTool.Erode)
+        {
+            var b = s.Brush;
+            int e = s.EditGround(Lang.T("brush.step.erodeWholeMap"), g => Sculpt.ErodeWhole(g, b.ErodeWater, b.RestAngle, b.Strength, mask, b.Random)).Count;
+            Msg(Said.Of("brush.msg.erodeWholeMap", e));
+            return;
+        }
+        if (Brush.PaintOf(tool) is not { } colour)
+        {
+            return;
+        }
         int n = s.EditGround(Lang.T("brush.step.wholeMap", Brush.Label(tool)), g => Sculpt.FillPaint(g, colour, mask)).Count;
         Msg(Said.Of(mask == null ? "brush.msg.wholeMap" : "brush.msg.wholeMapMask", Brush.Label(tool), n));
     }

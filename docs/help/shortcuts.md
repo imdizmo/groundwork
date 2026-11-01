@@ -31,6 +31,7 @@ and `Option` for `Alt`.
 | `1` `2` `3` `4` `5` | Raise, Lower, Flatten, Smooth, Restore |
 | `0` | Natural |
 | `O` | Erode |
+| `T` | Terrace |
 | `6` `7` `8` `9` | Paint layer 2, 3, 4, and layer 1 (take paint off) |
 | `M` | Measure |
 | `H` or `Esc` | View |

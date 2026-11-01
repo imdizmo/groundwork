@@ -29,4 +29,6 @@ public enum BrushTool
     PaintLayer4,
     /// <summary>Removes paint: back to the map's first layer.</summary>
     PaintLayer1,
+    /// <summary>Shelves a step apart joined by steep rises (last: the others keep their numbers).</summary>
+    Terrace,
 }

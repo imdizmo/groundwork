@@ -186,6 +186,24 @@ public partial class MainWindow
         MaskPanel.PaintBox.SelectedIndex = keep;
     }
 
+    /// <summary>The map's heights as they are now into a 16-bit PNG or raw .r16 (Unreal's import formats), where the user picks.</summary>
+    private async Task ExportHeightmap()
+    {
+        if (Session is not { Scene: var scene } || MapProject.Current is not { } map)
+        {
+            return;
+        }
+        string? file = await Pickers.SaveFile(StorageProvider, "Export the heightmap", map.Name + "_height.png",
+            [new("16-bit PNG") { Patterns = ["*.png"] }, new("Raw 16-bit (.r16)") { Patterns = ["*.r16", "*.raw"] }]);
+        if (file == null)
+        {
+            return;
+        }
+        var (heights, cols, rows) = map.HeightsNow(scene);
+        HeightmapExport.Write(file, heights, cols, rows);
+        Msg(new Said($"Heightmap written: {Path.GetFileName(file)}, {cols} x {rows}, 0 m = 32768, 128 steps a metre (Unreal at Z scale 100).", ""));
+    }
+
     /// <summary>Play here: the game started in Unreal at the ground the camera looks at (Walk and Fly: below the camera).</summary>
     private async Task PlayHere()
     {
@@ -239,7 +257,9 @@ public partial class MainWindow
                     Tools.ChooseMod(_growTool);
                 }
             };
-            _moreButton.Flyout = new MenuFlyout { Items = { send, settle, grow } };
+            var export = new MenuItem { Header = "Export the heightmap (16-bit PNG or .r16)…" };
+            export.Click += async (_, _) => await ExportHeightmap();
+            _moreButton.Flyout = new MenuFlyout { Items = { send, settle, grow, export } };
             bar.Children.Insert(bar.Children.IndexOf(SaveButton) + 1, _moreButton);
             // Layers and Checks: right-hand panels like History
             _layersButton = new Button { Content = "Layers", FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };

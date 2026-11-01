@@ -35,6 +35,9 @@ public static partial class Sculpt
             case BrushTool.Natural:
                 g.SetHeight(p, h + (NaturalTarget(g, b, s, p) - h) * MathF.Min(1, 4 * rate * w));
                 break;
+            case BrushTool.Terrace:
+                g.SetHeight(p, h + (TerraceTarget(h, b.TerraceStep) - h) * MathF.Min(1, 6 * rate * w));
+                break;
             case BrushTool.Restore:
                 RestorePoint(g, p, rate, w);
                 break;

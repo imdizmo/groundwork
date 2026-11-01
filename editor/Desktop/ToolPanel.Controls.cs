@@ -13,7 +13,7 @@ public sealed partial class ToolPanel
     /// <summary>The options card's help line for the brush.</summary>
     private readonly TextBlock _help = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
     /// <summary>The option rows shown only for some brushes or shapes (Flatten, Naturalize, Turn, Erode, Falloff, stamps).</summary>
-    private readonly Control _flattenRows, _naturalRows, _turnRow, _erodeRows, _falloffRow, _stampOnceRows, _stampHeightRow;
+    private readonly Control _terraceRows, _flattenRows, _naturalRows, _turnRow, _erodeRows, _falloffRow, _stampOnceRows, _stampHeightRow;
     /// <summary>The stamps in the Shape list after the four shapes: the built-in ones, then loaded pictures.</summary>
     internal List<Stamps.Stamp> StampList { get; } = [.. Stamps.BuiltIn, .. Stamps.LoadKept()];
     /// <summary>Load stamp…: asks the window for a picture (<c>LoadStampAsked</c>).</summary>
