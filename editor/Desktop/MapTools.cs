@@ -1263,6 +1263,9 @@ public static partial class MapTools
     /// <summary>Each model's group (its catalog category; markers "Markers"; anything else "Other"), by prefab hash.</summary>
     private static Dictionary<int, (string Group, string Label)>? _groups;
 
+    /// <summary>Another map (or catalog): the groups are read again.</summary>
+    internal static void ForgetGroups() => _groups = null;
+
     /// <summary>A thing's group and label.</summary>
     public static (string Group, string Label) GroupOf(int prefab)
     {

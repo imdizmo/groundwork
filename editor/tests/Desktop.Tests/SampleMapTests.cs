@@ -26,4 +26,14 @@ public sealed class SampleMapTests
         var kinds = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(Meadow, "models", "catalog.json")))!["kinds"]!.AsArray();
         Assert.All(kinds, k => Assert.NotNull(store.LoadModel(k!["model"]!.GetValue<string>())));
     }
+
+    [AvaloniaFact]
+    public void ItsObjectsTakeItsOwnCatalogsKindsWhenOpenedFromNoMap()
+    {
+        MapProject.Current = null;
+        var map = MapProject.Open(Meadow);
+        _ = map.Read();
+        Assert.Equal(Groundwork.App.ObjectKind.Plants, Groundwork.App.ObjectKinds.Of("Grass_Common_Short"));
+        Assert.Equal("Plants", MapTools.GroupOf(Groundwork.App.AssetIds.Of("Grass_Common_Short")).Group);
+    }
 }

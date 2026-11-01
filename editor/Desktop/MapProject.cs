@@ -291,6 +291,9 @@ public sealed class MapProject
     /// <summary>The map as a scene: its ground (outside the heightmap: its nearest edge), objects and water.</summary>
     public WorldScene Read()
     {
+        // Read as the current map: its catalog and model folder sort its objects, not the last map's
+        Current = this;
+        MapTools.ForgetGroups();
         var map = ReadRaster();
         float[] heights = Read(HeightsFile, out _, out _);
         byte[] mask = ReadMask(LayersFile, map);

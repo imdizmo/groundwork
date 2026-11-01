@@ -71,6 +71,7 @@ public partial class MainWindow
         }
         WorldScene scene;
         MapProject map;
+        var was = MapProject.Current;
         try
         {
             map = chosen ?? MapProject.Current ?? throw new IOException("no map chosen");
@@ -80,6 +81,7 @@ public partial class MainWindow
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or System.Text.Json.JsonException)
         {
+            MapProject.Current = was;
             await Tell("The map could not be read: " + ex.Message);
             return;
         }
