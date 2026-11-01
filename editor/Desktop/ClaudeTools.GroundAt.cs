@@ -51,7 +51,7 @@ public sealed partial class ClaudeTools
                 original = MathF.Round(s.Ground.Original(i), 3),
                 layer = MapProject.Current?.Layers.ElementAtOrDefault(scene.LayerAt(i))?.Name ?? scene.LayerAt(i).ToString(),
                 slope = MathF.Round(SlopeAt(s.Ground, gx, gz), 1),
-                water = MathF.Round(MathF.Max(0, scene.Water - h), 2),
+                water = MathF.Round(MathF.Max(0, MathF.Max(scene.Water, MapWater.SurfaceAt(x, z) ?? float.MinValue) - h), 2),
             };
         }));
     });

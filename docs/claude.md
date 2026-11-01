@@ -23,3 +23,7 @@ ramps, draws areas, makes holes and terraces, paints, fills or erodes the whole 
 Unreal open it can start the game at a point (Play here) and look at the level as the game draws it (fog, lighting,
 real materials); making the Unreal landscape asks you first. Every
 change is a step marked as Claude's in History; **Take back Claude's changes** removes them.
+
+Claude can also measure what it made: the slope, layer and water depth at a point; objects floating, buried or under
+water; trees and buildings on ground too steep for them; roads that run under a river, lake or the sea; and how many
+of a kind stand in a circle and how far apart.

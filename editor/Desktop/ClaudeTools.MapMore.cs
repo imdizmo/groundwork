@@ -295,27 +295,100 @@ public sealed partial class ClaudeTools
     });
 
     /// <inheritdoc/>
-    [McpServerTool(Name = "map_checks", ReadOnly = true, Title = "Find misplaced trees, plants and rocks")]
-    [Description("As the Checks panel: trees, plants and rocks floating above the ground (more than floatBy metres), buried in it (more than buriedBy; rocks may be), standing under water (reeds aside), and trees on ground steeper than steepTrees degrees. Counts by problem, then each (object id, what is wrong, x, z), nearest first when near is given. map_settle puts floating and buried ones back on the ground; select picks them in the editor.")]
-    public Task<string> MapChecks(float floatBy = 0.3f, float buriedBy = 1, float steepTrees = 40, bool underWater = true, int limit = 50,
+    [McpServerTool(Name = "map_checks", ReadOnly = true, Title = "Find misplaced objects and roads under water")]
+    [Description("As the Checks panel, and more: trees, plants and rocks floating above the ground (more than floatBy metres), buried in it (more than buriedBy; rocks may be), standing under the sea, a river or a lake (reeds aside), trees on ground steeper than steepTrees degrees, buildings and props (any kind not a tree, bush, plant or rock) on ground steeper than steepBuildings, and (road: a layer, map_catalog's layers) where that layer runs under water, one spot per 10 m. Counts by problem, then each (object id, or none for a road; what is wrong; x, z), nearest first when near is given. map_settle puts floating and buried ones back on the ground; select picks the objects in the editor.")]
+    public Task<string> MapChecks(float floatBy = 0.3f, float buriedBy = 1, float steepTrees = 40, float steepBuildings = 10, bool underWater = true,
+        [Description("A layer painted on roads and paths: where it is under water.")] string? road = null, int limit = 50,
         [Description("[x, z]: list the nearest to it first.")] float[]? near = null, [Description("Select them all in the editor.")] bool select = false) => OnUi(() =>
     {
         if (NoMap() is string why)
         {
             return why;
         }
+        int layer = LayerNamed(road);
+        if (road is { Length: > 0 } && layer < 1)
+        {
+            return $"No painted layer \"{road}\": {string.Join(", ", MapProject.Current!.Layers.Skip(1).Select(l => l.Name))}.";
+        }
         var s = _w.Session!;
-        var found = MapTools.ChecksTool.FindProblems(s, new SceneLayers.AreaView(s.Scene), s.Scene.Water, floatBy, buriedBy, steepTrees, underWater);
+        var found = MapTools.ChecksTool.FindProblems(s, new SceneLayers.AreaView(s.Scene), s.Scene.Water, floatBy, buriedBy, steepTrees, underWater, steepBuildings);
         if (select)
         {
             _w.View.Select(found.Select(f => f.Index));
+        }
+        if (layer >= 1)
+        {
+            found.AddRange(RoadsUnderWater(s.Ground, layer - 1, s.Scene.Water).Select(r => (-1, $"road under water {r.Depth:0.0} m", new System.Numerics.Vector3(r.X, 0, r.Z))));
         }
         var listed = near is { Length: >= 2 } ? found.OrderBy(f => System.Numerics.Vector2.Distance(new(f.At.X, f.At.Z), new(near[0], near[1]))) : found.AsEnumerable();
         return ToJson(new
         {
             problems = found.Count,
-            by = found.GroupBy(f => f.Problem.Contains("floating") ? "floating" : f.Problem.Contains("buried") ? "buried" : f.Problem.Contains("water") ? "under water" : "on steep ground").ToDictionary(g => g.Key, g => g.Count()),
-            first = listed.Take(Math.Clamp(limit, 1, 500)).Select(f => new { id = s.Scene.Things[f.Index].Id, problem = f.Problem, x = MathF.Round(f.At.X, 1), z = MathF.Round(f.At.Z, 1) }),
+            by = found.GroupBy(f => f.Problem.Contains("floating") ? "floating" : f.Problem.Contains("buried") ? "buried" : f.Problem.StartsWith("road", StringComparison.Ordinal) ? "road under water" : f.Problem.Contains("water") ? "under water" : "on steep ground").ToDictionary(g => g.Key, g => g.Count()),
+            first = listed.Take(Math.Clamp(limit, 1, 500)).Select(f => new { id = f.Index >= 0 ? s.Scene.Things[f.Index].Id : (int?)null, problem = f.Problem, x = MathF.Round(f.At.X, 1), z = MathF.Round(f.At.Z, 1) }),
+        });
+    });
+
+    /// <summary>Where a paint channel (mostly that layer) lies under the sea, a river or a lake: a spot per 10 m, deepest first kept.</summary>
+    private static List<(float X, float Z, float Depth)> RoadsUnderWater(Ground g, int channel, float sea)
+    {
+        var wet = new List<(float X, float Z, float Depth)>();
+        for (int p = 0; p < g.W * g.H; p++)
+        {
+            if (g.MaskOf(p, channel) < 0.5f)
+            {
+                continue;
+            }
+            float x = g.OriginX + (p % g.W), z = g.OriginZ + (p / g.W), depth = MathF.Max(sea, MapWater.SurfaceAt(x, z) ?? float.MinValue) - g.HeightOf(p);
+            if (depth > 0.05f)
+            {
+                wet.Add((x, z, depth));
+            }
+        }
+        // ponytail: greedy, O(spots x wet points); fine for roads, a grid of cells if a whole map is painted under water.
+        var spots = new List<(float X, float Z, float Depth)>();
+        foreach (var w in wet.OrderByDescending(w => w.Depth))
+        {
+            if (!spots.Any(o => ((o.X - w.X) * (o.X - w.X)) + ((o.Z - w.Z) * (o.Z - w.Z)) < 100))
+            {
+                spots.Add(w);
+            }
+        }
+        return spots;
+    }
+
+    /// <inheritdoc/>
+    [McpServerTool(Name = "map_density", ReadOnly = true, Title = "Count objects in a circle and their spacing")]
+    [Description("The objects within radius metres of x, z: how many, per hectare, and how far each is from its nearest neighbour of the same kind (smallest, mean, largest, metres). kind: a model, label or group (map_catalog) to count only those; none: every kind, with a count per group.")]
+    public Task<string> MapDensity(float x, float z, float radius = 25, string? kind = null) => OnUi(() =>
+    {
+        if (NoMap() is string why)
+        {
+            return why;
+        }
+        var things = _w.Session!.Scene.Things;
+        var inside = new List<(System.Numerics.Vector3 At, int Prefab, string Group)>();
+        lock (things)
+        {
+            foreach (var t in things.Where(t => !t.Gone && System.Numerics.Vector2.Distance(new(t.Position.X, t.Position.Z), new(x, z)) <= radius))
+            {
+                var (group, label) = MapTools.GroupOf(t.Prefab);
+                if (kind is not { Length: > 0 } || string.Equals(kind, label, StringComparison.OrdinalIgnoreCase) || string.Equals(kind, group, StringComparison.OrdinalIgnoreCase) || t.Prefab == Groundwork.App.AssetIds.Of(kind))
+                {
+                    inside.Add((t.Position, t.Prefab, group));
+                }
+            }
+        }
+        // ponytail: O(n²) nearest neighbours; fine for a circle's worth, a grid if radius covers thousands.
+        var nearest = inside.Select(a => inside.Where(b => b.Prefab == a.Prefab && b.At != a.At).Select(b => System.Numerics.Vector2.Distance(new(a.At.X, a.At.Z), new(b.At.X, b.At.Z))).DefaultIfEmpty(float.NaN).Min()).Where(d => !float.IsNaN(d)).ToList();
+        return ToJson(new
+        {
+            count = inside.Count,
+            perHectare = MathF.Round(inside.Count / (MathF.PI * radius * radius / 10000), 1),
+            nearestMin = nearest.Count > 0 ? MathF.Round(nearest.Min(), 1) : (float?)null,
+            nearestMean = nearest.Count > 0 ? MathF.Round(nearest.Average(), 1) : (float?)null,
+            nearestMax = nearest.Count > 0 ? MathF.Round(nearest.Max(), 1) : (float?)null,
+            groups = kind is { Length: > 0 } ? null : inside.GroupBy(i => i.Group).ToDictionary(g => g.Key, g => g.Count()),
         });
     });
 }

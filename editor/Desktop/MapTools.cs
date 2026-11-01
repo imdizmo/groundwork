@@ -1512,10 +1512,11 @@ public static partial class MapTools
         }
 
         /// <summary>
-        /// The trees, plants and rocks floating above the ground, buried in it, under water (water: reeds aside) or (trees)
-        /// on ground steeper than steep degrees: each one's index, what is wrong, where.
+        /// The trees, plants and rocks floating above the ground, buried in it, under the sea, a river or a lake (water: reeds
+        /// aside) or (trees) on ground steeper than steep degrees; buildings and props (any kind not a tree, bush, plant or
+        /// rock) on ground steeper than steepBuildings: each one's index, what is wrong, where.
         /// </summary>
-        internal static List<(int Index, string Problem, Vector3 At)> FindProblems(EditSession s, IAreaView area, float sea, float floatBy, float buriedBy, float steep, bool water)
+        internal static List<(int Index, string Problem, Vector3 At)> FindProblems(EditSession s, IAreaView area, float sea, float floatBy, float buriedBy, float steep, bool water, float steepBuildings = 90)
         {
             var found = new List<(int, string, Vector3)>();
             lock (s.Scene.Things)
@@ -1524,14 +1525,27 @@ public static partial class MapTools
                 {
                     var t = s.Scene.Things[i];
                     var (group, label) = GroupOf(t.Prefab);
-                    if (t.Gone || group is "Markers" or "Other" or "Props")
+                    if (t.Gone || group == "Markers")
                     {
                         continue;
                     }
                     float ground = area.GroundHeight(t.Position.X, t.Position.Z), up = t.Position.Y - ground;
+                    if (group is not ("Trees" or "Bushes" or "Plants" or "Rocks" or "Grass"))
+                    {
+                        // ponytail: the ground's rise over 4 m across the spot, not the model's own footprint.
+                        float rise = MathF.Max(MathF.Abs(area.GroundHeight(t.Position.X + 2, t.Position.Z) - area.GroundHeight(t.Position.X - 2, t.Position.Z)),
+                            MathF.Abs(area.GroundHeight(t.Position.X, t.Position.Z + 2) - area.GroundHeight(t.Position.X, t.Position.Z - 2)));
+                        float deg = MathF.Atan(rise / 4) * 180 / MathF.PI;
+                        if (deg > steepBuildings)
+                        {
+                            found.Add((i, $"{label} on steep ground {deg:0}°", t.Position));
+                        }
+                        continue;
+                    }
+                    float wet = MathF.Max(sea, MapWater.SurfaceAt(t.Position.X, t.Position.Z) ?? float.MinValue);
                     string? problem = up > floatBy ? $"{label} floating {up:0.0} m"
                         : group != "Rocks" && -up > buriedBy ? $"{label} buried {-up:0.0} m"
-                        : water && group != "Rocks" && ground < sea - 0.05f && !label.Contains("Reed", StringComparison.OrdinalIgnoreCase) && !label.Contains("Grass Wide", StringComparison.OrdinalIgnoreCase) ? $"{label} under water"
+                        : water && group != "Rocks" && ground < wet - 0.05f && !label.Contains("Reed", StringComparison.OrdinalIgnoreCase) && !label.Contains("Grass Wide", StringComparison.OrdinalIgnoreCase) ? $"{label} under water"
                         : group == "Trees" && MathF.Acos(Math.Clamp(Normal(area, t.Position.X, t.Position.Z).Y, -1, 1)) * 180 / MathF.PI > steep ? $"{label} on steep ground"
                         : null;
                     if (problem != null)

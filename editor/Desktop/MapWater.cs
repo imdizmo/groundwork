@@ -233,6 +233,30 @@ public static class MapWater
 
     private static bool Inside(Vector2 p, Vector2 a, Vector2 b, Vector2 c) => Cross(b - a, p - a) >= 0 && Cross(c - b, p - b) >= 0 && Cross(a - c, p - c) >= 0;
 
+    /// <summary>The surface of the river or lake over an editor point (x, z), the highest where they meet; null: neither.</summary>
+    public static float? SurfaceAt(float x, float z)
+    {
+        var p = new Vector2(x, -z);
+        float? best = null;
+        foreach (var r in Rivers)
+        {
+            float[] surfaces = Surfaces(r);
+            for (int i = 0; i + 1 < r.Points.Count; i++)
+            {
+                var (a, b) = (r.Points[i], r.Points[i + 1]);
+                if (SegmentDistance(p, new(a.X, a.Y), new(b.X, b.Y), out float t) <= a.HalfWidth + ((b.HalfWidth - a.HalfWidth) * t))
+                {
+                    best = MathF.Max(best ?? float.MinValue, surfaces[i] + ((surfaces[i + 1] - surfaces[i]) * t));
+                }
+            }
+        }
+        foreach (var l in Lakes.Where(l => l.Outline.Count >= 3 && InsideBy(l.Outline, p) >= 0))
+        {
+            best = MathF.Max(best ?? float.MinValue, l.Level);
+        }
+        return best;
+    }
+
     /// <summary>How far a point is inside a polygon's outline (negative outside), metres.</summary>
     public static float InsideBy(IReadOnlyList<Vector2> outline, Vector2 p)
     {
