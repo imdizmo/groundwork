@@ -24,16 +24,16 @@ public class KeysAndMouseTests
         Assert.Equal(9, w.Tools.Brush.Radius);
         w.KeyPress(Key.OemOpenBrackets, RawInputModifiers.None, PhysicalKey.BracketLeft, "[");
         w.KeyPress(Key.OemOpenBrackets, RawInputModifiers.None, PhysicalKey.BracketLeft, "[");
-        Assert.Equal(7, w.Tools.Brush.Radius);
+        Assert.Equal(7.5, w.Tools.Brush.Radius);   // a tenth smaller each time, to half a metre
         // The ends hold.
         w.Tools.SizeSlider.Value = 1.5;
         w.KeyPress(Key.OemOpenBrackets, RawInputModifiers.None, PhysicalKey.BracketLeft, "[");
         Assert.Equal(1, w.Tools.Brush.Radius);
         w.KeyPress(Key.OemOpenBrackets, RawInputModifiers.None, PhysicalKey.BracketLeft, "[");
         Assert.Equal(1, w.Tools.Brush.Radius);
-        w.Tools.SizeSlider.Value = 30;
+        w.Tools.SizeSlider.Value = 300;
         w.KeyPress(Key.OemCloseBrackets, RawInputModifiers.None, PhysicalKey.BracketRight, "]");
-        Assert.Equal(30, w.Tools.Brush.Radius);
+        Assert.Equal(300, w.Tools.Brush.Radius);
         // With Ctrl, not the brush's.
         w.Tools.SizeSlider.Value = 10;
         w.KeyPress(Key.OemOpenBrackets, RawInputModifiers.Control, PhysicalKey.BracketLeft, "[");
