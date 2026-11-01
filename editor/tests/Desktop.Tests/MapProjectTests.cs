@@ -275,4 +275,14 @@ public sealed class MapProjectTests : IDisposable
         Assert.Equal(("textures/sand.png", 6f), (again["texture"]!.GetValue<string>(), again["size"]!.GetValue<float>()));
         Assert.Equal((Path.Combine(made.Folder, "textures", "sand.png"), 6f), map.Read().LayerTextures[1]);
     }
+
+    // A folder given with a slash at its end (as the folder picker gives it) is the same folder.
+    [AvaloniaFact]
+    public void AFolderWithASlashAtItsEndOpens()
+    {
+        var made = MapProject.Create("Slash", 1, generated: false, height: 2, seed: 1, under: _dir);
+        var map = MapProject.Open(made.Folder + Path.DirectorySeparatorChar);
+        Assert.Equal(made.Folder, map.Folder);
+        Assert.Equal(made.HeightsFile, map.HeightsFile);
+    }
 }

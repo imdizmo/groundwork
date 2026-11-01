@@ -31,7 +31,7 @@ public sealed class MapProject
     /// <summary>The map open, or to open next.</summary>
     public static MapProject? Current { get; set; }
 
-    private MapProject(string folder) => Folder = Path.GetFullPath(folder);
+    private MapProject(string folder) => Folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
 
     /// <summary>The map's folder.</summary>
     public string Folder { get; }
