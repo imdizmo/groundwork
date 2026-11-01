@@ -56,7 +56,8 @@ public sealed partial class GlView
     /// <param name="kind">Lines, or triangles as they are.</param>
     /// <param name="blend">See-through (alpha).</param>
     /// <param name="width">For line segments, times a tool line's width (0: 1-pixel lines).</param>
-    private unsafe void DrawLines(ref uint vao, ref uint vbo, float[] data, Matrix4x4 vp, Vector4 color, PrimitiveType kind = PrimitiveType.Lines, bool blend = false, float width = 1)
+    /// <param name="depth">Hidden behind what stands in front (the map's water); else drawn over everything (tool marks).</param>
+    private unsafe void DrawLines(ref uint vao, ref uint vbo, float[] data, Matrix4x4 vp, Vector4 color, PrimitiveType kind = PrimitiveType.Lines, bool blend = false, float width = 1, bool depth = false)
     {
         if (kind == PrimitiveType.Lines && width > 0)
         {
@@ -78,7 +79,14 @@ public sealed partial class GlView
         {
             _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 4), p, BufferUsageARB.DynamicDraw);
         }
-        _gl.Disable(EnableCap.DepthTest);
+        if (depth)
+        {
+            _gl.DepthMask(false);   // tested against the ground and objects, not hiding them in turn
+        }
+        else
+        {
+            _gl.Disable(EnableCap.DepthTest);
+        }
         _gl.Uniform4(UseLineProgram(vp), color.X, color.Y, color.Z, color.W);
         _gl.BindVertexArray(vao);
         if (blend)
@@ -95,6 +103,7 @@ public sealed partial class GlView
         }
         _gl.Disable(EnableCap.Blend);
         _gl.Enable(EnableCap.DepthTest);
+        _gl.DepthMask(true);
     }
     /// <summary>
     /// A line through points on the ground as line pairs, each stretch cut about every metre so it follows hills.

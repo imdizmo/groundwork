@@ -196,7 +196,7 @@ public sealed partial class GlView
     {
         foreach (var (color, tris) in _mapWater)
         {
-            DrawLines(ref _waterLinesVao, ref _waterLinesVbo, tris, vp, color, PrimitiveType.Triangles, blend: true);
+            DrawLines(ref _waterLinesVao, ref _waterLinesVbo, tris, vp, color, PrimitiveType.Triangles, blend: true, depth: true);
         }
     }
 
