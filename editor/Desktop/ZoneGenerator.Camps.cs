@@ -158,16 +158,17 @@ public static partial class ZoneGenerator
         return busy;
     }
 
-    /// <summary>The roads and the camps' trodden ground painted with the second layer.</summary>
-    private static void PaintRoads(byte[] mask, float[] road, List<Camp> camps, int cols, int rows)
+    /// <summary>The roads and the camps' trodden ground painted with a layer (its channel: 0 the first painted one, 1 the second).</summary>
+    private static void PaintRoads(byte[] mask, float[] road, List<Camp> camps, int cols, int rows, int channel)
     {
         void Put(int p, float v)
         {
-            if (v > mask[(p * 4) + 1] / 255f)
+            if (v > mask[(p * 4) + channel] / 255f)
             {
-                mask[(p * 4) + 1] = Byte(v);
-                mask[p * 4] = Byte(mask[p * 4] / 255f * (1 - v));
-                mask[(p * 4) + 2] = Byte(mask[(p * 4) + 2] / 255f * (1 - v));
+                for (int k = 0; k < 3; k++)
+                {
+                    mask[(p * 4) + k] = k == channel ? Byte(v) : Byte(mask[(p * 4) + k] / 255f * (1 - v));
+                }
             }
         }
         for (int p = 0; p < road.Length; p++)

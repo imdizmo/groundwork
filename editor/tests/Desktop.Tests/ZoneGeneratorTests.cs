@@ -168,6 +168,8 @@ public class ZoneGeneratorTests
         var mid = z.Roads[0][z.Roads[0].Count / 2];
         int p = ((int)MathF.Round(mid.Y + 200) * 500) + (int)MathF.Round(mid.X + 200);
         Assert.True(z.Mask[(p * 4) + 1] > 200, $"road paint {z.Mask[(p * 4) + 1]}");
+        var sand = Make(new ZoneGenerator.Spec(Low: 20, High: 80, HillSize: 200, RimHeight: 0, LakeHectares: [], Camps: 3, CampSize: 5, Roads: true, RoadChannel: 0), 500);
+        Assert.True(sand.Mask[p * 4] > 200 && sand.Mask[(p * 4) + 1] < 50, "a road on the first layer");
     }
 
     [Fact]

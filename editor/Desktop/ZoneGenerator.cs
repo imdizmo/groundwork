@@ -24,13 +24,13 @@ public static partial class ZoneGenerator
     /// a marsh: the ground lower than Marsh metres flattened into wet flats, MarshShare of it pools under the sea's level;
     /// Rough: bumps of so many metres a few tens of metres across, over the rolling ground (no ground is quite flat);
     /// Camps: so many camps of CampSize buildings (the catalog's Buildings) round levelled ground, Props among them, joined
-    /// by Roads (levelled strips painted with the second layer) when asked.
+    /// by Roads (levelled strips painted with the second layer, or RoadChannel's: 0 the first, 1 the second) when asked.
     /// </summary>
     public sealed record Spec(float Low = 20, float High = 70, float HillSize = 300, float RimHeight = 200, float RimWidth = 220,
         float[]? LakeHectares = null, float Woods = 0.35f, float WoodDensity = 17, float OpenTrees = 0.3f, float Small = 20, float TreeScale = 1, float Shore = 6, int Seed = 1,
         float Terraces = 0, float TerraceShare = 1, float Canyons = 0, float CanyonWidth = 40, float CanyonSpacing = 500,
         float Coast = 0, string CoastSide = "west", float CoastDepth = 15, bool CoastDry = false, int Rivers = 0, float RiverWidth = 8,
-        int Floaters = 0, float SnowLine = 0, float OpenDirt = 0.12f, int SnowChannel = 0, float RockSlope = 30, float Marsh = 0, float MarshShare = 0.3f, float Rough = 0, int Camps = 0, int CampSize = 5, bool Roads = false);
+        int Floaters = 0, float SnowLine = 0, float OpenDirt = 0.12f, int SnowChannel = 0, float RockSlope = 30, float Marsh = 0, float MarshShare = 0.3f, float Rough = 0, int Camps = 0, int CampSize = 5, bool Roads = false, int RoadChannel = 1);
 
     /// <summary>A lake made: its middle and outline (Unreal X, Y metres), its surface height and depth.</summary>
     public sealed record Lake(Vector2 Middle, Vector2[] Outline, float Level, float Depth);
@@ -119,7 +119,7 @@ public static partial class ZoneGenerator
         bool[] busy = Busy(cols, rows, camps, road, wet);
         float[] wooded = Woods(spec, h, cols, rows, x0, y0, lakeIn, busy);
         byte[] mask = Paint(spec, h, cols, rows, x0, y0, lakeIn, wooded, wet);
-        PaintRoads(mask, road, camps, cols, rows);
+        PaintRoads(mask, road, camps, cols, rows, spec.RoadChannel == 0 ? 0 : 1);
         var objects = Plant(spec, h, cols, rows, x0, y0, lakeIn, wooded, planting, rng, busy);
         Furnish(spec, h, cols, rows, x0, y0, camps, planting, rng, objects);
         Float(spec, h, cols, rows, x0, y0, planting, rng, objects);

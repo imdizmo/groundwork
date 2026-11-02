@@ -25,7 +25,7 @@ public static partial class ZoneGenerator
                 Terraces: 45, TerraceShare: 0.45f, Coast: 350, CoastSide: "east", CoastDepth: 20, OpenDirt: 0.45f, RockSlope: 24, Rough: 4, Camps: 10, Roads: true)),
         ("Tundra coast", "Cold rolling ground down to a wide bay, snow on the heights, few trees.",
             new Spec(Low: 0, High: 80, HillSize: 500, RimHeight: 280, RimWidth: 280, Woods: 0.03f, WoodDensity: 22, OpenTrees: 0.6f, Small: 80, Shore: 12,
-                Coast: 1300, CoastSide: "west", CoastDepth: 40, SnowLine: 75, SnowChannel: 1, OpenDirt: 0, RockSlope: 20, Rough: 2.5f, Camps: 6, Roads: true)),
+                Coast: 1300, CoastSide: "west", CoastDepth: 40, SnowLine: 75, SnowChannel: 1, OpenDirt: 0, RockSlope: 20, Rough: 2.5f, Camps: 6, Roads: true, RoadChannel: 0)),
         ("Marsh coast", "Low wet flats and pools along the sea, rivers down from high mountains.",
             new Spec(Low: 0, High: 55, HillSize: 250, RimHeight: 520, RimWidth: 650, Woods: 0.05f, WoodDensity: 24, OpenTrees: 0.4f, Small: 22, Shore: 0,
                 Coast: 1300, CoastSide: "west", CoastDepth: 3, Rivers: 2, RiverWidth: 10, SnowLine: 330, OpenDirt: 0.12f, Marsh: 14, MarshShare: 0.6f, Rough: 4, Camps: 4, CampSize: 4, Roads: true)),
