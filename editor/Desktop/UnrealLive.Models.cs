@@ -109,7 +109,8 @@ public sealed partial class UnrealLive
 
     /// <summary>
     /// The level's landscape given a material of the map's layers (the bridge makes it, its paint layers and textures,
-    /// saved in the project), then every layer painted as the map has it and the holes cut: what Unreal said.
+    /// saved in the project), then every layer painted as the map has it, the holes cut, and its rivers, lakes and sea
+    /// made: what Unreal said.
     /// </summary>
     public static async Task<string> PaintLandscape(MapProject map, WorldScene scene)
     {
@@ -171,11 +172,29 @@ public sealed partial class UnrealLive
             string cut = holes.Any(v => v > 0)
                 ? "; " + await Post("/groundwork/holes", new JsonObject { ["x0"] = map.X0, ["y0"] = map.Y0, ["col"] = 0, ["row"] = 0, ["w"] = cols, ["h"] = rows, ["weights"] = Convert.ToBase64String(holes) })
                 : "";
-            return $"{made}; {map.Layers.Count} layers painted" + cut;
+            string water = await Post("/groundwork/water", WaterBody(map));
+            return $"{made}; {map.Layers.Count} layers painted" + cut + "; " + water;
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
         {
             return "Unreal does not answer: " + e.Message;
         }
     }
+
+    /// <summary>
+    /// What /groundwork/water is sent for the map: its rivers and lakes (MapWater's), the water prefix, and its sea at
+    /// its sea level over its extent (none for a map whose sea is far below everything: a dry world's edge).
+    /// </summary>
+    internal static JsonObject WaterBody(MapProject map)
+    {
+        var body = JsonNode.Parse(MapWater.Snapshot())!.AsObject();
+        body["prefix"] = map.UnrealWaterPrefix;
+        if (map.SeaLevel > -500)
+        {
+            var raster = map.ReadRaster();
+            body["sea"] = new JsonObject { ["level"] = map.SeaLevel, ["x0"] = map.X0, ["y0"] = map.Y0, ["cols"] = raster.Cols, ["rows"] = raster.Rows };
+        }
+        return body;
+    }
 }
+

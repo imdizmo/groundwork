@@ -54,7 +54,8 @@ player on the ground the camera looks at (in **Walk**: where you stand), facing 
 
 **⋯ → Make the Unreal landscape** also paints it: the bridge makes a landscape material of the map's layers (each
 layer's texture repeated every `size` metres, or its colour; holes cut), a paint layer per map layer and the textures,
-saved under `/Game/Groundwork/Maps/<map>`, then every layer is painted as the map has it and the holes are cut.
+saved under `/Game/Groundwork/Maps/<map>`, then every layer is painted as the map has it, the holes are cut, and the rivers, lakes and the map's sea (an
+ocean at its sea level, when the map has one) are made.
 
 **⋯ → Bring the models into Unreal** imports the map's glTF models that Unreal has no mesh for yet (the models
 folder's `names.json` lists those it has) through Unreal's own importer, each into its own folder under

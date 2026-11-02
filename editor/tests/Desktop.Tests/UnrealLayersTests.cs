@@ -31,4 +31,18 @@ public sealed class UnrealLayersTests : IDisposable
         Assert.Equal(map.Layers.Count, body["layers"]!.AsArray().Count);
         Assert.Equal(3, body["layers"]![0]!["colour"]!.AsArray().Count);
     }
+
+    [AvaloniaFact]
+    public void TheWaterSentHasTheMapsSeaUnlessItHasNone()
+    {
+        var map = MapProject.Create("Sea", 2, generated: false, height: 10, seed: 1, under: _dir);
+        _ = map.Read();
+        var body = UnrealLive.WaterBody(map);
+        Assert.Equal(map.UnrealWaterPrefix, body["prefix"]!.GetValue<string>());
+        Assert.Equal(map.SeaLevel, body["sea"]!["level"]!.GetValue<float>());
+        Assert.Equal(map.ReadRaster().Cols, body["sea"]!["cols"]!.GetValue<int>());
+        map.SeaLevel = -1000;
+        Assert.Null(UnrealLive.WaterBody(map)["sea"]);
+    }
 }
+
