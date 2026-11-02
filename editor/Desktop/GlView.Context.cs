@@ -34,7 +34,12 @@ public sealed partial class GlView
         _terrainEbo = _waterVbo = _waterEbo = 0;
         _terrainProg = _objectProg = _waterProg = _lineProg = 0;
         _terrainVao = _terrainIndexCount = _waterVao = _terrainVbo = _terrainCutVbo = 0;
+        _weightsVbo = _holeTex = _frameFbo = 0;
+        Array.Clear(_layerTex);
         _ghostVbo = 0;
+        // Drawn through DrawLines, which makes them only while they are 0: kept, the rivers' triangles were written
+        // into whatever had the name in the new context (the ground: shards over the whole map).
+        _waterLinesVao = _waterLinesVbo = _modPreviewVao = _modPreviewVbo = _shapeGhostVao = _shapeGhostVbo = 0;
         _hoverBoxVao = _hoverBoxVbo = 0;
         _markVao = _markVbo = _markProg = 0;
         _markCount = 0;
@@ -54,6 +59,7 @@ public sealed partial class GlView
         _shapesDirty = true;
         _shapesGeneration = -1;
         _meshGl.Clear();
+        _meshColorGl.Clear();
         _pickMeshes.Clear();
         _bothWays.Clear();
         _onGpu.Clear();
