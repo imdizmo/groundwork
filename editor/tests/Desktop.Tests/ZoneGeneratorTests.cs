@@ -173,6 +173,16 @@ public class ZoneGeneratorTests
     }
 
     [Fact]
+    public void AShareOfTheTreesAreGiants()
+    {
+        var z = Make(new ZoneGenerator.Spec(RimHeight: 0, LakeHectares: [], Woods: 0.4f, WoodDensity: 120, Small: 0, Giants: 0.2f, GiantScale: 3), 500);
+        var trees = z.Objects.Where(o => o.Model == "Tree").ToList();
+        float giants = trees.Count(t => t.Scale > 2) / (float)trees.Count;
+        Assert.InRange(giants, 0.15f, 0.25f);
+        Assert.All(trees.Where(t => t.Scale > 2), t => Assert.InRange(t.Scale, 2.4f, 3.6f));
+    }
+
+    [Fact]
     public void AMarshFloodsPartOfTheLowGround()
     {
         var z = Make(new ZoneGenerator.Spec(Low: 1, High: 30, RimHeight: 0, LakeHectares: [], Marsh: 8, MarshShare: 0.4f));

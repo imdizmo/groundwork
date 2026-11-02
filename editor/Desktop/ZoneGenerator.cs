@@ -24,13 +24,15 @@ public static partial class ZoneGenerator
     /// a marsh: the ground lower than Marsh metres flattened into wet flats, MarshShare of it pools under the sea's level;
     /// Rough: bumps of so many metres a few tens of metres across, over the rolling ground (no ground is quite flat);
     /// Camps: so many camps of CampSize buildings (the catalog's Buildings) round levelled ground, Props among them, joined
-    /// by Roads (levelled strips painted with the second layer, or RoadChannel's: 0 the first, 1 the second) when asked.
+    /// by Roads (levelled strips painted with the second layer, or RoadChannel's: 0 the first, 1 the second) when asked;
+    /// Giants: the share of the trees that are giants, about GiantScale times their kind's size (one here and there, not
+    /// whole groves: a game's few great trees make much of its canopy).
     /// </summary>
     public sealed record Spec(float Low = 20, float High = 70, float HillSize = 300, float RimHeight = 200, float RimWidth = 220,
         float[]? LakeHectares = null, float Woods = 0.35f, float WoodDensity = 17, float OpenTrees = 0.3f, float Small = 20, float TreeScale = 1, float Shore = 6, int Seed = 1,
         float Terraces = 0, float TerraceShare = 1, float Canyons = 0, float CanyonWidth = 40, float CanyonSpacing = 500,
         float Coast = 0, string CoastSide = "west", float CoastDepth = 15, bool CoastDry = false, int Rivers = 0, float RiverWidth = 8,
-        int Floaters = 0, float SnowLine = 0, float OpenDirt = 0.12f, int SnowChannel = 0, float RockSlope = 30, float Marsh = 0, float MarshShare = 0.3f, float Rough = 0, int Camps = 0, int CampSize = 5, bool Roads = false, int RoadChannel = 1);
+        int Floaters = 0, float SnowLine = 0, float OpenDirt = 0.12f, int SnowChannel = 0, float RockSlope = 30, float Marsh = 0, float MarshShare = 0.3f, float Rough = 0, int Camps = 0, int CampSize = 5, bool Roads = false, int RoadChannel = 1, float Giants = 0, float GiantScale = 2.5f);
 
     /// <summary>A lake made: its middle and outline (Unreal X, Y metres), its surface height and depth.</summary>
     public sealed record Lake(Vector2 Middle, Vector2[] Outline, float Level, float Depth);
@@ -298,6 +300,10 @@ public static partial class ZoneGenerator
                     ? from[Math.Clamp((int)(((Fbm(fc / 220, fr / 220, spec.Seed + 53 + from.Count, 2) * 0.5f) + 0.5f) * from.Count), 0, from.Count - 1)]
                     : from[rng.Next(from.Count)];
                 float s = (kind.MinScale + (rng.NextSingle() * (kind.MaxScale - kind.MinScale))) * times;
+                if (ReferenceEquals(from, kinds.Trees) && spec.Giants > 0 && rng.NextSingle() < spec.Giants)
+                {
+                    s *= spec.GiantScale * (0.85f + (0.3f * rng.NextSingle()));
+                }
                 // editor axes: x = X, z = -Y
                 placed.Add((kind.Model, new Vector3(fc + x0, At(h, cols, rows, fc, fr), -(fr + y0)), rng.NextSingle() * 360, s));
             }
