@@ -152,7 +152,7 @@ public partial class MainWindow
                 ? MapProject.CreateZone(name, chunks, zone, ZoneGenerator.Planting.From(MapTools.Catalog().Kinds), NewMapsFolder(), MapProject.Current)
                 : MapProject.Create(name, chunks, rolling, rolling ? 3f : 1f, Environment.TickCount & 0xFFFF, NewMapsFolder(), MapProject.Current);
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
             await Tell(ex.Message);
             return;

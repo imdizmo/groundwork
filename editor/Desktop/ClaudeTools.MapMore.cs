@@ -253,7 +253,7 @@ public sealed partial class ClaudeTools
         {
             made = MapProject.CreateZone(name, squares, spec, ZoneGenerator.Planting.From(MapTools.Catalog().Kinds), _w.NewMapsFolder(), MapProject.Current);
         }
-        catch (IOException e)
+        catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
         {
             return e.Message;
         }

@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using SharpGLTF.Schema2;
 using Xunit;
 
@@ -6,6 +7,39 @@ namespace Groundwork.Desktop.Tests;
 /// <summary>Floating islands: written as a .glb the model loader reads, a domed top over rock hanging to a point.</summary>
 public class FloatingIslandTests
 {
+    [Fact]
+    public void IslandsAreWrittenOnlyIntoARealModelsFolderAndNeverThroughALink()
+    {
+        string dir = Directory.CreateTempSubdirectory("gw-islands-").FullName;
+        try
+        {
+            var m = MapProject.Create("Isle", 1, generated: false, height: 10, seed: 1, under: dir);
+            // its own models folder: made, the islands in it
+            Assert.Equal(FloatingIsland.Variants, FloatingIsland.WriteFor(m).Count);
+            string own = Path.Combine(m.Folder, "models");
+            Assert.Equal(FloatingIsland.Variants, Directory.GetFiles(own, "FloatingIsland_*.glb").Length);
+            // a link planted where an island goes: refused, its target untouched
+            string target = Path.Combine(dir, "precious.txt");
+            File.WriteAllText(target, "keep");
+            string first = Path.Combine(own, FloatingIsland.Models("Isle")[0] + ".glb");
+            File.Delete(first);
+            File.CreateSymbolicLink(first, target);
+            Assert.Throws<InvalidDataException>(() => FloatingIsland.WriteFor(m));
+            Assert.Equal("keep", File.ReadAllText(target));
+            // a models folder elsewhere that is not one (missing, or without models): nothing made there
+            var json = JsonNode.Parse(File.ReadAllText(Path.Combine(m.Folder, "map.json")))!;
+            string elsewhere = Path.Combine(dir, "made-for-me");
+            json["models"] = elsewhere;
+            File.WriteAllText(Path.Combine(m.Folder, "map.json"), json.ToJsonString());
+            Assert.Throws<InvalidDataException>(() => FloatingIsland.WriteFor(MapProject.Open(m.Folder)));
+            Assert.False(Directory.Exists(elsewhere));
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
     [Fact]
     public void AnIslandIsAGlbWithItsTopAndTheRockBelow()
     {

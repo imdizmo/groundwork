@@ -73,14 +73,27 @@ public static class FloatingIsland
     /// <returns>The islands' kinds.</returns>
     public static List<MapTools.Kind> WriteFor(MapProject m)
     {
+        // A map from elsewhere names its own models folder: islands go into the map's own one, or into a shared one only
+        // when it is real (there, not a link, models already in it); never through a link planted where an island goes.
         string folder = m.Models ?? Path.Combine(m.Folder, "models");
-        Directory.CreateDirectory(folder);
+        if (m.Models == null)
+        {
+            Directory.CreateDirectory(folder);
+        }
+        if (!Directory.Exists(folder) || new DirectoryInfo(folder).LinkTarget != null || (m.Models != null && ModelStore.ModelFiles(folder).Count == 0))
+        {
+            throw new InvalidDataException($"{folder}: not a models folder floating islands can be written into");
+        }
         var top = m.Layers[0];
         MapProject.Layer? Named(params string[] words) => m.Layers.FirstOrDefault(l => words.Any(w => l.Name.Contains(w, StringComparison.OrdinalIgnoreCase)));
         var below = Named("Rock", "Cliff", "Stone") ?? m.Layers[^1];
         var earth = Named("Dirt", "Earth", "Mud", "Ground") ?? below;
         string? File(MapProject.Layer l) => l.Texture is { } t && System.IO.File.Exists(Path.Combine(m.Folder, t)) ? Path.Combine(m.Folder, t) : null;
         string[] names = Models(m.Name);
+        if (names.Select(n => Path.Combine(folder, n + ".glb")).FirstOrDefault(f => new FileInfo(f).LinkTarget != null) is { } link)
+        {
+            throw new InvalidDataException($"{link} is a link: an island is written only as a file of its own");
+        }
         for (int v = 0; v < Variants; v++)
         {
             Write(Path.Combine(folder, names[v] + ".glb"), v, [(File(top), top.Colour, top.Size), (File(earth), earth.Colour, earth.Size), (File(below), below.Colour, below.Size)]);
