@@ -397,6 +397,7 @@ public sealed class MapProject
         scene.Session.ForgetHistory();
         MapWater.Load(WaterFile);
         MapAreas.Load(AreasFile);
+        MapNotes.Load(System.IO.Path.Combine(Folder, "notes"));
         return scene;
     }
 

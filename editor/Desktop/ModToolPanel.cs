@@ -24,6 +24,7 @@ public sealed class ModToolPanel
     private readonly Dictionary<string, List<int>> _picked = [];
     private readonly Dictionary<string, Slider> _sliders = [];
     private readonly Dictionary<string, CheckBox> _toggleBoxes = [];
+    private readonly Dictionary<string, TextBox> _typedBoxes = [];
     private readonly Dictionary<string, (StackPanel Cards, List<(string, string, string)> Items)> _lists = [];
     private bool _setting;
 
@@ -120,6 +121,10 @@ public sealed class ModToolPanel
         else if (_toggleBoxes.TryGetValue(id, out var box))
         {
             box.Content = text;   // a switch's label (Layers: the group and its count)
+        }
+        else if (_typedBoxes.TryGetValue(id, out var typed))
+        {
+            typed.Text = text;   // a text box's text (Notes: emptied once its note is pinned)
         }
     }
 
@@ -306,6 +311,7 @@ public sealed class ModToolPanel
     {
         _typed[t.Id] = "";
         var box = new TextBox { PlaceholderText = t.Placeholder, FontSize = 12 };
+        _typedBoxes[t.Id] = box;
         box.TextChanged += (_, _) =>
         {
             _typed[t.Id] = box.Text ?? "";

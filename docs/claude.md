@@ -27,3 +27,14 @@ change is a step marked as Claude's in History; **Take back Claude's changes** r
 Claude can also measure what it made: the slope, layer and water depth at a point; objects floating, buried or under
 water; trees and buildings on ground too steep for them; roads that run under a river, lake or the sea; and how many
 of a kind stand in a circle and how far apart.
+
+## Notes for Claude
+
+**Notes** (on the rail under MAP) is how you point Claude at things. Type a note and click where it belongs, on the
+ground or on an object, to pin it there. Drag to draw a line round what you mean; `Shift`+click deletes a pin or a
+line. **Send the view to Claude** takes a picture of the view as it is, pins and lines in it and each pin's number
+over it, with your message. Claude reads them, answers each note (its answer shows under the note, and it can mark it
+done) and pins its own notes in blue where it wants you to look or decide.
+
+Notes live in the map's `notes` folder (`notes.json` and the last ten pictures) and are saved as you make them. They
+are not part of the map: Save, undo and Unreal ignore them.
