@@ -26,6 +26,7 @@ public sealed partial class GeneratorWindow
         new("Ground", "Canyon depth", "m", 0, 150, 5, s => s.Canyons, (s, v) => s with { Canyons = F(v) }, "Chasms cut through the ground (0: none)."),
         new("Ground", "Canyon width", "m", 10, 200, 5, s => s.CanyonWidth, (s, v) => s with { CanyonWidth = F(v) }),
         new("Ground", "Canyons apart", "m", 200, 3000, 50, s => s.CanyonSpacing, (s, v) => s with { CanyonSpacing = F(v) }),
+        new("Ground", "Cliffs from", "°", 0, 70, 1, s => s.CliffSlope, (s, v) => s with { CliffSlope = F(v) }, "Ground steeper than this faced with walls of rock, pieces overlapping along it (0: none; not in the preview)."),
         new("Mountain rim", "Rim height", "m", 0, 800, 10, s => s.RimHeight, (s, v) => s with { RimHeight = F(v) }, "A wall of ridged mountains round the edge (0: none)."),
         new("Mountain rim", "Rim width", "m", 0, 1000, 10, s => s.RimWidth, (s, v) => s with { RimWidth = F(v) }),
         new("Coast", "Coast width", "m", 0, 4000, 50, s => s.Coast, (s, v) => s with { Coast = F(v) }, "How far in from one side the ground goes under the sea, or drops away (0: no coast)."),

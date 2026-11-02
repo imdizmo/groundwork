@@ -158,6 +158,34 @@ public class ZoneGeneratorTests
     }
 
     [Fact]
+    public void CliffPiecesStepTheSteepGroundAndFaceDownIt()
+    {
+        var cliff = new MapTools.Kind("Cliff_0", "Cliff", CliffPiece.Category, 1, 1, null);
+        var kinds = Kinds with { Cliffs = [cliff] };
+        var spec = new ZoneGenerator.Spec(Low: 0, High: 50, HillSize: 250, RimHeight: 0, LakeHectares: [], Woods: 0, Small: 0, Terraces: 20, CliffSlope: 35);
+        var z = ZoneGenerator.Generate(spec, 500, 500, -200, -200, kinds);
+        var pieces = z.Objects.Where(o => o.Model == "Cliff_0").ToList();
+        Assert.True(pieces.Count > 20, $"{pieces.Count} pieces");
+        float G(float x, float y) => z.Heights[(Math.Clamp((int)MathF.Round(y + 200), 0, 499) * 500) + Math.Clamp((int)MathF.Round(x + 200), 0, 499)];
+        int stepped = 0, flush = 0;
+        foreach (var (_, at, yaw, scale) in pieces)
+        {
+            // the ground steps down at its face: just behind it the hill's top (filled out to it, the piece's top just
+            // under it), a few metres in front well below
+            var ahead = new Vector2(MathF.Sin(yaw * MathF.PI / 180), MathF.Cos(yaw * MathF.PI / 180));   // editor x, z
+            float behind = G(at.X - (ahead.X * CliffPiece.Depth * scale * 0.3f), -(at.Z - (ahead.Y * CliffPiece.Depth * scale * 0.3f)));
+            float before = G(at.X + (ahead.X * (3 + (2 * scale))), -(at.Z + (ahead.Y * (3 + (2 * scale)))));
+            stepped += behind - before > 3 ? 1 : 0;
+            float top = at.Y + (CliffPiece.Height * scale);
+            flush += top <= behind + 0.1f && behind - top < 4 ? 1 : 0;
+            Assert.True(at.Y < G(at.X, -at.Z), "its foot in the ground");
+        }
+        Assert.True(stepped > pieces.Count * 0.8f, $"{stepped} of {pieces.Count} with the ground stepping down at their face");
+        Assert.True(flush > pieces.Count * 0.8f, $"{flush} of {pieces.Count} with their top just under the ground behind");
+        Assert.DoesNotContain(ZoneGenerator.Generate(spec with { CliffSlope = 0 }, 500, 500, -200, -200, kinds).Objects, o => o.Model == "Cliff_0");
+    }
+
+    [Fact]
     public void FloatersHangHighAboveTheGroundAndSnowLiesHigh()
     {
         var z = Make(new ZoneGenerator.Spec(Low: 20, High: 200, RimHeight: 0, LakeHectares: [], Woods: 0, OpenTrees: 0, Small: 0, Floaters: 6, SnowLine: 150));

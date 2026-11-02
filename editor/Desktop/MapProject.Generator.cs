@@ -27,6 +27,11 @@ public sealed partial class MapProject
             // its own islands, of its own ground (another map's in the copied catalog are not its)
             planting = planting with { Islands = FloatingIsland.WriteFor(this) };
         }
+        if (spec.CliffSlope > 0)
+        {
+            // its own cliff pieces, of its own rock
+            planting = planting with { Cliffs = CliffPiece.WriteFor(this) };
+        }
         var zone = ZoneGenerator.Generate(spec, map.Cols, map.Rows, map.X0, map.Y0, planting);
         Write(HeightsFile, zone.Heights, map.Rows, map.Cols);
         WriteMask(LayersFile, zone.Mask, map);

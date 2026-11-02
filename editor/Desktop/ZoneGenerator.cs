@@ -26,13 +26,14 @@ public static partial class ZoneGenerator
     /// Camps: so many camps of CampSize buildings (the catalog's Buildings) round levelled ground, Props among them, joined
     /// by Roads (levelled strips painted with the second layer, or RoadChannel's: 0 the first, 1 the second) when asked;
     /// Giants: the share of the trees that are giants, about GiantScale times their kind's size (one here and there, not
-    /// whole groves: a game's few great trees make much of its canopy).
+    /// whole groves: a game's few great trees make much of its canopy); cliffs: ground steeper than CliffSlope degrees faced
+    /// with the catalog's Cliffs (0: none), pieces of rock wall overlapping along it.
     /// </summary>
     public sealed record Spec(float Low = 20, float High = 70, float HillSize = 300, float RimHeight = 200, float RimWidth = 220,
         float[]? LakeHectares = null, float Woods = 0.35f, float WoodDensity = 17, float OpenTrees = 0.3f, float Small = 20, float TreeScale = 1, float Shore = 6, int Seed = 1,
         float Terraces = 0, float TerraceShare = 1, float Canyons = 0, float CanyonWidth = 40, float CanyonSpacing = 500,
         float Coast = 0, string CoastSide = "west", float CoastDepth = 15, bool CoastDry = false, int Rivers = 0, float RiverWidth = 8,
-        int Floaters = 0, float SnowLine = 0, float OpenDirt = 0.12f, int SnowChannel = 0, float RockSlope = 30, float Marsh = 0, float MarshShare = 0.3f, float Rough = 0, int Camps = 0, int CampSize = 5, bool Roads = false, int RoadChannel = 1, float Giants = 0, float GiantScale = 2.5f);
+        int Floaters = 0, float SnowLine = 0, float OpenDirt = 0.12f, int SnowChannel = 0, float RockSlope = 30, float Marsh = 0, float MarshShare = 0.3f, float Rough = 0, int Camps = 0, int CampSize = 5, bool Roads = false, int RoadChannel = 1, float Giants = 0, float GiantScale = 2.5f, float CliffSlope = 0);
 
     /// <summary>A lake made: its middle and outline (Unreal X, Y metres), its surface height and depth.</summary>
     public sealed record Lake(Vector2 Middle, Vector2[] Outline, float Level, float Depth);
@@ -62,12 +63,15 @@ public static partial class ZoneGenerator
         /// <summary>The floating islands rocks in the air are made of (FloatingIsland); none: the big rocks.</summary>
         public IReadOnlyList<MapTools.Kind> Islands { get; init; } = [];
 
+        /// <summary>The cliff pieces steep ground is faced with (CliffPiece).</summary>
+        public IReadOnlyList<MapTools.Kind> Cliffs { get; init; } = [];
+
         /// <summary>A catalog's kinds sorted into its Trees, Bushes, Rocks and Plants groups.</summary>
         public static Planting From(IEnumerable<MapTools.Kind> kinds)
         {
             var all = kinds.ToList();
             List<MapTools.Kind> Of(string group) => [.. all.Where(k => string.Equals(k.Category, group, StringComparison.OrdinalIgnoreCase))];
-            return new(Of("Trees"), Of("Bushes"), Of("Rocks"), Of("Plants")) { Buildings = Of("Buildings"), Props = Of("Props"), Islands = Of(FloatingIsland.Category) };
+            return new(Of("Trees"), Of("Bushes"), Of("Rocks"), Of("Plants")) { Buildings = Of("Buildings"), Props = Of("Props"), Islands = Of(FloatingIsland.Category), Cliffs = Of(CliffPiece.Category) };
         }
     }
 
@@ -122,10 +126,14 @@ public static partial class ZoneGenerator
         float[] road = new float[cols * rows];
         var roads = spec.Roads ? MakeRoads(spec, h, cols, rows, x0, y0, camps, lakeIn, wet, road) : [];
         bool[] busy = Busy(cols, rows, camps, road, wet);
+        // the cliffs before the woods and the paint: they step the ground (painted rock, nothing growing on the step)
+        var cliffs = new List<(string, Vector3, float, float)>();
+        Cliffs(spec, h, cols, rows, x0, y0, planting.Cliffs, rng, cliffs, (c, r) => !busy[(r * cols) + c] && lakeIn[(r * cols) + c] <= -2);
         float[] wooded = Woods(spec, h, cols, rows, x0, y0, lakeIn, busy);
         byte[] mask = Paint(spec, h, cols, rows, x0, y0, lakeIn, wooded, wet);
         PaintRoads(mask, road, camps, cols, rows, spec.RoadChannel == 0 ? 0 : 1);
         var objects = Plant(spec, h, cols, rows, x0, y0, lakeIn, wooded, planting, rng, busy);
+        objects.AddRange(cliffs);
         Furnish(spec, h, cols, rows, x0, y0, camps, planting, rng, objects);
         Float(spec, h, cols, rows, x0, y0, planting, rng, objects);
         return new Zone(h, mask, objects, lakes, wooded) { Rivers = rivers, Roads = roads };
@@ -242,6 +250,135 @@ public static partial class ZoneGenerator
             }
         });
         return w;
+    }
+
+    /// <summary>
+    /// The cliffs: steep ground faced with cliff pieces. Each at the foot of a slope steeper than CliffSlope (found by
+    /// walking down it from a steep point until it eases), facing down it, as tall as the slope's drop to where it eases
+    /// above (its top just under the ground there), reaching back into the hill; close along the slope, overlapping. The
+    /// ground inside each piece is filled up to the slope's top, so that the slope becomes a step: the hill's top runs out
+    /// to the rock's face and the face drops from it (the piece's top under the grass).
+    /// </summary>
+    private static void Cliffs(Spec spec, float[] h, int cols, int rows, float x0, float y0, IReadOnlyList<MapTools.Kind> pieces, Random rng, List<(string, Vector3, float, float)> placed, Func<int, int, bool> free)
+    {
+        if (spec.CliffSlope <= 0 || pieces.Count == 0)
+        {
+            return;
+        }
+        float ease = spec.CliffSlope * 0.6f;
+        Vector2 Down(Vector2 p)
+        {
+            var g = new Vector2(At(h, cols, rows, p.X + 1, p.Y) - At(h, cols, rows, p.X - 1, p.Y), At(h, cols, rows, p.X, p.Y + 1) - At(h, cols, rows, p.X, p.Y - 1));
+            return g.LengthSquared() > 1e-8f ? -Vector2.Normalize(g) : Vector2.Zero;
+        }
+        bool Inside(Vector2 p) => p.X >= 1 && p.Y >= 1 && p.X < cols - 2 && p.Y < rows - 2;
+        // where the slope eases, walking one way from a point (at most 30 m)
+        Vector2 Walk(Vector2 p, float way)
+        {
+            for (int k = 0; k < 30 && Inside(p); k++)
+            {
+                var d = Down(p) * way;
+                if (d == Vector2.Zero || Slope(h, cols, rows, (int)p.X, (int)p.Y) < ease)
+                {
+                    break;
+                }
+                p += d;
+            }
+            return Vector2.Clamp(p, Vector2.One, new Vector2(cols - 2, rows - 2));
+        }
+        var middles = new List<(Vector2 At, float Width)>();
+        var made = new List<(Vector2 At, float Yaw, float S, float Back)>();
+        // whether a point lies in a piece's footprint (its width, from just before its face back to where its slope tops out)
+        static bool Under((Vector2 At, float Yaw, float S, float Back) piece, Vector2 p)
+        {
+            float a = piece.Yaw * MathF.PI / 180;
+            var front = new Vector2(MathF.Sin(a), -MathF.Cos(a));
+            var d = p - piece.At;
+            float lz = Vector2.Dot(d, front), lx = Vector2.Dot(d, new Vector2(-front.Y, front.X));
+            return MathF.Abs(lx) <= CliffPiece.Width * piece.S / 2 && lz > -piece.Back && lz < 2 * piece.S;
+        }
+        // the ground inside a piece (behind its face, back to where the slope tops out: no further, or it would spill
+        // over a ridge) raised to the slope's top
+        void Fill(Vector2 at, float yaw, float s, int variant, float topHeight, float back)
+        {
+            var face = CliffPiece.Face(Math.Max(0, variant));
+            // behind the face's deepest point (its top leans back), or the ground's step would stand in front of the rock;
+            // found once a piece at 25 places across it
+            float[] backs = [.. Enumerable.Range(0, 25).Select(i => Enumerable.Range(0, 25).Min(j => face(((i / 24f) - 0.5f) * CliffPiece.Width, j * CliffPiece.Height / 24)) - 1)];
+            float Back(float lx) => backs[Math.Clamp((int)MathF.Round(((lx / CliffPiece.Width) + 0.5f) * 24), 0, 24)];
+            float a = yaw * MathF.PI / 180;
+            var front = new Vector2(MathF.Sin(a), -MathF.Cos(a));   // the face's way in pixels (editor z = -row)
+            var side = new Vector2(-front.Y, front.X);
+            float reach = (CliffPiece.Width * s / 2) + (CliffPiece.Depth * s);
+            int c0 = Math.Max(0, (int)(at.X - reach)), c1 = Math.Min(cols - 1, (int)(at.X + reach)), r0 = Math.Max(0, (int)(at.Y - reach)), r1 = Math.Min(rows - 1, (int)(at.Y + reach));
+            for (int r = r0; r <= r1; r++)
+            {
+                for (int c = c0; c <= c1; c++)
+                {
+                    var d = new Vector2(c, r) - at;
+                    float lx = Vector2.Dot(d, side) / s, lz = Vector2.Dot(d, front) / s;
+                    if (MathF.Abs(lx) <= CliffPiece.Width / 2 && lz * s > -back && lz < Back(lx))
+                    {
+                        h[(r * cols) + c] = MathF.Max(h[(r * cols) + c], topHeight);
+                    }
+                }
+            }
+        }
+        // candidates every 3 m, jittered, in a shuffled order
+        var candidates = new List<Vector2>();
+        for (int r = 2; r < rows - 2; r += 3)
+        {
+            for (int c = 2; c < cols - 2; c += 3)
+            {
+                if (Slope(h, cols, rows, c, r) > spec.CliffSlope && free(c, r))
+                {
+                    candidates.Add(new Vector2(c + rng.NextSingle(), r + rng.NextSingle()));
+                }
+            }
+        }
+        foreach (var p in candidates.OrderBy(_ => rng.Next()))
+        {
+            var foot = Walk(p, 1);
+            var top = Walk(p, -1);
+            float drop = At(h, cols, rows, top.X, top.Y) - At(h, cols, rows, foot.X, foot.Y), run = Vector2.Distance(foot, top);
+            var middle = (foot + top) / 2;
+            if (drop < 6 || middles.Any(m => Vector2.Distance(m.At, middle) < m.Width * 0.3f))
+            {
+                continue;
+            }
+            // the slope's top: the lowest along the piece's width there (so that its top is under the ground all along);
+            // the piece as tall as from there down to the foot, its top 0.4 m under the ground and its foot 1.5 m in it
+            // (the ground behind it is filled, so it need not reach back)
+            var d = Down(p);
+            var across = new Vector2(-d.Y, d.X) * CliffPiece.Width * Math.Clamp((drop + 1.9f) / CliffPiece.Height, 0.3f, 6) * 0.4f;
+            float topHeight = MathF.Min(At(h, cols, rows, top.X, top.Y), MathF.Min(At(h, cols, rows, Math.Clamp(top.X + across.X, 0, cols - 1), Math.Clamp(top.Y + across.Y, 0, rows - 1)), At(h, cols, rows, Math.Clamp(top.X - across.X, 0, cols - 1), Math.Clamp(top.Y - across.Y, 0, rows - 1))));
+            drop = topHeight - At(h, cols, rows, foot.X, foot.Y);
+            if (drop < 6 || drop + 1.9f > CliffPiece.Height * 6)
+            {
+                continue;
+            }
+            float s = MathF.Max(0.3f, (drop + 1.9f) / CliffPiece.Height);
+            // none where the slope tops out on a ridge (the ground falling away behind would leave the rock standing up)
+            var beyond = Vector2.Clamp(top - (d * CliffPiece.Depth * s * 0.6f), Vector2.Zero, new Vector2(cols - 1, rows - 1));
+            if (At(h, cols, rows, beyond.X, beyond.Y) < At(h, cols, rows, top.X, top.Y) - 1.5f)
+            {
+                continue;
+            }
+            var at = foot + (d * 0.5f);
+            float yaw = (MathF.Atan2(d.X, -d.Y) * 180 / MathF.PI) + ((rng.NextSingle() - 0.5f) * 30);   // the face (+z) down the slope (editor z = -row), a little turned
+            // not standing in another piece, nor another in it (one would bury the other's face)
+            var piece = (at, yaw, s, run + 1.5f);
+            if (made.Any(m => Vector2.DistanceSquared(m.At, at) < MathF.Pow((CliffPiece.Width * MathF.Max(m.S, s)) + m.Back + piece.Item4, 2) && (Under(m, at) || Under(piece, m.At))))
+            {
+                continue;
+            }
+            made.Add(piece);
+            int k = rng.Next(pieces.Count);
+            // its top just under the ground where the slope tops out (the ground's grass to the edge), its foot sunk
+            placed.Add((pieces[k].Model, new Vector3(at.X + x0, topHeight - 0.4f - (CliffPiece.Height * s), -(at.Y + y0)), yaw, s));
+            Fill(at, yaw, s, CliffPiece.VariantOf(pieces[k].Model), topHeight, run + 1.5f);
+            middles.Add((middle, CliffPiece.Width * s));
+        }
     }
 
     /// <summary>Whether trees may stand at a point: not a cliff (woods climb steep hillsides), not in a lake.</summary>

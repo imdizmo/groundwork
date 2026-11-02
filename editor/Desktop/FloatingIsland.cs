@@ -1,6 +1,4 @@
 using System.Numerics;
-using System.Text;
-using System.Text.Json.Nodes;
 
 namespace Groundwork.Desktop;
 
@@ -74,42 +72,17 @@ public static class FloatingIsland
     /// <returns>The islands' kinds.</returns>
     public static List<MapTools.Kind> WriteFor(MapProject m)
     {
-        // A map from elsewhere names its own models folder: islands go into the map's own one, or into a shared one only
-        // when it is real (there, not a link, models already in it); never through a link planted where an island goes.
-        string folder = m.Models ?? Path.Combine(m.Folder, "models");
-        if (m.Models == null)
-        {
-            Directory.CreateDirectory(folder);
-        }
-        if (!Directory.Exists(folder) || new DirectoryInfo(folder).LinkTarget != null || (m.Models != null && ModelStore.ModelFiles(folder).Count == 0))
-        {
-            throw new InvalidDataException($"{folder}: not a models folder floating islands can be written into");
-        }
+        string folder = GeneratedModels.Folder(m, "floating islands");
         var top = m.Layers[0];
-        MapProject.Layer? Named(params string[] words) => m.Layers.FirstOrDefault(l => words.Any(w => l.Name.Contains(w, StringComparison.OrdinalIgnoreCase)));
-        var earth = Named("Dirt", "Earth", "Mud", "Ground") ?? Named("Rock", "Cliff", "Stone") ?? m.Layers[^1];
-        string? File(MapProject.Layer l) => l.Texture is { } t && System.IO.File.Exists(Path.Combine(m.Folder, t)) ? Path.Combine(m.Folder, t) : null;
+        var earth = GeneratedModels.Layer(m, "Dirt", "Earth", "Mud", "Ground") ?? GeneratedModels.Layer(m, "Rock", "Cliff", "Stone") ?? m.Layers[^1];
         string[] names = Models(m.Name);
-        if (names.Select(n => Path.Combine(folder, n + ".glb")).FirstOrDefault(f => new FileInfo(f).LinkTarget != null) is { } link)
-        {
-            throw new InvalidDataException($"{link} is a link: an island is written only as a file of its own");
-        }
+        GeneratedModels.NoLinks(folder, names);
         for (int v = 0; v < Variants; v++)
         {
-            Write(Path.Combine(folder, names[v] + ".glb"), v, [(File(top), top.Colour, top.Size), (File(earth), earth.Colour, earth.Size)]);
+            Write(Path.Combine(folder, names[v] + ".glb"), v, [GeneratedModels.Look(m, top), GeneratedModels.Look(m, earth)]);
         }
         var kinds = names.Select((n, v) => new MapTools.Kind(n, $"Floating island {v + 1}", Category, 1, 1, null)).ToList();
-        if (m.Catalog is { } cat && System.IO.File.Exists(cat))
-        {
-            var j = JsonNode.Parse(System.IO.File.ReadAllText(cat))!.AsObject();
-            var list = j["kinds"] as JsonArray ?? [];
-            foreach (var k in kinds.Where(k => !list.Any(e => e?["model"]?.GetValue<string>() == k.Model)))
-            {
-                list.Add(new JsonObject { ["model"] = k.Model, ["label"] = k.Label, ["category"] = Category, ["scale"] = new JsonArray(1, 1) });
-            }
-            j["kinds"] = list;
-            System.IO.File.WriteAllText(cat, j.ToJsonString(new() { WriteIndented = true }));
-        }
+        GeneratedModels.AddToCatalog(m, kinds);
         return kinds;
     }
 
@@ -224,106 +197,6 @@ public static class FloatingIsland
     internal static void Write(string file, int variant, (string? Png, Vector3 Colour, float Size)[] looks)
     {
         float Size(int k) => looks[k].Size > 0 ? looks[k].Size : 4;
-        var parts = Mesh(variant, Size(0), Size(1));
-        var bin = new MemoryStream();
-        var views = new JsonArray();
-        var accessors = new JsonArray();
-        int View(byte[] bytes, int? target)
-        {
-            while (bin.Length % 4 != 0)
-            {
-                bin.WriteByte(0);
-            }
-            var view = new JsonObject { ["buffer"] = 0, ["byteOffset"] = bin.Length, ["byteLength"] = bytes.Length };
-            if (target is { } t)
-            {
-                view["target"] = t;
-            }
-            bin.Write(bytes);
-            views.Add(view);
-            return views.Count - 1;
-        }
-        int Accessor(float[] data, int offset, int width, string type, bool bounds)
-        {
-            int n = data.Length / 8;
-            float[] flat = new float[n * width];
-            for (int i = 0; i < n; i++)
-            {
-                Array.Copy(data, (i * 8) + offset, flat, i * width, width);
-            }
-            byte[] bytes = new byte[flat.Length * 4];
-            Buffer.BlockCopy(flat, 0, bytes, 0, bytes.Length);
-            var acc = new JsonObject { ["bufferView"] = View(bytes, 34962), ["componentType"] = 5126, ["count"] = n, ["type"] = type };
-            if (bounds)
-            {
-                acc["min"] = new JsonArray([.. Enumerable.Range(0, width).Select(c => (JsonNode)Enumerable.Range(0, n).Min(i => flat[(i * width) + c]))]);
-                acc["max"] = new JsonArray([.. Enumerable.Range(0, width).Select(c => (JsonNode)Enumerable.Range(0, n).Max(i => flat[(i * width) + c]))]);
-            }
-            accessors.Add(acc);
-            return accessors.Count - 1;
-        }
-        var materials = new JsonArray();
-        var textures = new JsonArray();
-        var images = new JsonArray();
-        var prims = new JsonArray();
-        foreach (var (part, look, name) in parts.Zip(looks, ["Top", "Ground"]))
-        {
-            float[] v = [.. part.V];
-            byte[] idx = new byte[part.I.Count * 4];
-            Buffer.BlockCopy(part.I.ToArray(), 0, idx, 0, idx.Length);
-            int indices = accessors.Count;
-            accessors.Add(new JsonObject { ["bufferView"] = View(idx, 34963), ["componentType"] = 5125, ["count"] = part.I.Count, ["type"] = "SCALAR" });
-            var pbr = new JsonObject { ["metallicFactor"] = 0, ["roughnessFactor"] = 1 };
-            if (look.Png != null)
-            {
-                images.Add(new JsonObject { ["bufferView"] = View(System.IO.File.ReadAllBytes(look.Png), null), ["mimeType"] = "image/png" });
-                textures.Add(new JsonObject { ["source"] = images.Count - 1 });
-                pbr["baseColorTexture"] = new JsonObject { ["index"] = textures.Count - 1 };
-            }
-            else
-            {
-                pbr["baseColorFactor"] = new JsonArray(look.Colour.X, look.Colour.Y, look.Colour.Z, 1);
-            }
-            materials.Add(new JsonObject { ["name"] = name, ["pbrMetallicRoughness"] = pbr });
-            prims.Add(new JsonObject
-            {
-                ["attributes"] = new JsonObject { ["POSITION"] = Accessor(v, 0, 3, "VEC3", true), ["NORMAL"] = Accessor(v, 3, 3, "VEC3", false), ["TEXCOORD_0"] = Accessor(v, 6, 2, "VEC2", false) },
-                ["indices"] = indices,
-                ["material"] = materials.Count - 1,
-            });
-        }
-        while (bin.Length % 4 != 0)
-        {
-            bin.WriteByte(0);
-        }
-        var gltf = new JsonObject
-        {
-            ["asset"] = new JsonObject { ["version"] = "2.0", ["generator"] = "Groundwork" },
-            ["scene"] = 0,
-            ["scenes"] = new JsonArray(new JsonObject { ["nodes"] = new JsonArray(0) }),
-            ["nodes"] = new JsonArray(new JsonObject { ["mesh"] = 0, ["name"] = Path.GetFileNameWithoutExtension(file) }),
-            ["meshes"] = new JsonArray(new JsonObject { ["primitives"] = prims }),
-            ["materials"] = materials,
-            ["buffers"] = new JsonArray(new JsonObject { ["byteLength"] = bin.Length }),
-            ["bufferViews"] = views,
-            ["accessors"] = accessors,
-        };
-        if (images.Count > 0)
-        {
-            (gltf["images"], gltf["textures"]) = (images, textures);
-        }
-        byte[] json = Encoding.UTF8.GetBytes(gltf.ToJsonString());
-        int jsonLength = (json.Length + 3) & ~3;
-        using var w = new BinaryWriter(System.IO.File.Create(file));
-        w.Write(0x46546C67u);
-        w.Write(2u);
-        w.Write((uint)(12 + 8 + jsonLength + 8 + bin.Length));
-        w.Write((uint)jsonLength);
-        w.Write(0x4E4F534Au);
-        w.Write(json);
-        w.Write(Enumerable.Repeat((byte)' ', jsonLength - json.Length).ToArray());
-        w.Write((uint)bin.Length);
-        w.Write(0x004E4942u);
-        w.Write(bin.ToArray());
+        GeneratedModels.WriteGlb(file, Mesh(variant, Size(0), Size(1)), [.. looks.Select(l => (l.Png, l.Colour))], ["Top", "Ground"]);
     }
 }
