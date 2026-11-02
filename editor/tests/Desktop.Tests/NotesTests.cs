@@ -74,6 +74,25 @@ public sealed class NotesTests : IDisposable
         Assert.Contains("\"new\":[]", again);
     }
 
+    [AvaloniaFact]
+    public void ANotesFileCannotNameAPictureOutsideItsFolder()
+    {
+        var (_, _, map) = Open();
+        string notes = Path.Combine(map.Folder, "notes"), outside = Path.Combine(_dir, "keep.png");
+        File.WriteAllText(outside, "x");
+        Directory.CreateDirectory(notes);
+        File.WriteAllText(Path.Combine(notes, "notes.json"), "{\"Next\":1,\"Pins\":[],\"Strokes\":[],\"Sent\":[{\"Message\":\"hi\",\"Picture\":\"../../keep.png\"}]}");
+        MapNotes.Load(notes);
+        Assert.Empty(MapNotes.Messages);
+        using var bmp = new SKBitmap(4, 4);
+        for (int i = 0; i < 11; i++)
+        {
+            _ = MapNotes.Send("m", bmp.Encode(SKEncodedImageFormat.Png, 100).ToArray());
+        }
+        Assert.True(File.Exists(outside));
+        Assert.Equal(10, Directory.GetFiles(notes, "sent-*.png").Length);
+    }
+
     private static void Point(MapTools.NotesTool tool, Card card, PointerAction action, float x, float z) =>
         tool.OnPointer(card, new PointerInput(action, KeyModifiers.None, new Vector3(x, 50, z), -Vector3.UnitY) { Target = PointerTarget.Ground, Point = new Vector3(x, 10, z) });
 

@@ -9,7 +9,7 @@ namespace Groundwork.Desktop;
 /// (notes.json and the pictures), written on every change: they are a conversation, not part of the map, so they have
 /// no undo and Save does not wait for them.
 /// </summary>
-public static class MapNotes
+public static partial class MapNotes
 {
     /// <summary>Pictures kept; older ones are deleted.</summary>
     private const int PicturesKept = 10;
@@ -76,9 +76,16 @@ public static class MapNotes
     {
         Folder = folder;
         var f = System.IO.File.Exists(Path.Combine(folder, "notes.json")) ? JsonSerializer.Deserialize<File>(System.IO.File.ReadAllText(Path.Combine(folder, "notes.json"))) ?? new() : new();
-        (Pins, Strokes, Messages, _next) = (f.Pins, [.. f.Strokes.Select(s => s.Where(p => p.Length >= 3).Select(p => new Vector3(p[0], p[1], p[2])).ToList())], f.Sent, f.Next);
+        // A notes file can come with a map from elsewhere: only pictures named as Send names them are kept.
+        (Pins, Strokes, Messages, _next) = (f.Pins, [.. f.Strokes.Select(s => s.Where(p => p.Length >= 3).Select(p => new Vector3(p[0], p[1], p[2])).ToList())], [.. f.Sent.Where(m => PictureName().IsMatch(m.Picture ?? ""))], f.Next);
         Changed?.Invoke();
     }
+
+    /// <summary>A sent picture's file in the notes folder, or null for a name Send would not have made.</summary>
+    public static string? PicturePath(Sent m) => Folder is { } f && PictureName().IsMatch(m.Picture ?? "") ? Path.Combine(f, m.Picture!) : null;
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^sent-[0-9-]+\.png$")]
+    private static partial System.Text.RegularExpressions.Regex PictureName();
 
     /// <summary>A new pin, saved.</summary>
     public static Pin Add(float x, float y, float z, string text, string by = "you")
@@ -94,12 +101,19 @@ public static class MapNotes
     {
         string folder = Folder ?? throw new InvalidOperationException("No map is open.");
         Directory.CreateDirectory(folder);
-        var sent = new Sent { Message = message, Picture = $"sent-{DateTime.Now:yyyyMMdd-HHmmss-fff}.png", At = DateTime.Now };
+        var sent = new Sent { Message = message, At = DateTime.Now };
+        for (int n = 0; sent.Picture.Length == 0 || System.IO.File.Exists(Path.Combine(folder, sent.Picture)); n++)
+        {
+            sent.Picture = $"sent-{sent.At:yyyyMMdd-HHmmss}-{n}.png";
+        }
         System.IO.File.WriteAllBytes(Path.Combine(folder, sent.Picture), png);
         Messages.Add(sent);
         foreach (var old in Messages.Take(Math.Max(0, Messages.Count - PicturesKept)).ToList())
         {
-            System.IO.File.Delete(Path.Combine(folder, old.Picture));
+            if (PicturePath(old) is { } file)
+            {
+                System.IO.File.Delete(file);
+            }
             _ = Messages.Remove(old);
         }
         Touch();
