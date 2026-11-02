@@ -7,7 +7,8 @@ namespace Groundwork.Desktop.Tests;
 public class ZoneGeneratorTests
 {
     private static readonly MapTools.Kind Tree = new("Tree", "Tree", "Trees", 1, 1, null), Rock = new("Rock", "Rock", "Rocks", 1, 1, null);
-    private static readonly ZoneGenerator.Planting Kinds = new([Tree], [], [Rock], []);
+    private static readonly MapTools.Kind Hut = new("Hut", "Hut", "Buildings", 1, 1, null), Crate = new("Crate", "Crate", "Props", 1, 1, null);
+    private static readonly ZoneGenerator.Planting Kinds = new([Tree], [], [Rock], []) { Buildings = [Hut], Props = [Crate] };
 
     private static ZoneGenerator.Zone Make(ZoneGenerator.Spec spec, int n = 400) => ZoneGenerator.Generate(spec, n, n, -200, -200, Kinds);
 
@@ -149,6 +150,27 @@ public class ZoneGeneratorTests
     }
 
     [Fact]
+    public void CampsStandOnLevelledGroundJoinedByRoads()
+    {
+        var z = Make(new ZoneGenerator.Spec(Low: 20, High: 80, HillSize: 200, RimHeight: 0, LakeHectares: [], Camps: 3, CampSize: 5, Roads: true), 500);
+        var huts = z.Objects.Where(o => o.Model == "Hut").ToList();
+        Assert.Equal(15, huts.Count);
+        Assert.Contains(z.Objects, o => o.Model == "Crate");
+        Assert.All(huts, h => Assert.True(MathF.Abs(h.At.Y - Height(z, new Vector2(h.At.X, -h.At.Z), 500)) < 0.6f, "a hut off the ground"));
+        // each camp's ground is level: its huts stand within a couple of metres of each other's height
+        foreach (var camp in huts.Chunk(5))
+        {
+            Assert.True(camp.Max(h => h.At.Y) - camp.Min(h => h.At.Y) < 2.5f, $"camp heights {string.Join(", ", camp.Select(h => h.At.Y))}");
+        }
+        Assert.DoesNotContain(z.Objects, o => o.Model == "Tree" && huts.Any(h => Vector2.Distance(new(h.At.X, h.At.Z), new(o.At.X, o.At.Z)) < 6));
+        Assert.True(z.Roads.Count >= 2);
+        // a road is painted with the dirt layer along it
+        var mid = z.Roads[0][z.Roads[0].Count / 2];
+        int p = ((int)MathF.Round(mid.Y + 200) * 500) + (int)MathF.Round(mid.X + 200);
+        Assert.True(z.Mask[(p * 4) + 1] > 200, $"road paint {z.Mask[(p * 4) + 1]}");
+    }
+
+    [Fact]
     public void AMarshFloodsPartOfTheLowGround()
     {
         var z = Make(new ZoneGenerator.Spec(Low: 1, High: 30, RimHeight: 0, LakeHectares: [], Marsh: 8, MarshShare: 0.4f));
@@ -180,9 +202,9 @@ public class ZoneGeneratorTests
         }
     }
 
-    private static float Height(ZoneGenerator.Zone z, Vector2 unreal)
+    private static float Height(ZoneGenerator.Zone z, Vector2 unreal, int n = 400)
     {
-        int c = Math.Clamp((int)MathF.Round(unreal.X + 200), 0, 399), r = Math.Clamp((int)MathF.Round(unreal.Y + 200), 0, 399);
-        return z.Heights[(r * 400) + c];
+        int c = Math.Clamp((int)MathF.Round(unreal.X + 200), 0, n - 1), r = Math.Clamp((int)MathF.Round(unreal.Y + 200), 0, n - 1);
+        return z.Heights[(r * n) + c];
     }
 }

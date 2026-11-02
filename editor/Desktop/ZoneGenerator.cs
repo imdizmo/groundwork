@@ -22,13 +22,15 @@ public static partial class ZoneGenerator
     /// the air; snow above SnowLine, on the painted layer SnowChannel (0: the first, as the shores; 1: the second);
     /// OpenDirt, the share of the open ground patched with the second painted layer; rock painted from RockSlope degrees;
     /// a marsh: the ground lower than Marsh metres flattened into wet flats, MarshShare of it pools under the sea's level;
-    /// Rough: bumps of so many metres a few tens of metres across, over the rolling ground (no ground is quite flat).
+    /// Rough: bumps of so many metres a few tens of metres across, over the rolling ground (no ground is quite flat);
+    /// Camps: so many camps of CampSize buildings (the catalog's Buildings) round levelled ground, Props among them, joined
+    /// by Roads (levelled strips painted with the second layer) when asked.
     /// </summary>
     public sealed record Spec(float Low = 20, float High = 70, float HillSize = 300, float RimHeight = 200, float RimWidth = 220,
         float[]? LakeHectares = null, float Woods = 0.35f, float WoodDensity = 17, float OpenTrees = 0.3f, float Small = 20, float TreeScale = 1, float Shore = 6, int Seed = 1,
         float Terraces = 0, float TerraceShare = 1, float Canyons = 0, float CanyonWidth = 40, float CanyonSpacing = 500,
         float Coast = 0, string CoastSide = "west", float CoastDepth = 15, bool CoastDry = false, int Rivers = 0, float RiverWidth = 8,
-        int Floaters = 0, float SnowLine = 0, float OpenDirt = 0.12f, int SnowChannel = 0, float RockSlope = 30, float Marsh = 0, float MarshShare = 0.3f, float Rough = 0);
+        int Floaters = 0, float SnowLine = 0, float OpenDirt = 0.12f, int SnowChannel = 0, float RockSlope = 30, float Marsh = 0, float MarshShare = 0.3f, float Rough = 0, int Camps = 0, int CampSize = 5, bool Roads = false);
 
     /// <summary>A lake made: its middle and outline (Unreal X, Y metres), its surface height and depth.</summary>
     public sealed record Lake(Vector2 Middle, Vector2[] Outline, float Level, float Depth);
@@ -38,6 +40,9 @@ public static partial class ZoneGenerator
     {
         /// <summary>The rivers, each a stretch whose surface falls evenly from Top to End (a river is several stretches end to end).</summary>
         public List<River> Rivers { get; init; } = [];
+
+        /// <summary>The roads, each its points (Unreal X, Y metres).</summary>
+        public List<List<Vector2>> Roads { get; init; } = [];
     }
 
     /// <summary>A stretch of river: its points (Unreal X, Y metres, half-width, depth, current) and its surface at its ends.</summary>
@@ -46,12 +51,18 @@ public static partial class ZoneGenerator
     /// <summary>The kinds the zone is planted with, by the catalog's groups.</summary>
     public sealed record Planting(IReadOnlyList<MapTools.Kind> Trees, IReadOnlyList<MapTools.Kind> Bushes, IReadOnlyList<MapTools.Kind> Rocks, IReadOnlyList<MapTools.Kind> Plants)
     {
+        /// <summary>The buildings camps are made of.</summary>
+        public IReadOnlyList<MapTools.Kind> Buildings { get; init; } = [];
+
+        /// <summary>The small things set about a camp (crates, barrels, carts).</summary>
+        public IReadOnlyList<MapTools.Kind> Props { get; init; } = [];
+
         /// <summary>A catalog's kinds sorted into its Trees, Bushes, Rocks and Plants groups.</summary>
         public static Planting From(IEnumerable<MapTools.Kind> kinds)
         {
             var all = kinds.ToList();
             List<MapTools.Kind> Of(string group) => [.. all.Where(k => string.Equals(k.Category, group, StringComparison.OrdinalIgnoreCase))];
-            return new(Of("Trees"), Of("Bushes"), Of("Rocks"), Of("Plants"));
+            return new(Of("Trees"), Of("Bushes"), Of("Rocks"), Of("Plants")) { Buildings = Of("Buildings"), Props = Of("Props") };
         }
     }
 
@@ -101,11 +112,18 @@ public static partial class ZoneGenerator
         var rivers = MakeRivers(spec, h, cols, rows, x0, y0, lakes, rng);
         bool[] wet = Wet(spec, h, cols, rows, x0, y0, rivers);
         float[] lakeIn = LakeField(lakes, cols, rows, x0, y0, MathF.Max(spec.Shore, 4) + 2);
-        float[] wooded = Woods(spec, h, cols, rows, x0, y0, lakeIn, wet);
+        // camps and the roads between them: levelled ground, kept clear of the planting, the roads painted
+        var camps = PlaceCamps(spec, h, cols, rows, lakeIn, wet, rng);
+        float[] road = new float[cols * rows];
+        var roads = spec.Roads ? MakeRoads(spec, h, cols, rows, x0, y0, camps, lakeIn, wet, road) : [];
+        bool[] busy = Busy(cols, rows, camps, road, wet);
+        float[] wooded = Woods(spec, h, cols, rows, x0, y0, lakeIn, busy);
         byte[] mask = Paint(spec, h, cols, rows, x0, y0, lakeIn, wooded, wet);
-        var objects = Plant(spec, h, cols, rows, x0, y0, lakeIn, wooded, planting, rng, wet);
+        PaintRoads(mask, road, camps, cols, rows);
+        var objects = Plant(spec, h, cols, rows, x0, y0, lakeIn, wooded, planting, rng, busy);
+        Furnish(spec, h, cols, rows, x0, y0, camps, planting, rng, objects);
         Float(spec, h, cols, rows, x0, y0, planting, rng, objects);
-        return new Zone(h, mask, objects, lakes, wooded) { Rivers = rivers };
+        return new Zone(h, mask, objects, lakes, wooded) { Rivers = rivers, Roads = roads };
     }
 
     /// <summary>The lakes: each in the lowest open ground found away from the rim and the others, its bed carved.</summary>

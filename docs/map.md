@@ -30,7 +30,9 @@ elsewhere. The zone is planted with the open map's Trees, Bushes, Rocks and Plan
 The styles' shapes, beyond rolling hills: flat shelves with steep risers (plateaus, mesas), canyons cut down into the
 ground, a coast on one side going under the sea or a cliff dropping into nothing, rivers running downhill into a lake
 or the sea with their beds carved, great rocks hanging in the air, snow above a height, marsh flats with pools along
-the sea, and small bumps over everything so no ground is quite flat. The first layer is painted on shores and snow
+the sea, small bumps over everything so no ground is quite flat, and camps: buildings (the catalog's Buildings) in a ring
+round levelled ground with props (its Props) among them, joined one to the next by levelled roads painted with the
+second layer. The first layer is painted on shores and snow
 (or the second, for a coast with beaches and snow), the second in patches over the open ground, the third on steep
 ground.
 
