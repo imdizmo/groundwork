@@ -40,7 +40,7 @@ public static class Lighting
     /// <summary>
     /// The exponential-squared fog's density, per metre.
     /// </summary>
-    public const float FogDensity = 0.003f;
+    public const float FogDensity = 0.001f;   // objects only (the ground has no fog): a haze over a kilometre or more, not a wall
     /// <summary>
     /// Where the fog starts, in metres from the camera (the view sets it each frame: the orbit's distance, so zooming
     /// out does not fog the area over; 0 walking or flying, as in game).

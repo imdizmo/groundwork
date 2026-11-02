@@ -93,6 +93,22 @@ public static class Dialogs
         var density = Box(20, 0, 500, 1);
         var treeScale = Box(1, 0.2, 10, 0.1);
         var seed = Box(Random.Shared.Next(1, 10000), 0, 1e9, 1);
+        var styles = ZoneGenerator.Styles;
+        var style = new ComboBox { ItemsSource = styles.Select(s => s.Name).ToList(), SelectedIndex = 0, FontSize = 13, MinWidth = 130, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var about = new TextBlock { Text = styles[0].About, TextWrapping = TextWrapping.Wrap, FontSize = 12, Foreground = Ui.Muted };
+        style.SelectionChanged += (_, _) =>
+        {
+            // a style fills in its numbers (the lakes too, when it has its own); its shapes come with it on Make it
+            var (_, text, spec) = styles[Math.Max(0, style.SelectedIndex)];
+            about.Text = text;
+            (low.Value, high.Value, hills.Value, rimHeight.Value) = ((decimal)spec.Low, (decimal)spec.High, (decimal)spec.HillSize, (decimal)spec.RimHeight);
+            rimWidth.Value = (decimal)Math.Min(spec.RimWidth, metres * 0.2);
+            (woods.Value, density.Value, treeScale.Value) = ((decimal)(spec.Woods * 100), (decimal)spec.WoodDensity, (decimal)spec.TreeScale);
+            if (spec.LakeHectares is { } own)
+            {
+                lakes.Text = string.Join(", ", own);
+            }
+        };
         Control Row(string label, Control box, string unit) => new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("190,*,60"),
@@ -110,8 +126,19 @@ public static class Dialogs
             float F(NumericUpDown b) => (float)(b.Value ?? 0);
             float[] ha = [.. (lakes.Text ?? "").Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries)
                 .Select(t => float.TryParse(t, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v) ? v : 0).Where(v => v > 0)];
-            result = new ZoneGenerator.Spec(Low: F(low), High: MathF.Max(F(low), F(high)), HillSize: F(hills), RimHeight: F(rimHeight), RimWidth: F(rimWidth),
-                LakeHectares: ha, Woods: F(woods) / 100, WoodDensity: F(density), TreeScale: F(treeScale), Seed: (int)F(seed));
+            result = styles[Math.Max(0, style.SelectedIndex)].Spec with
+            {
+                Low = F(low),
+                High = MathF.Max(F(low), F(high)),
+                HillSize = F(hills),
+                RimHeight = F(rimHeight),
+                RimWidth = F(rimWidth),
+                LakeHectares = ha,
+                Woods = F(woods) / 100,
+                WoodDensity = F(density),
+                TreeScale = F(treeScale),
+                Seed = (int)F(seed),
+            };
             dialog.Close();
         };
         var cancel = new Button { Content = Lang.T("common.cancel"), IsCancel = true }.Tip("dialog.cancel");
@@ -123,6 +150,8 @@ public static class Dialogs
             Children =
             {
                 new TextBlock { Text = "Rolling hills, a mountain rim round the edge, lakes in the low ground and woods, the ground painted by slope and height. The same numbers with another seed make another zone.", TextWrapping = TextWrapping.Wrap, FontSize = 13 },
+                Row("Style", style, ""),
+                about,
                 Row("Hills from", low, "m"),
                 Row("Hills up to", high, "m"),
                 Row("Hills apart", hills, "m"),

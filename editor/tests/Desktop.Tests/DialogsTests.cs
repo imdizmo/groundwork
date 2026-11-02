@@ -114,4 +114,20 @@ public class DialogsTests
         Press(TestWindows.Shown(owner), "Cancel");
         Assert.Null(await asked);
     }
+
+    [AvaloniaFact]
+    public async Task AZoneStyleFillsTheNumbersAndKeepsItsShapes()
+    {
+        var owner = Owner();
+        var asked = Dialogs.AskZone(owner, 2000);
+        var d = TestWindows.Shown(owner);
+        var style = d.GetLogicalDescendants().OfType<ComboBox>().Single();
+        style.SelectedIndex = ZoneGenerator.Styles.ToList().FindIndex(s => s.Name == "Mesas and canyons");
+        Press(d, "Make it");
+        var spec = await asked;
+        Assert.NotNull(spec);
+        var mesas = ZoneGenerator.Styles.Single(s => s.Name == "Mesas and canyons").Spec;
+        Assert.True(spec.Terraces > 0 && spec.Canyons > 0);
+        Assert.Equal((mesas.Low, mesas.High, mesas.Terraces), (spec.Low, spec.High, spec.Terraces));
+    }
 }

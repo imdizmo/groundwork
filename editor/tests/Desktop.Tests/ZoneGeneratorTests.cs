@@ -67,6 +67,116 @@ public class ZoneGeneratorTests
         Assert.NotEqual(Make(spec).Heights, Make(spec with { Seed = 6 }).Heights);
     }
 
+    [Fact]
+    public void TerracesMakeFlatShelvesAndSteepRisers()
+    {
+        var z = Make(new ZoneGenerator.Spec(Low: 20, High: 120, HillSize: 150, RimHeight: 0, LakeHectares: [], Terraces: 20));
+        float near = z.Heights.Count(v => MathF.Abs(v - (MathF.Round(v / 20) * 20)) < 3) / (float)z.Heights.Length;
+        Assert.True(near > 0.5f, $"{near} of the ground near a shelf");
+        int steep = Enumerable.Range(0, 400 * 400).Count(p => ZoneGenerator.Slope(z.Heights, 400, 400, p % 400, p / 400) > 35);
+        Assert.True(steep > 400 * 400 / 25, $"{steep} steep");
+    }
+
+    [Fact]
+    public void CanyonsCutDownIntoTheGround()
+    {
+        var flat = Make(new ZoneGenerator.Spec(Low: 50, High: 60, RimHeight: 0, LakeHectares: []));
+        var cut = Make(new ZoneGenerator.Spec(Low: 50, High: 60, RimHeight: 0, LakeHectares: [], Canyons: 40, CanyonSpacing: 150, CanyonWidth: 25));
+        Assert.True(cut.Heights.Min() < 20, $"{cut.Heights.Min()}");
+        float deep = cut.Heights.Count(v => v < 30) / (float)cut.Heights.Length;
+        Assert.InRange(deep, 0.02f, 0.4f);
+        Assert.True(flat.Heights.Min() > 49);
+    }
+
+    [Fact]
+    public void ACoastGoesUnderTheSeaOnItsSideOnly()
+    {
+        var z = Make(new ZoneGenerator.Spec(Low: 20, High: 40, RimHeight: 100, RimWidth: 60, LakeHectares: [], Coast: 120, CoastSide: "west"));
+        Assert.True(Enumerable.Range(0, 400).Average(r => z.Heights[r * 400]) < -5);        // the west edge under the sea
+        Assert.True(Enumerable.Range(0, 400).Max(r => z.Heights[(r * 400) + 399]) > 80);    // the rim still on the east
+        Assert.DoesNotContain(z.Objects, o => o.At.Y < 0.3f);                                  // nothing planted in the sea
+        var drop = Make(new ZoneGenerator.Spec(Low: 20, High: 40, RimHeight: 0, LakeHectares: [], Coast: 120, CoastSide: "north", CoastDry: true));
+        Assert.True(Enumerable.Range(0, 400).Average(c => drop.Heights[c]) < -200);          // the world's edge: a drop, row 0 is north
+    }
+
+    [Fact]
+    public void ARiverRunsDownhillInACarvedBed()
+    {
+        var z = Make(new ZoneGenerator.Spec(Low: 20, High: 90, HillSize: 250, RimHeight: 0, LakeHectares: [], Rivers: 1, RiverWidth: 6), 500);
+        Assert.NotEmpty(z.Rivers);
+        float last = float.MaxValue;
+        foreach (var r in z.Rivers)
+        {
+            Assert.True(r.Top >= r.End - 0.01f, $"{r.Top} -> {r.End}");
+            Assert.True(r.Top <= last + 0.01f);
+            last = r.End;
+            // the bed under each point is below the surface there
+            for (int i = 0; i < r.Points.Count; i++)
+            {
+                float t = r.Points.Count == 1 ? 0 : i / (float)(r.Points.Count - 1), surface = r.Top + ((r.End - r.Top) * t);
+                var p = r.Points[i];
+                int c = Math.Clamp((int)MathF.Round(p.X + 200), 0, 499), row = Math.Clamp((int)MathF.Round(p.Y + 200), 0, 499);
+                Assert.True(z.Heights[(row * 500) + c] < surface, $"bed {z.Heights[(row * 500) + c]} vs surface {surface}");
+            }
+        }
+        float length = z.Rivers.Sum(r => r.Points.Zip(r.Points.Skip(1), (a, b) => Vector2.Distance(new(a.X, a.Y), new(b.X, b.Y))).Sum());
+        Assert.True(length > 150, $"{length} m");
+    }
+
+    [Fact]
+    public void FloatersHangHighAboveTheGroundAndSnowLiesHigh()
+    {
+        var z = Make(new ZoneGenerator.Spec(Low: 20, High: 200, RimHeight: 0, LakeHectares: [], Woods: 0, OpenTrees: 0, Small: 0, Floaters: 6, SnowLine: 150));
+        var up = z.Objects.Where(o => o.Model == "Rock").ToList();
+        Assert.Equal(6, up.Count);
+        Assert.All(up, o => Assert.True(o.At.Y - Height(z, new Vector2(o.At.X, -o.At.Z)) > 40));
+        int high = Enumerable.Range(0, z.Heights.Length).First(p => z.Heights[p] > 180);
+        Assert.True(z.Mask[high * 4] > 200);
+        int low = Enumerable.Range(0, z.Heights.Length).First(p => z.Heights[p] < 60 && ZoneGenerator.Slope(z.Heights, 400, 400, p % 400, p / 400) < 10);
+        Assert.True(z.Mask[low * 4] < 50);
+        var second = Make(new ZoneGenerator.Spec(Low: 20, High: 200, RimHeight: 0, LakeHectares: [], Woods: 0, OpenDirt: 0, SnowLine: 150, SnowChannel: 1));
+        Assert.True(second.Mask[(high * 4) + 1] > 200 && second.Mask[high * 4] < 50);
+    }
+
+    [Fact]
+    public void RoughGroundHasLessFlat()
+    {
+        int Flat(ZoneGenerator.Zone z) => Enumerable.Range(0, 400 * 400).Count(p => ZoneGenerator.Slope(z.Heights, 400, 400, p % 400, p / 400) < 10);
+        int smooth = Flat(Make(new ZoneGenerator.Spec(RimHeight: 0, LakeHectares: [])));
+        int rough = Flat(Make(new ZoneGenerator.Spec(RimHeight: 0, LakeHectares: [], Rough: 6)));
+        Assert.True(rough < smooth * 0.8f, $"{rough} flat points rough, {smooth} smooth");
+    }
+
+    [Fact]
+    public void AMarshFloodsPartOfTheLowGround()
+    {
+        var z = Make(new ZoneGenerator.Spec(Low: 1, High: 30, RimHeight: 0, LakeHectares: [], Marsh: 8, MarshShare: 0.4f));
+        var dry = Make(new ZoneGenerator.Spec(Low: 1, High: 30, RimHeight: 0, LakeHectares: []));
+        float wet = z.Heights.Count(v => v < 0) / (float)z.Heights.Length;
+        Assert.InRange(wet, 0.05f, 0.45f);
+        Assert.Equal(0, dry.Heights.Count(v => v < 0));
+        Assert.DoesNotContain(z.Objects, o => o.At.Y < 0.3f);
+    }
+
+    [Avalonia.Headless.XUnit.AvaloniaFact]
+    public void AZoneMapKeepsItsRiversAndADryEdgeHasNoSea()
+    {
+        string dir = Directory.CreateTempSubdirectory("gw-zone-").FullName;
+        try
+        {
+            var spec = new ZoneGenerator.Spec(Low: 20, High: 90, HillSize: 250, RimHeight: 0, LakeHectares: [], Woods: 0, Small: 0, Rivers: 1, Coast: 80, CoastSide: "east", CoastDry: true);
+            var m = MapProject.CreateZone("River", 8, spec, Kinds, dir);
+            _ = m.Read();
+            Assert.NotEmpty(MapWater.Rivers);
+            Assert.Equal(-1000, MapProject.Open(m.Folder).SeaLevel);
+        }
+        finally
+        {
+            MapWater.Rivers.Clear();
+            Directory.Delete(dir, true);
+        }
+    }
+
     private static float Height(ZoneGenerator.Zone z, Vector2 unreal)
     {
         int c = Math.Clamp((int)MathF.Round(unreal.X + 200), 0, 399), r = Math.Clamp((int)MathF.Round(unreal.Y + 200), 0, 399);

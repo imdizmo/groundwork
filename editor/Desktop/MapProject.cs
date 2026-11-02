@@ -254,7 +254,13 @@ public sealed class MapProject
         System.IO.File.WriteAllText(m.ObjectsFile, new JsonArray([.. zone.Objects.Select(o => (JsonNode)new JsonArray(o.Model, R(o.At.X), R(o.At.Y), R(o.At.Z), 0, R(o.Yaw), 0, R(o.Scale)))]).ToJsonString());
         System.IO.File.WriteAllText(m.WaterFile, new JsonObject
         {
-            ["rivers"] = new JsonArray(),
+            ["rivers"] = new JsonArray([.. zone.Rivers.Select((r, i) => (JsonNode)new JsonObject
+            {
+                ["name"] = $"River {i + 1}",
+                ["top"] = R(r.Top),
+                ["end"] = R(r.End),
+                ["points"] = new JsonArray([.. r.Points.Select(p => (JsonNode)new JsonArray(R(p.X), R(p.Y), R(p.HalfWidth), R(p.Depth), R(p.Current)))]),
+            })]),
             ["lakes"] = new JsonArray([.. zone.Lakes.Select((l, i) => (JsonNode)new JsonObject
             {
                 ["name"] = $"Lake {i + 1}",
@@ -263,6 +269,12 @@ public sealed class MapProject
                 ["outline"] = new JsonArray([.. l.Outline.Select(p => (JsonNode)new JsonArray(R(p.X), R(p.Y)))]),
             })]),
         }.ToJsonString());
+        if (spec.CoastDry)
+        {
+            // the world's edge falls away into nothing: no sea to fill it
+            m.SeaLevel = -1000;
+            m.WriteJson();
+        }
         return m;
     }
 
