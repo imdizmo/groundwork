@@ -704,8 +704,8 @@ public sealed partial class UnrealLive
     }
 
     /// <summary>
-    /// Makes the map's landscape in the open Unreal level (replace: rebuilds the one it has, at the map's size): what
-    /// Unreal answered, or why not.
+    /// Makes the map's landscape in the open Unreal level (replace: rebuilds the one it has, at the map's size), then
+    /// paints it with the map's layers (PaintLandscape): what Unreal answered, or why not.
     /// </summary>
     public static async Task<string> MakeLandscape(MapProject map, WorldScene scene, bool replace)
     {
@@ -726,9 +726,11 @@ public sealed partial class UnrealLive
         try
         {
             using var r = await Http.SendAsync(req);
-            return r.StatusCode == System.Net.HttpStatusCode.NotFound ? "This Groundwork Bridge plugin cannot make landscapes: update it."
+            string said = r.StatusCode == System.Net.HttpStatusCode.NotFound ? "This Groundwork Bridge plugin cannot make landscapes: update it."
                 : !r.IsSuccessStatusCode ? $"Unreal answered {(int)r.StatusCode}: restart Unreal so the token is fresh."
                 : await r.Content.ReadAsStringAsync();
+            // then its layers: a material of the map's layers, every layer painted, the holes cut
+            return said.StartsWith("landscape made", StringComparison.Ordinal) ? said + "; " + await PaintLandscape(map, scene) : said;
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
         {

@@ -93,4 +93,89 @@ public sealed partial class UnrealLive
             return "Unreal does not answer: " + e.Message;
         }
     }
+
+    /// <summary>What /groundwork/layer_material is asked for the map: its name and each layer's name, texture (full path), colour and size.</summary>
+    internal static JsonObject LayerMaterialBody(MapProject map) => new()
+    {
+        ["name"] = map.Name,
+        ["layers"] = new JsonArray([.. map.Layers.Select(l => (JsonNode)new JsonObject
+        {
+            ["name"] = l.Name,
+            ["texture"] = l.Texture is { } t && File.Exists(t) ? Path.GetFullPath(t) : null,
+            ["colour"] = new JsonArray(l.Colour.X, l.Colour.Y, l.Colour.Z),
+            ["size"] = l.Size,
+        })]),
+    };
+
+    /// <summary>
+    /// The level's landscape given a material of the map's layers (the bridge makes it, its paint layers and textures,
+    /// saved in the project), then every layer painted as the map has it and the holes cut: what Unreal said.
+    /// </summary>
+    public static async Task<string> PaintLandscape(MapProject map, WorldScene scene)
+    {
+        string file = Path.Combine(Project, "Saved/GroundworkBridge.json");
+        if (Project.Length == 0 || !File.Exists(file))
+        {
+            return "Unreal is not running with the Groundwork Bridge plugin (no Saved/GroundworkBridge.json).";
+        }
+        var cfg = JsonNode.Parse(File.ReadAllText(file))!;
+        async Task<string> Post(string path, JsonObject body)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, $"http://127.0.0.1:{cfg["port"]!.GetValue<int>()}{path}")
+            {
+                Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
+            };
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", cfg["token"]!.GetValue<string>());
+            using var r = await SlowHttp.SendAsync(req);
+            return r.StatusCode == System.Net.HttpStatusCode.NotFound ? "This Groundwork Bridge plugin cannot paint landscapes: update it."
+                : !r.IsSuccessStatusCode ? $"Unreal answered {(int)r.StatusCode}." : await r.Content.ReadAsStringAsync();
+        }
+        try
+        {
+            string made = await Post("/groundwork/layer_material", LayerMaterialBody(map));
+            if (!made.StartsWith("landscape material", StringComparison.Ordinal))
+            {
+                return made;
+            }
+            // every layer by name, a band of rows at a time (a whole big map is too much for one request)
+            var (weights, cols, rows) = map.LayersNow(scene);
+            var g = scene.Session!.Ground;
+            byte[] holes = new byte[cols * rows];
+            var raster = map.ReadRaster();
+            for (int gz = 0; gz < g.H; gz++)
+            {
+                for (int gx = 0; gx < g.W; gx++)
+                {
+                    var (col, row) = raster.Pixel(g.OriginX + gx, g.OriginZ + gz);
+                    if (raster.Holds(col, row) && g.MaskOf((gz * g.W) + gx, 3) > 0.5f)
+                    {
+                        holes[(row * cols) + col] = 255;
+                    }
+                }
+            }
+            const int Band = 256;
+            for (int row = 0; row < rows; row += Band)
+            {
+                int h = Math.Min(Band, rows - row);
+                var layers = new JsonArray([.. map.Layers.Select((l, k) => (JsonNode)new JsonObject
+                {
+                    ["name"] = l.Name,
+                    ["weights"] = Convert.ToBase64String(weights[k], row * cols, h * cols),
+                })]);
+                string said = await Post("/groundwork/layers", new JsonObject { ["x0"] = map.X0, ["y0"] = map.Y0, ["col"] = 0, ["row"] = row, ["w"] = cols, ["h"] = h, ["layers"] = layers });
+                if (said.Contains("not in this level", StringComparison.Ordinal))
+                {
+                    return made + "; " + said;
+                }
+            }
+            string cut = holes.Any(v => v > 0)
+                ? "; " + await Post("/groundwork/holes", new JsonObject { ["x0"] = map.X0, ["y0"] = map.Y0, ["col"] = 0, ["row"] = 0, ["w"] = cols, ["h"] = rows, ["weights"] = Convert.ToBase64String(holes) })
+                : "";
+            return $"{made}; {map.Layers.Count} layers painted" + cut;
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+        {
+            return "Unreal does not answer: " + e.Message;
+        }
+    }
 }

@@ -440,6 +440,42 @@ public sealed class MapProject
         return (heights, map.Cols, map.Rows);
     }
 
+    /// <summary>
+    /// Each layer's weight (0..255) per map pixel as it is now (the file's, the open ground's over it), rows of cols:
+    /// the painted layers from their channels, the first layer what they leave.
+    /// </summary>
+    public (byte[][] Weights, int Cols, int Rows) LayersNow(WorldScene s)
+    {
+        var g = s.Session!.Ground;
+        var map = ReadRaster();
+        byte[] mask = ReadMask(LayersFile, map);
+        for (int gz = 0; gz < g.H; gz++)
+        {
+            for (int gx = 0; gx < g.W; gx++)
+            {
+                var (col, row) = map.Pixel(g.OriginX + gx, g.OriginZ + gz);
+                if (map.Holds(col, row))
+                {
+                    for (int k = 1; k < Layers.Count; k++)
+                    {
+                        mask[((row * map.Cols) + col) * 4 + Layers[k].Channel] = Byte(g.MaskOf((gz * g.W) + gx, k - 1));
+                    }
+                }
+            }
+        }
+        byte[][] weights = [.. Layers.Select(_ => new byte[map.Cols * map.Rows])];
+        for (int px = 0; px < map.Cols * map.Rows; px++)
+        {
+            int rest = 255;
+            for (int k = 1; k < Layers.Count; k++)
+            {
+                rest -= weights[k][px] = (byte)Math.Min(mask[(px * 4) + Layers[k].Channel], Math.Max(0, rest));
+            }
+            weights[0][px] = (byte)Math.Max(0, rest);
+        }
+        return (weights, map.Cols, map.Rows);
+    }
+
     /// <summary>The ground, its colours, the objects and the water as they are now back into the map's files.</summary>
     /// <returns>How many objects were written.</returns>
     public int Save(WorldScene s)
