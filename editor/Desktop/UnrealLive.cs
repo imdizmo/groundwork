@@ -13,7 +13,7 @@ namespace Groundwork.Desktop;
 /// what was changed in Unreal by hand, ground, objects, markers, rivers, comes into the editor as a step of its own
 /// ("From Unreal").
 /// </summary>
-public sealed class UnrealLive
+public sealed partial class UnrealLive
 {
     /// <summary>The bridge protocol this editor speaks (the Groundwork Bridge's /groundwork/ping "version").</summary>
     private const int Protocol = 1;

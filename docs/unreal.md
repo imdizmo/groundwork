@@ -52,6 +52,11 @@ player on the ground the camera looks at (in **Walk**: where you stand), facing 
 
 ## Send to Unreal
 
+**⋯ → Bring the models into Unreal** imports the map's glTF models that Unreal has no mesh for yet (the models
+folder's `names.json` lists those it has) through Unreal's own importer, each into its own folder under
+`/Game/Groundwork/Models`, saved in the project, and adds their meshes to `names.json`. From then on Live and Send
+place those objects like any others. It needs the Groundwork Bridge plugin with the import route.
+
 **Send to Unreal** saves the map, then runs the script `unreal.apply` names, its last line shown on the status bar.
 The first time a map's script runs, the editor asks: run it only when you know where the map came from. It asks again
 whenever the script changes.

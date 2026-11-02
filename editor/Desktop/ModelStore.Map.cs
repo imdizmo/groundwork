@@ -51,6 +51,9 @@ public sealed partial class ModelStore
     internal static string? ModelName(int prefab) => ModelNames().GetValueOrDefault(prefab);
 
     /// <summary>The kinds Place offers on the map: every model but the scaled copies.</summary>
+    /// <summary>Every glTF model file (.gltf, .glb) under a models folder.</summary>
+    internal static List<string> ModelFiles(string folder) => Gltf.Files(folder);
+
     internal static IEnumerable<string> ModelKinds() => ModelNames().Values.Where(n => !n.Contains('@'));
 
     /// <summary>The exporter's files first, then the glTF files; a glTF id has a '#'.</summary>

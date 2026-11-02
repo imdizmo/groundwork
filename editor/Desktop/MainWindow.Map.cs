@@ -319,7 +319,13 @@ public partial class MainWindow
             export.Click += async (_, _) => await ExportHeightmap();
             var landscape = new MenuItem { Header = "Make the Unreal landscape from this map…" };
             landscape.Click += async (_, _) => await MakeLandscape();
-            _moreButton.Flyout = new MenuFlyout { Items = { send, settle, grow, export, landscape } };
+            var models = new MenuItem { Header = "Bring the models into Unreal" };
+            models.Click += async (_, _) =>
+            {
+                Msg(new Said("Bringing the models into Unreal...", ""));
+                Msg(new Said(await UnrealLive.ImportModels(ModelStore.MapModels), ""));
+            };
+            _moreButton.Flyout = new MenuFlyout { Items = { send, settle, grow, export, landscape, models } };
             bar.Children.Insert(bar.Children.IndexOf(SaveButton) + 1, _moreButton);
             // Layers and Checks: right-hand panels like History
             _layersButton = new Button { Content = "Layers", FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
