@@ -276,7 +276,7 @@ public static partial class ZoneGenerator
         }
     }
 
-    /// <summary>Where the ground is under water (the sea) or in a river's channel: nothing grows or stands there.</summary>
+    /// <summary>Where the ground is under water (the sea), in a river's channel or past a dry edge: nothing grows or stands there.</summary>
     private static bool[] Wet(Spec spec, float[] h, int cols, int rows, float x0, float y0, List<River> rivers)
     {
         bool[] wet = new bool[cols * rows];
@@ -285,6 +285,13 @@ public static partial class ZoneGenerator
             for (int p = 0; p < wet.Length; p++)
             {
                 wet[p] = h[p] < 0.3f;
+            }
+        }
+        else if (spec.CoastDry)
+        {
+            for (int p = 0; p < wet.Length; p++)
+            {
+                wet[p] = h[p] < -250;   // past the world's edge: nothing stands there
             }
         }
         foreach (var river in rivers)

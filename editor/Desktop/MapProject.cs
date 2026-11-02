@@ -271,9 +271,16 @@ public sealed class MapProject
         }.ToJsonString());
         if (spec.CoastDry)
         {
-            // the world's edge falls away into nothing: no sea to fill it
+            // the world's edge falls away into nothing: no sea to fill it, and the ground past the cliff is a hole
             m.SeaLevel = -1000;
             m.WriteJson();
+            byte[] holes = new byte[zone.Heights.Length * 4];
+            for (int p = 0; p < zone.Heights.Length; p++)
+            {
+                byte hole = zone.Heights[p] < -300 ? (byte)255 : (byte)0;
+                (holes[p * 4], holes[(p * 4) + 1], holes[(p * 4) + 2], holes[(p * 4) + 3]) = (hole, hole, hole, 255);
+            }
+            WriteMask(m.HolesFile, holes, map);
         }
         return m;
     }

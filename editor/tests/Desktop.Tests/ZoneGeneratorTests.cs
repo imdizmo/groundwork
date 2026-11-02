@@ -97,6 +97,7 @@ public class ZoneGeneratorTests
         Assert.DoesNotContain(z.Objects, o => o.At.Y < 0.3f);                                  // nothing planted in the sea
         var drop = Make(new ZoneGenerator.Spec(Low: 20, High: 40, RimHeight: 0, LakeHectares: [], Coast: 120, CoastSide: "north", CoastDry: true));
         Assert.True(Enumerable.Range(0, 400).Average(c => drop.Heights[c]) < -200);          // the world's edge: a drop, row 0 is north
+        Assert.DoesNotContain(drop.Objects, o => o.At.Y < -200);
     }
 
     [Fact]
@@ -166,8 +167,10 @@ public class ZoneGeneratorTests
         {
             var spec = new ZoneGenerator.Spec(Low: 20, High: 90, HillSize: 250, RimHeight: 0, LakeHectares: [], Woods: 0, Small: 0, Rivers: 1, Coast: 80, CoastSide: "east", CoastDry: true);
             var m = MapProject.CreateZone("River", 8, spec, Kinds, dir);
-            _ = m.Read();
+            var g = m.Read().Session!.Ground;
             Assert.NotEmpty(MapWater.Rivers);
+            int east = ((g.H / 2) * g.W) + g.W - 3, west = ((g.H / 2) * g.W) + 2;
+            Assert.True(g.MaskOf(east, 3) > 0.5f && g.MaskOf(west, 3) < 0.5f);   // the drop past the edge is a hole: nothing
             Assert.Equal(-1000, MapProject.Open(m.Folder).SeaLevel);
         }
         finally
