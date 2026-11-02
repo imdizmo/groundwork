@@ -95,39 +95,4 @@ public class DialogsTests
         Press(d, "Cancel");
         Assert.Null(await typed);
     }
-
-    [AvaloniaFact]
-    public async Task TheZoneFormGivesItsNumbersOrNothing()
-    {
-        var owner = Owner();
-        var asked = Dialogs.AskZone(owner, 1000);
-        var d = TestWindows.Shown(owner);
-        d.GetLogicalDescendants().OfType<TextBox>().Single(t => t.PlaceholderText == "none").Text = "12, 5";
-        Press(d, "Make it");
-        var spec = await asked;
-        Assert.NotNull(spec);
-        Assert.Equal([12f, 5f], spec.LakeHectares!);
-        Assert.Equal((20f, 70f, 0.35f), (spec.Low, spec.High, spec.Woods));
-        Assert.Equal(120f, spec.RimWidth);   // scaled to the map's size
-
-        asked = Dialogs.AskZone(owner, 1000);
-        Press(TestWindows.Shown(owner), "Cancel");
-        Assert.Null(await asked);
-    }
-
-    [AvaloniaFact]
-    public async Task AZoneStyleFillsTheNumbersAndKeepsItsShapes()
-    {
-        var owner = Owner();
-        var asked = Dialogs.AskZone(owner, 2000);
-        var d = TestWindows.Shown(owner);
-        var style = d.GetLogicalDescendants().OfType<ComboBox>().Single();
-        style.SelectedIndex = ZoneGenerator.Styles.ToList().FindIndex(s => s.Name == "Mesas and canyons");
-        Press(d, "Make it");
-        var spec = await asked;
-        Assert.NotNull(spec);
-        var mesas = ZoneGenerator.Styles.Single(s => s.Name == "Mesas and canyons").Spec;
-        Assert.True(spec.Terraces > 0 && spec.Canyons > 0);
-        Assert.Equal((mesas.Low, mesas.High, mesas.Terraces), (spec.Low, spec.High, spec.Terraces));
-    }
 }

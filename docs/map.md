@@ -5,24 +5,32 @@ map folder…** adds one, **New map…** makes one.
 
 ## A new map
 
-**New map…** asks for a name, a size in 63 m squares (the size of an Unreal landscape component, plus one metre) and
-whether the ground is rolling or flat. The map goes in the maps folder (**Settings**; `Documents/Groundwork` unless you
-choose another), centred on the origin, its first layer under 1.5 m. It shares the open map's model folder and starts
-with a copy of its catalog.
+**New map…** opens the generator: a name, a size in 63 m squares (the size of an Unreal landscape component, plus one
+metre), a style, and the style's numbers as sliders, with the ground they make in 3D beside them. The preview is made
+again a moment after a slider stops; drag it to turn round it, the wheel to come nearer. It shows the ground, its paint,
+woods and water; trees, rocks, camps and floating islands come only with **Make the map**. The map goes in the maps
+folder (**Settings**; `Documents/Groundwork` unless you choose another), centred on the origin. It shares the open map's
+model folder and starts with a copy of its catalog.
 
-Rolling ground can be **a whole zone** instead of gentle bumps. A form asks for its numbers:
+The styles: rolling woods, grassland with plateaus, sky islands, broken badland at the world's edge, mesas and canyons,
+savanna, tundra coast, marsh coast, highlands; each fills in every slider and brings its own shapes. **Flat ground** and
+**Gently rolling ground** at the end of the list make a map with nothing on it. Every slider's number can be typed too
+(past the slider's ends as well), and **Another** seed makes other ground from the same numbers. The sliders, by group:
 
-| Setting | What it does |
+| Group | Sliders |
 |---|---|
-| Style | A kind of zone to start from: rolling woods, grassland with plateaus, sky islands, broken badland at the world's edge, mesas and canyons, savanna, tundra coast, marsh coast, highlands. It fills in the numbers below and brings its own shapes. |
-| Hills from, up to | The rolling ground's lowest and highest heights, metres. |
-| Hills apart | How far apart the hills are, metres. |
-| Mountain rim height, width | A rim of ridged mountains round the edge, high in places and lower in others (0: none). |
-| Lakes | Each lake's size in hectares (`35, 18` makes two), set in the low ground with banks sloping to the water. |
-| Wooded | The share of the ground under woods (not cliffs, not lakes); the woods grow in stands of one kind. |
-| Trees in the woods | Trees per hectare in the woods; a few more stand in the open. |
-| Tree size | How much bigger the trees are than their kinds' own size. A game's trees are often several times a real tree's: the share of ground under the crowns, not the count, is what makes a wood. |
-| Seed | Another seed, the same numbers: another zone. |
+| Ground | The lowest and highest ground; how far apart the hills are; roughness (small bumps so no ground is quite flat); terrace steps and how much of the ground is terraced; canyons' depth, width and spacing. |
+| Mountain rim | A rim of ridged mountains round the edge, high in places and lower in others (0: none), and its width. |
+| Coast | How far in from one side the ground goes under the sea (0: none), how deep, which side, or a drop into nothing instead. |
+| Water | How many lakes and the biggest one's size (each next about half the last), set in the low ground with banks sloping to the water; rivers and their width; the sand along shores; marsh flats under a height, and the share of them that pools. |
+| Woods & plants | The share of the ground under woods, trees per hectare in the woods and in the open, the trees' size (a game's trees are often several times a real tree's), giant trees and their size, bushes and plants per hectare. |
+| Paint | The slope rock is painted from, the share of open ground patched with dirt, the height snow lies from. |
+| Camps & roads | How many camps, buildings each, roads between them. |
+| Extras | Floating islands. |
+
+A generated map keeps its numbers (`generator` in map.json). Until it is worked on by hand and saved, **⋯ → Make it
+again with other numbers…** opens the generator on them and makes the whole map again; **Undo make it again** goes back
+to the numbers before. Once you change the map yourself it is yours, and the generator no longer offers to remake it.
 
 The ground is painted by rule: rock on steep ground (less under trees), dirt under the woods and in patches, grass
 elsewhere. The zone is planted with the open map's Trees, Bushes, Rocks and Plants.

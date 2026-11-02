@@ -17,13 +17,14 @@ namespace Groundwork.Desktop;
 /// channel "r", "g" or "b" of the layers file; in that order when not given);</item>
 /// <item>optional: catalog (the kinds Place and the scatter tools offer), models (the model folder), stamps, and
 /// unreal { project, apply, layersTexture, waterPrefix } (the Unreal project Live talks to, the script Send to Unreal
-/// runs, the texture the landscape material reads the layers from, the water bodies' label prefix).</item>
+/// runs, the texture the landscape material reads the layers from, the water bodies' label prefix), and generator { spec,
+/// print } (a generated map's numbers and its files' fingerprint when made: MapProject.Generator).</item>
 /// </list>
 /// Seen from above the
 /// engine's +Y is the editor's -z (Unreal is left-handed, Z up): z = -Y keeps the map the right way round. Heights are
 /// the engine's metres as they are: the editor's y is the file's height.
 /// </summary>
-public sealed class MapProject
+public sealed partial class MapProject
 {
     /// <summary>The map project's own file.</summary>
     public const string FileName = "map.json";
@@ -68,6 +69,11 @@ public sealed class MapProject
     public sealed record Layer(string Name, System.Numerics.Vector3 Colour, int Channel, string? Texture = null, float Size = 4);
 
     /// <summary>A new map's layers.</summary>
+    internal static List<Layer> NewLayers => DefaultLayers;
+
+    /// <summary>A new map's gently rolling ground at a point (metres over its height), for a seed.</summary>
+    internal static float RollingAt(int seed, float x, float y) => new Relief(seed).At(x, y);
+
     private static List<Layer> DefaultLayers =>
         [new("Grass", Linear(0.42f, 0.60f, 0.27f), -1), new("Sand", Linear(0.80f, 0.74f, 0.52f), 0), new("Dirt", Linear(0.40f, 0.31f, 0.20f), 1), new("Rock", Linear(0.50f, 0.50f, 0.48f), 2)];
 
@@ -140,6 +146,7 @@ public sealed class MapProject
         m.UnrealApply = S(j["unreal"]?["apply"]) is string ua ? m.Abs(ua) : null;
         m.UnrealLayersTexture = S(j["unreal"]?["layersTexture"]);
         m.UnrealWaterPrefix = S(j["unreal"]?["waterPrefix"]) ?? m.UnrealWaterPrefix;
+        m.Generated = ReadGenerated(j["generator"]);
         return m;
     }
 
@@ -185,6 +192,10 @@ public sealed class MapProject
                 j["unreal"]!["layersTexture"] = UnrealLayersTexture;
             }
             j["unreal"]!["waterPrefix"] = UnrealWaterPrefix;
+        }
+        if (Generated is { } g)
+        {
+            j["generator"] = WriteGenerated(g);
         }
         NoLinks(Path.Combine(Folder, FileName));
         System.IO.File.WriteAllText(Path.Combine(Folder, FileName), j.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
@@ -247,46 +258,7 @@ public sealed class MapProject
     public static MapProject CreateZone(string name, int chunks, ZoneGenerator.Spec spec, ZoneGenerator.Planting planting, string under, MapProject? like = null)
     {
         var m = Create(name, chunks, generated: false, spec.Low, spec.Seed, under, like);
-        var map = m.ReadRaster();
-        if (spec.Floaters > 0)
-        {
-            // its own islands, of its own ground (another map's in the copied catalog are not its)
-            planting = planting with { Islands = FloatingIsland.WriteFor(m) };
-        }
-        var zone = ZoneGenerator.Generate(spec, map.Cols, map.Rows, map.X0, map.Y0, planting);
-        Write(m.HeightsFile, zone.Heights, map.Rows, map.Cols);
-        WriteMask(m.LayersFile, zone.Mask, map);
-        System.IO.File.WriteAllText(m.ObjectsFile, new JsonArray([.. zone.Objects.Select(o => (JsonNode)new JsonArray(o.Model, R(o.At.X), R(o.At.Y), R(o.At.Z), 0, R(o.Yaw), 0, R(o.Scale)))]).ToJsonString());
-        System.IO.File.WriteAllText(m.WaterFile, new JsonObject
-        {
-            ["rivers"] = new JsonArray([.. zone.Rivers.Select((r, i) => (JsonNode)new JsonObject
-            {
-                ["name"] = $"River {i + 1}",
-                ["top"] = R(r.Top),
-                ["end"] = R(r.End),
-                ["points"] = new JsonArray([.. r.Points.Select(p => (JsonNode)new JsonArray(R(p.X), R(p.Y), R(p.HalfWidth), R(p.Depth), R(p.Current)))]),
-            })]),
-            ["lakes"] = new JsonArray([.. zone.Lakes.Select((l, i) => (JsonNode)new JsonObject
-            {
-                ["name"] = $"Lake {i + 1}",
-                ["level"] = R(l.Level),
-                ["depth"] = R(l.Depth),
-                ["outline"] = new JsonArray([.. l.Outline.Select(p => (JsonNode)new JsonArray(R(p.X), R(p.Y)))]),
-            })]),
-        }.ToJsonString());
-        if (spec.CoastDry)
-        {
-            // the world's edge falls away into nothing: no sea to fill it, and the ground past the cliff is a hole
-            m.SeaLevel = -1000;
-            m.WriteJson();
-            byte[] holes = new byte[zone.Heights.Length * 4];
-            for (int p = 0; p < zone.Heights.Length; p++)
-            {
-                byte hole = zone.Heights[p] < -300 ? (byte)255 : (byte)0;
-                (holes[p * 4], holes[(p * 4) + 1], holes[(p * 4) + 2], holes[(p * 4) + 3]) = (hole, hole, hole, 255);
-            }
-            WriteMask(m.HolesFile, holes, map);
-        }
+        m.Generate(spec, planting);
         return m;
     }
 

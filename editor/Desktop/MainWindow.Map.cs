@@ -131,26 +131,19 @@ public partial class MainWindow
         Msg(new Said("", ""));
     }
 
-    /// <summary>New map: asks its name, size and ground, makes it in the maps folder (Settings) and opens it.</summary>
+    /// <summary>New map: its name, size and ground in the generator's window, made in the maps folder (Settings) and opened.</summary>
     private async Task NewMap()
     {
-        if (await Dialogs.AskText(this, "New map", "Its name:", "Map") is not { Length: > 0 } name
-            || await Dialogs.AskText(this, "New map", "How big, in 63 m squares across (8 = 505 m):", "8") is not { } size
-            || !int.TryParse(size.Trim(), out int chunks) || chunks < 1)
+        if (await GeneratorWindow.NewMap(this) is not { } asked)
         {
             return;
         }
-        bool rolling = await Ask("New map", "Rolling ground, or flat?", "Rolling", "Flat");
-        // a whole zone: hills, a rim, lakes and woods (planted with the open map's kinds)
-        var zone = rolling && await Ask("New map", "A whole zone (hills, a mountain rim, lakes and woods, planted with the open map's objects), or gentle rolling ground?", "A zone", "Gentle")
-            ? await Dialogs.AskZone(this, (chunks * 63) + 1)
-            : null;
         MapProject made;
         try
         {
-            made = zone != null
-                ? MapProject.CreateZone(name, chunks, zone, ZoneGenerator.Planting.From(MapTools.Catalog().Kinds), NewMapsFolder(), MapProject.Current)
-                : MapProject.Create(name, chunks, rolling, rolling ? 3f : 1f, Environment.TickCount & 0xFFFF, NewMapsFolder(), MapProject.Current);
+            made = asked.Spec is { } spec
+                ? MapProject.CreateZone(asked.Name, asked.Chunks, spec, ZoneGenerator.Planting.From(MapTools.Catalog().Kinds), NewMapsFolder(), MapProject.Current)
+                : MapProject.Create(asked.Name, asked.Chunks, asked.Rolling, asked.Rolling ? 3f : 1f, asked.Seed, NewMapsFolder(), MapProject.Current);
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
@@ -159,6 +152,38 @@ public partial class MainWindow
         }
         await ShowMap(made);
     }
+
+    /// <summary>
+    /// Make it again: a generated map not yet worked on, made again from the numbers asked in the generator's window
+    /// (its last numbers kept for Undo make it again) and opened again.
+    /// </summary>
+    private async Task MakeAgain(ZoneGenerator.Spec? spec = null)
+    {
+        if (MapProject.Current is not { Generated: { } g } m || !m.Untouched || MapDirty)
+        {
+            await Tell("Only a generated map not yet worked on can be made again: this one has been changed by hand (or was not generated).");
+            return;
+        }
+        if ((spec ?? await GeneratorWindow.Again(this, m, g.Spec)) is not { } asked)
+        {
+            return;
+        }
+        try
+        {
+            Msg(new Said("Making the map again...", ""));
+            m.Generate(asked, ZoneGenerator.Planting.From(MapTools.Catalog().Kinds));
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            await Tell(ex.Message);
+            return;
+        }
+        _madeFrom = (m.Folder, g.Spec);
+        await ShowMap(MapProject.Open(m.Folder));
+    }
+
+    /// <summary>The map made again last and the numbers it was made from before (Undo make it again).</summary>
+    private (string Folder, ZoneGenerator.Spec Spec)? _madeFrom;
 
     /// <summary>The map's rivers and lakes drawn again (and the save bar: they count as changes).</summary>
     private void ShowWater()
@@ -325,7 +350,18 @@ public partial class MainWindow
                 Msg(new Said("Bringing the models into Unreal...", ""));
                 Msg(new Said(await UnrealLive.ImportModels(ModelStore.MapModels), ""));
             };
-            _moreButton.Flyout = new MenuFlyout { Items = { send, settle, grow, export, landscape, models } };
+            // a generated map not worked on yet: made again from new numbers, or back to the last ones
+            var again = new MenuItem { Header = "Make it again with other numbers…" };
+            again.Click += async (_, _) => await MakeAgain();
+            var undoAgain = new MenuItem { Header = "Undo make it again" };
+            undoAgain.Click += async (_, _) => await MakeAgain(_madeFrom?.Spec);
+            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, export, landscape, models } };
+            more.Opening += (_, _) =>
+            {
+                again.IsVisible = MapProject.Current is { Untouched: true } && !MapDirty;
+                undoAgain.IsVisible = again.IsVisible && _madeFrom?.Folder == MapProject.Current?.Folder;
+            };
+            _moreButton.Flyout = more;
             bar.Children.Insert(bar.Children.IndexOf(SaveButton) + 1, _moreButton);
             // Layers and Checks: right-hand panels like History
             _layersButton = new Button { Content = "Layers", FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
