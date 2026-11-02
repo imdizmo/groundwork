@@ -19,7 +19,7 @@ savanna, tundra coast, marsh coast, highlands; each fills in every slider and br
 
 | Group | Sliders |
 |---|---|
-| Ground | The lowest and highest ground; how far apart the hills are; roughness (small bumps so no ground is quite flat); terrace steps and how much of the ground is terraced; canyons' depth, width and spacing. |
+| Ground | The lowest and highest ground; how far apart the hills are; roughness (small bumps so no ground is quite flat); terrace steps and how much of the ground is terraced; canyons' depth, width and spacing; cliffs from (ground steeper than this faced with walls of rock: the map's own cliff pieces, overlapping along it, the ground stepped behind them so the grass runs to the edge; 0: none). |
 | Mountain rim | A rim of ridged mountains round the edge, high in places and lower in others (0: none), and its width. |
 | Coast | How far in from one side the ground goes under the sea (0: none), how deep, which side, or a drop into nothing instead. |
 | Water | How many lakes and the biggest one's size (each next about half the last), set in the low ground with banks sloping to the water; rivers and their width; the sand along shores; marsh flats under a height, and the share of them that pools. |
