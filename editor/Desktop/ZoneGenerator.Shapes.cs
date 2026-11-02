@@ -59,7 +59,9 @@ public static partial class ZoneGenerator
             "south" => rows - 1 - r,
             _ => c,
         };
-        return d + (spec.Coast * 0.35f * Fbm(x / (spec.Coast * 2.5f), y / (spec.Coast * 2.5f), spec.Seed + 83, 3));
+        // bays and headlands a few hundred metres across, however wide the coast is
+        float across = MathF.Min(spec.Coast * 2.5f, 700), deep = MathF.Min(spec.Coast * 0.35f, 220);
+        return d + (deep * Fbm(x / across, y / across, spec.Seed + 83, 3) / 0.4f);
     }
 
     /// <summary>The distance to the nearest edge that is not the coast's (the rim stands only there).</summary>
@@ -291,7 +293,7 @@ public static partial class ZoneGenerator
         {
             for (int p = 0; p < wet.Length; p++)
             {
-                wet[p] = h[p] < -250;   // past the world's edge: nothing stands there
+                wet[p] = h[p] < -150;   // the cliff face and past it, at the world's edge: nothing stands there
             }
         }
         foreach (var river in rivers)
