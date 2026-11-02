@@ -14,6 +14,7 @@ Rolling ground can be **a whole zone** instead of gentle bumps. A form asks for 
 
 | Setting | What it does |
 |---|---|
+| Style | A kind of zone to start from: rolling woods, grassland with plateaus, sky islands, broken badland at the world's edge, mesas and canyons, savanna, tundra coast, marsh coast, highlands. It fills in the numbers below and brings its own shapes. |
 | Hills from, up to | The rolling ground's lowest and highest heights, metres. |
 | Hills apart | How far apart the hills are, metres. |
 | Mountain rim height, width | A rim of ridged mountains round the edge, high in places and lower in others (0: none). |
@@ -25,6 +26,13 @@ Rolling ground can be **a whole zone** instead of gentle bumps. A form asks for 
 
 The ground is painted by rule: rock on steep ground (less under trees), dirt under the woods and in patches, grass
 elsewhere. The zone is planted with the open map's Trees, Bushes, Rocks and Plants.
+
+The styles' shapes, beyond rolling hills: flat shelves with steep risers (plateaus, mesas), canyons cut down into the
+ground, a coast on one side going under the sea or a cliff dropping into nothing, rivers running downhill into a lake
+or the sea with their beds carved, great rocks hanging in the air, snow above a height, marsh flats with pools along
+the sea, and small bumps over everything so no ground is quite flat. The first layer is painted on shores and snow
+(or the second, for a coast with beaches and snow), the second in patches over the open ground, the third on steep
+ground.
 
 ## map.json
 
