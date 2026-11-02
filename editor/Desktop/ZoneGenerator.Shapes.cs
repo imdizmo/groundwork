@@ -123,70 +123,74 @@ public static partial class ZoneGenerator
     }
 
     /// <summary>
-    /// Rivers: each from high open ground, downhill (and on towards the nearest lake, the coast or the far edge),
-    /// winding, until it reaches a lake, the sea or the edge. Its surface falls along it, never rising; it is kept as
-    /// stretches of about 150 m whose surfaces fall evenly (as the map's rivers are), its bed carved under them and its
-    /// banks eased down to it.
+    /// Rivers: each from high open ground, the way water runs from there (<see cref="Flow"/>): downhill round the hills
+    /// until it reaches a lake, the sea, the edge or an earlier river. Its surface falls along it, never rising, just
+    /// under the ground; it is kept as stretches whose surfaces fall evenly (as the map's rivers are), each as long as
+    /// that stays within a few centimetres of the ground's fall, its bed carved under them and its banks eased down to it.
     /// </summary>
     private static List<River> MakeRivers(Spec spec, float[] h, int cols, int rows, float x0, float y0, List<Lake> lakes, Random rng)
     {
         var all = new List<River>();
+        if (spec.Rivers <= 0)
+        {
+            return all;
+        }
+        var made = new List<(List<Vector2> Path, float[] Surface)>();
+        var (down, ends, run, clean, w) = Flow(spec, h, cols, rows, x0, y0, lakes);
         float margin = spec.RimHeight > 0 ? spec.RimWidth * 0.5f : 20;
         for (int n = 0; n < spec.Rivers; n++)
         {
-            // the source: the highest of a few open places, not too steep, away from the edge
+            // the source: of a few open places, not too steep, away from the edge and the other rivers, the one whose water
+            // runs furthest before it pools (further still counted for one reaching its end without pooling)
             Vector2? start = null;
             float best = float.MinValue;
-            for (int k = 0; k < 200; k++)
+            for (int k = 0; k < 400; k++)
             {
                 var at = new Vector2(margin + (rng.NextSingle() * (cols - (2 * margin))), margin + (rng.NextSingle() * (rows - (2 * margin))));
                 if (cols <= 2 * margin || rows <= 2 * margin)
                 {
                     break;
                 }
-                float g = At(h, cols, rows, at.X, at.Y);
-                if (g > 1 && g > best && Slope(h, cols, rows, (int)at.X, (int)at.Y) < 20 && !all.Any(r => r.Points.Any(p => Vector2.Distance(new(p.X - x0, p.Y - y0), at) < 200)))
+                int cell = ((int)(at.Y / FlowStep) * w) + (int)(at.X / FlowStep);
+                float score = run[cell] * (clean[cell] ? 1.5f : 1);
+                if (At(h, cols, rows, at.X, at.Y) > 1 && score > best && down[cell] >= 0 && Slope(h, cols, rows, (int)at.X, (int)at.Y) < 20 && !made.Any(r => r.Path.Any(p => Vector2.Distance(p, at) < 200)))
                 {
-                    (start, best) = (at, g);
+                    (start, best) = (at, score);
                 }
             }
             if (start is not Vector2 s0)
             {
                 continue;
             }
-            // where it heads: the nearest lake, else the coast, else the far side
-            Vector2 goal = lakes.Count > 0 ? lakes.OrderBy(l => Vector2.Distance(l.Middle - new Vector2(x0, y0), s0)).First().Middle - new Vector2(x0, y0)
-                : spec.Coast > 0 && !spec.CoastDry ? spec.CoastSide switch { "east" => new(cols, s0.Y), "north" => new(s0.X, 0), "south" => new(s0.X, rows), _ => new(0, s0.Y) }
-                : new Vector2(cols - s0.X, rows - s0.Y);
-            var path = new List<Vector2> { s0 };
-            var dir = Vector2.Normalize(goal - s0 + new Vector2(1e-3f));
-            float endLevel = float.MinValue;
-            for (int step = 0; step < 800; step++)
+            // down the flow to where it ends, eased round its corners, a point every 12 m
+            var cells = new List<Vector2>();
+            int from = ((int)(s0.Y / FlowStep) * w) + (int)(s0.X / FlowStep);
+            float endLevel = ends[from];
+            for (int cell = from; cell >= 0; cell = down[cell])
             {
-                var p = path[^1];
-                float gx = At(h, cols, rows, p.X + 3, p.Y) - At(h, cols, rows, p.X - 3, p.Y), gy = At(h, cols, rows, p.X, p.Y + 3) - At(h, cols, rows, p.X, p.Y - 3);
-                var down = new Vector2(-gx, -gy);
-                down = down.LengthSquared() > 1e-6f ? Vector2.Normalize(down) : Vector2.Zero;
-                var toGoal = Vector2.Normalize(goal - p + new Vector2(1e-3f));
-                float bend = 0.9f * Fbm((p.X + x0) / 180, (p.Y + y0) / 180, spec.Seed + 89 + n, 2);
-                var want = (dir * 1.2f) + (down * 0.9f) + (toGoal * 0.7f);
-                want = Vector2.Normalize(Vector2.Transform(want, Matrix3x2.CreateRotation(bend * 0.6f)) + new Vector2(1e-4f));
-                dir = want;
-                var next = p + (dir * 12);
-                if (next.X < 2 || next.Y < 2 || next.X > cols - 3 || next.Y > rows - 3)
+                cells.Add(new Vector2(cell % w, cell / w) * FlowStep);
+            }
+            for (int pass = 0; pass < 4; pass++)
+            {
+                cells = [cells[0], .. Enumerable.Range(1, Math.Max(0, cells.Count - 2)).Select(i => (cells[i - 1] + (2 * cells[i]) + cells[i + 1]) / 4), cells[^1]];
+            }
+            var path = new List<Vector2> { s0 };
+            for (int i = 1; i < cells.Count; i++)
+            {
+                for (float gone = Vector2.Distance(path[^1], cells[i]); gone >= 12; gone = Vector2.Distance(path[^1], cells[i]))
                 {
-                    path.Add(Vector2.Clamp(next, Vector2.Zero, new Vector2(cols - 1, rows - 1)));
-                    break;
+                    path.Add(path[^1] + (Vector2.Normalize(cells[i] - path[^1]) * 12));
                 }
-                path.Add(next);
-                if (lakes.FirstOrDefault(l => InsideBy(l.Outline, next + new Vector2(x0, y0)) > 2) is { } lake)
+            }
+            path.Add(Vector2.Clamp(cells[^1], Vector2.Zero, new Vector2(cols - 1, rows - 1)));
+            // it joins an earlier river where it meets it
+            for (int i = 1; i < path.Count; i++)
+            {
+                var meets = made.SelectMany(r => r.Path.Select((p, j) => (At: p, Level: r.Surface[j]))).Where(q => Vector2.Distance(q.At, path[i]) < spec.RiverWidth * 1.5f).Take(1).ToList();
+                if (meets.Count > 0)
                 {
-                    endLevel = lake.Level;
-                    break;
-                }
-                if (spec.Coast > 0 && !spec.CoastDry && At(h, cols, rows, next.X, next.Y) < -0.5f)
-                {
-                    endLevel = 0;
+                    path.RemoveRange(i + 1, path.Count - i - 1);
+                    (path[i], endLevel) = (meets[0].At, meets[0].Level);
                     break;
                 }
             }
@@ -194,23 +198,51 @@ public static partial class ZoneGenerator
             {
                 continue;
             }
-            // the surface: under the ground along it, never rising, not below where it ends
+            // the surface: under the ground along it, never rising, not below where it ends. Where the way on climbs out of
+            // a hollow by more than a few metres, the water pools instead: the river ends there in a pond.
             float[] surface = new float[path.Count];
+            int lowest = 0;
             for (int i = 0; i < path.Count; i++)
             {
                 float g = At(h, cols, rows, path[i].X, path[i].Y) - 0.8f;
+                if (i > 0 && g > surface[i - 1] + 3)
+                {
+                    path.RemoveRange(lowest + 1, path.Count - lowest - 1);
+                    if (path.Count >= 6)
+                    {
+                        float r = MathF.Max(10, spec.RiverWidth * 2.5f);
+                        Vector2[] ring = [.. Enumerable.Range(0, 20).Select(k => path[^1] + (new Vector2(MathF.Cos(MathF.Tau * k / 20), MathF.Sin(MathF.Tau * k / 20)) * r * (1 + (0.2f * Fbm(k * 0.3f, n, spec.Seed + 23, 2)))))];
+                        var pond = CarveLake(h, cols, rows, x0, y0, path[^1], ring, r);
+                        lakes.Add(pond);
+                        endLevel = pond.Level;
+                    }
+                    break;
+                }
                 surface[i] = i == 0 ? g : MathF.Min(surface[i - 1] - 0.01f, g);
+                lowest = surface[i] <= surface[lowest] ? i : lowest;
             }
+            if (path.Count < 6)
+            {
+                continue;
+            }
+            surface = surface[..path.Count];
             for (int i = 0; i < path.Count; i++)
             {
                 surface[i] = MathF.Max(surface[i], endLevel);
             }
-            // stretches of a dozen points, each falling evenly from its first point's surface to its last's
+            // stretches falling evenly: each as long (up to a dozen points) as the even fall keeps the water no more than half a
+            // metre over the surface (still under the ground) and the bed no more than 1.5 m deeper
             float half = spec.RiverWidth / 2;
             var stretches = new List<(int From, int To)>();
-            for (int i = 0; i < path.Count - 1; i += 12)
+            for (int i = 0; i < path.Count - 1;)
             {
-                stretches.Add((i, Math.Min(path.Count - 1, i + 12)));
+                int end = i + 1;
+                while (end + 1 < path.Count && end + 1 - i <= 12 && Enumerable.Range(i, end + 2 - i).All(j => (surface[i] + ((surface[end + 1] - surface[i]) * (j - i) / (end + 1 - i)) - surface[j]) is > -1.5f and < 0.5f))
+                {
+                    end++;
+                }
+                stretches.Add((i, end));
+                i = end;
             }
             float[] even = new float[path.Count];
             foreach (var (a, b) in stretches)
@@ -221,6 +253,7 @@ public static partial class ZoneGenerator
                 }
             }
             Carve(h, cols, rows, path, even, half, MathF.Max(1.2f, half * 0.35f));
+            made.Add((path, even));
             foreach (var (a, b) in stretches)
             {
                 float hw(int i) => half * (0.8f + (0.4f * (i / (float)(path.Count - 1))));   // wider downstream
@@ -228,6 +261,84 @@ public static partial class ZoneGenerator
             }
         }
         return all;
+    }
+
+    /// <summary>The flow's cells, in pixels.</summary>
+    private const int FlowStep = 4;
+
+    /// <summary>
+    /// Where water runs from each place: a flood from where rivers end (the lakes and the sea, else the map's edge), lowest
+    /// first, over cells of <see cref="FlowStep"/> pixels; each cell keeps the one it was reached from (downstream; -1 where
+    /// rivers end), the level the river ends at, how far it runs before it pools (pixels: to a hollow more than 3 m under
+    /// the lip out of it, where <see cref="MakeRivers"/> ends it in a pond) and whether it gets to its end without pooling.
+    /// Followed down, a path runs downhill round the hills, and out of a hollow only over its lowest lip.
+    /// </summary>
+    private static (int[] Down, float[] End, float[] Run, bool[] Clean, int W) Flow(Spec spec, float[] h, int cols, int rows, float x0, float y0, List<Lake> lakes)
+    {
+        int w = ((cols - 1) / FlowStep) + 1, ht = ((rows - 1) / FlowStep) + 1;
+        int[] down = new int[w * ht];
+        Array.Fill(down, -2);
+        float[] end = new float[w * ht], run = new float[w * ht];
+        bool[] clean = new bool[w * ht];
+        var queue = new PriorityQueue<int, (float Level, float Ground)>();
+        float G(int i) => h[(Math.Min(rows - 1, i / w * FlowStep) * cols) + Math.Min(cols - 1, i % w * FlowStep)];
+        void Outlet(int i, float level, float endLevel)
+        {
+            if (down[i] == -2)
+            {
+                (down[i], end[i], clean[i]) = (-1, endLevel, true);
+                queue.Enqueue(i, (level, G(i)));
+            }
+        }
+        foreach (var l in lakes)
+        {
+            int c0 = Math.Max(0, (int)((l.Outline.Min(p => p.X) - x0) / FlowStep)), c1 = Math.Min(w - 1, (int)((l.Outline.Max(p => p.X) - x0) / FlowStep) + 1);
+            int r0 = Math.Max(0, (int)((l.Outline.Min(p => p.Y) - y0) / FlowStep)), r1 = Math.Min(ht - 1, (int)((l.Outline.Max(p => p.Y) - y0) / FlowStep) + 1);
+            for (int r = r0; r <= r1; r++)
+            {
+                for (int c = c0; c <= c1; c++)
+                {
+                    if (InsideBy(l.Outline, new Vector2((c * FlowStep) + x0, (r * FlowStep) + y0)) > 2)
+                    {
+                        Outlet((r * w) + c, l.Level, l.Level);
+                    }
+                }
+            }
+        }
+        for (int i = 0; spec.Coast > 0 && !spec.CoastDry && i < w * ht; i++)
+        {
+            if (G(i) < -0.5f)
+            {
+                Outlet(i, G(i), 0);
+            }
+        }
+        for (int i = 0; queue.Count == 0 && i < w * ht; i++)
+        {
+            if (i % w == 0 || i % w == w - 1 || i / w == 0 || i / w == ht - 1)
+            {
+                Outlet(i, G(i), float.MinValue);
+            }
+        }
+        while (queue.TryDequeue(out int i, out var at))
+        {
+            int c = i % w, r = i / w;
+            for (int dr = -1; dr <= 1; dr++)
+            {
+                for (int dc = -1; dc <= 1; dc++)
+                {
+                    int nc = c + dc, nr = r + dr, n = (nr * w) + nc;
+                    if (nc < 0 || nr < 0 || nc >= w || nr >= ht || down[n] != -2)
+                    {
+                        continue;
+                    }
+                    float level = MathF.Max(at.Level, G(n));
+                    bool pools = level - G(n) > 3;
+                    (down[n], end[n], run[n], clean[n]) = (i, end[i], pools ? 0 : run[i] + (FlowStep * MathF.Sqrt((dc * dc) + (dr * dr))), clean[i] && !pools);
+                    queue.Enqueue(n, (level, G(n)));
+                }
+            }
+        }
+        return (down, end, run, clean, w);
     }
 
     /// <summary>A river's bed cut under its surface (deepest in the middle), its banks eased down to just above the water.</summary>

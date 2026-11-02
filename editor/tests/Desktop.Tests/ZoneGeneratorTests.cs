@@ -126,6 +126,25 @@ public class ZoneGeneratorTests
     }
 
     [Fact]
+    public void ARiverRunsRoundTheHillsInsteadOfCuttingATrench()
+    {
+        // the same ground without its rivers: how deep each river cut under where it runs
+        var spec = new ZoneGenerator.Spec(Low: 0, High: 160, HillSize: 350, RimHeight: 0, LakeHectares: [], Rivers: 2, RiverWidth: 6, Seed: 3);
+        var z = Make(spec, 1000);
+        var dry = Make(spec with { Rivers = 0 }, 1000);
+        // (away from the lakes it may end in, whose banks slope down to their water)
+        var cuts = z.Rivers.SelectMany(r => r.Points).Where(p => z.Lakes.All(l => MapWater.InsideBy(l.Outline, new(p.X, p.Y)) < -100)).Select(p =>
+        {
+            int i = (Math.Clamp((int)MathF.Round(p.Y + 200), 0, 999) * 1000) + Math.Clamp((int)MathF.Round(p.X + 200), 0, 999);
+            return dry.Heights[i] - z.Heights[i];
+        }).Order().ToList();
+        Assert.True(cuts.Count > 20, $"{cuts.Count} points");
+        // its bed (a couple of metres under the ground it follows), deeper only through the odd lip out of a hollow
+        Assert.True(cuts[(int)(cuts.Count * 0.9f)] < 4.5f, $"90% of the river cut under {cuts[(int)(cuts.Count * 0.9f)]} m (deepest {cuts[^1]} m)");
+        Assert.True(cuts[^1] < 8, $"deepest cut {cuts[^1]} m");
+    }
+
+    [Fact]
     public void FloatersHangHighAboveTheGroundAndSnowLiesHigh()
     {
         var z = Make(new ZoneGenerator.Spec(Low: 20, High: 200, RimHeight: 0, LakeHectares: [], Woods: 0, OpenTrees: 0, Small: 0, Floaters: 6, SnowLine: 150));

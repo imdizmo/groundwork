@@ -167,33 +167,39 @@ public static partial class ZoneGenerator
                 float a = MathF.Tau * i / outline.Length, wobble = 1 + (0.28f * Fbm((MathF.Cos(a) * 1.7f) + (lakes.Count * 13), MathF.Sin(a) * 1.7f, spec.Seed + 19, 3));
                 outline[i] = b.At + (new Vector2(MathF.Cos(a), MathF.Sin(a)) * radius * wobble);
             }
-            // the surface just under the lowest shore, so the water stays in; the bed down from it, shallow at the edge
-            float level = outline.Min(p => At(h, cols, rows, p.X, p.Y)) - 0.4f, depth = MathF.Min(8, 2 + (radius / 40));
-            // as far out as the banks may reach (the ground round a lake can stand far above its water)
-            float reach = (radius * 1.4f) + 100;
-            int c0 = Math.Max(0, (int)(b.At.X - reach)), c1 = Math.Min(cols - 1, (int)(b.At.X + reach));
-            int r0 = Math.Max(0, (int)(b.At.Y - reach)), r1 = Math.Min(rows - 1, (int)(b.At.Y + reach));
-            for (int r = r0; r <= r1; r++)
-            {
-                for (int c = c0; c <= c1; c++)
-                {
-                    float inside = InsideBy(outline, new Vector2(c, r));
-                    int p = (r * cols) + c;
-                    if (inside >= 0)
-                    {
-                        h[p] = MathF.Min(h[p], level - (depth * Math.Clamp(inside / 15, 0.12f, 1)));
-                    }
-                    else
-                    {
-                        // the banks slope down to the water (about 9°) near it, the ground as it was further out
-                        float bank = MathF.Min(h[p], level + 0.3f + (-inside * 0.15f));
-                        h[p] = bank + ((h[p] - bank) * Smooth(25, 90, -inside));
-                    }
-                }
-            }
-            lakes.Add(new Lake(b.At + new Vector2(x0, y0), [.. outline.Select(p => p + new Vector2(x0, y0))], level, depth));
+            lakes.Add(CarveLake(h, cols, rows, x0, y0, b.At, outline, radius));
         }
         return lakes;
+    }
+
+    /// <summary>A lake's bed carved round its outline (pixels): its surface just under the lowest shore, so the water stays in.</summary>
+    internal static Lake CarveLake(float[] h, int cols, int rows, float x0, float y0, Vector2 middle, Vector2[] outline, float radius)
+    {
+        // the bed down from the surface, shallow at the edge
+        float level = outline.Min(p => At(h, cols, rows, p.X, p.Y)) - 0.4f, depth = MathF.Min(8, 2 + (radius / 40));
+        // as far out as the banks may reach (the ground round a lake can stand far above its water)
+        float reach = (radius * 1.4f) + MathF.Min(100, radius * 2);
+        int c0 = Math.Max(0, (int)(middle.X - reach)), c1 = Math.Min(cols - 1, (int)(middle.X + reach));
+        int r0 = Math.Max(0, (int)(middle.Y - reach)), r1 = Math.Min(rows - 1, (int)(middle.Y + reach));
+        for (int r = r0; r <= r1; r++)
+        {
+            for (int c = c0; c <= c1; c++)
+            {
+                float inside = InsideBy(outline, new Vector2(c, r));
+                int p = (r * cols) + c;
+                if (inside >= 0)
+                {
+                    h[p] = MathF.Min(h[p], level - (depth * Math.Clamp(inside / 15, 0.12f, 1)));
+                }
+                else
+                {
+                    // the banks slope down to the water (about 9°) near it, the ground as it was further out (nearer round a pond)
+                    float bank = MathF.Min(h[p], level + 0.3f + (-inside * 0.15f));
+                    h[p] = bank + ((h[p] - bank) * Smooth(MathF.Min(25, radius * 0.5f), MathF.Min(90, radius * 1.6f), -inside));
+                }
+            }
+        }
+        return new Lake(middle + new Vector2(x0, y0), [.. outline.Select(p => p + new Vector2(x0, y0))], level, depth);
     }
 
     private static float Radius(Lake l) => l.Outline.Max(p => Vector2.Distance(p, l.Middle));
