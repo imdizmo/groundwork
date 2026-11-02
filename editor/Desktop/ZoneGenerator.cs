@@ -59,12 +59,15 @@ public static partial class ZoneGenerator
         /// <summary>The small things set about a camp (crates, barrels, carts).</summary>
         public IReadOnlyList<MapTools.Kind> Props { get; init; } = [];
 
+        /// <summary>The floating islands rocks in the air are made of (FloatingIsland); none: the big rocks.</summary>
+        public IReadOnlyList<MapTools.Kind> Islands { get; init; } = [];
+
         /// <summary>A catalog's kinds sorted into its Trees, Bushes, Rocks and Plants groups.</summary>
         public static Planting From(IEnumerable<MapTools.Kind> kinds)
         {
             var all = kinds.ToList();
             List<MapTools.Kind> Of(string group) => [.. all.Where(k => string.Equals(k.Category, group, StringComparison.OrdinalIgnoreCase))];
-            return new(Of("Trees"), Of("Bushes"), Of("Rocks"), Of("Plants")) { Buildings = Of("Buildings"), Props = Of("Props") };
+            return new(Of("Trees"), Of("Bushes"), Of("Rocks"), Of("Plants")) { Buildings = Of("Buildings"), Props = Of("Props"), Islands = Of(FloatingIsland.Category) };
         }
     }
 

@@ -84,6 +84,23 @@ public sealed class ClaudeToolsMapMoreTests : IDisposable
     }
 
     [AvaloniaFact]
+    public async Task AFloatingIslandAndWhatGrowsOnItAreNotFloating()
+    {
+        string meadow = Path.GetFullPath(Path.Combine(Groundwork.Tests.Fixtures.Editor, "..", "samples", "Meadow"));
+        var map = MapProject.Create("Islands", 2, generated: false, height: 10, seed: 1, under: _dir, like: MapProject.Open(meadow));
+        var cat = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(map.Catalog!))!;
+        cat["kinds"]!.AsArray().Add(new System.Text.Json.Nodes.JsonObject { ["model"] = "FloatingIsland_Islands_0", ["label"] = "Floating island 1", ["category"] = FloatingIsland.Category });
+        File.WriteAllText(map.Catalog!, cat.ToJsonString());
+        var s = map.Read().Session!;
+        var t = new ClaudeTools(TestWindows.Editing(s));
+        static NewObject At(string model, float x, float y, float z) => new(0, Groundwork.App.AssetIds.Of(model), new System.Numerics.Vector3(x, y, z), System.Numerics.Vector3.Zero, 1);
+        _ = s.Commit("Place", null, [], [(At("FloatingIsland_Islands_0", 20, 60, 20), false), (At("Pine_1", 24, 62.5f, 18), false), (At("Pine_1", 3, 12, 3), false)]);
+        string found = await t.MapChecks();
+        Assert.Contains("\"problems\":1", found.Replace(" ", ""));
+        Assert.Contains("floating 2.0 m", found);
+    }
+
+    [AvaloniaFact]
     public async Task ARoadThroughALakeAndAHouseOnASlopeAreFound()
     {
         var (_, t, s) = Open();

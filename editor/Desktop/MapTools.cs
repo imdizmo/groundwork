@@ -1522,11 +1522,16 @@ public static partial class MapTools
             var found = new List<(int, string, Vector3)>();
             lock (s.Scene.Things)
             {
+                // ponytail: an island's reach is a circle a third wider than its mean radius, not its own outline
+                var islands = s.Scene.Things.Where(t => !t.Gone && GroupOf(t.Prefab).Group == FloatingIsland.Category)
+                    .Select(t => (t.Position, Reach: FloatingIsland.Radius * (t.Scale > 0 ? t.Scale : 1) * 1.3f)).ToList();
                 for (int i = 0; i < s.Scene.Things.Count; i++)
                 {
                     var t = s.Scene.Things[i];
                     var (group, label) = GroupOf(t.Prefab);
-                    if (t.Gone || group == "Markers")
+                    // islands hang in the air, and what grows on them stands on them, not on the ground
+                    bool onIsland = islands.Any(isl => t.Position.Y > isl.Position.Y - 1 && Vector2.Distance(new(t.Position.X, t.Position.Z), new(isl.Position.X, isl.Position.Z)) < isl.Reach);
+                    if (t.Gone || group is "Markers" or FloatingIsland.Category || onIsland)
                     {
                         continue;
                     }

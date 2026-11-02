@@ -248,6 +248,11 @@ public sealed class MapProject
     {
         var m = Create(name, chunks, generated: false, spec.Low, spec.Seed, under, like);
         var map = m.ReadRaster();
+        if (spec.Floaters > 0)
+        {
+            // its own islands, of its own ground (another map's in the copied catalog are not its)
+            planting = planting with { Islands = FloatingIsland.WriteFor(m) };
+        }
         var zone = ZoneGenerator.Generate(spec, map.Cols, map.Rows, map.X0, map.Y0, planting);
         Write(m.HeightsFile, zone.Heights, map.Rows, map.Cols);
         WriteMask(m.LayersFile, zone.Mask, map);

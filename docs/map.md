@@ -29,7 +29,9 @@ elsewhere. The zone is planted with the open map's Trees, Bushes, Rocks and Plan
 
 The styles' shapes, beyond rolling hills: flat shelves with steep risers (plateaus, mesas), canyons cut down into the
 ground, a coast on one side going under the sea or a cliff dropping into nothing, rivers running downhill into a lake
-or the sea with their beds carved, great rocks hanging in the air, snow above a height, marsh flats with pools along
+or the sea with their beds carved, floating islands (lumps of the map's own ground hanging in the air, earth and rock
+below, trees and rocks on top; models written into its models folder as Islands kinds, so Unreal gets them like any
+other), snow above a height, marsh flats with pools along
 the sea, small bumps over everything so no ground is quite flat, and camps: buildings (the catalog's Buildings) in a ring
 round levelled ground with props (its Props) among them, joined one to the next by levelled roads painted with the
 second layer, and giant trees: a share of the trees, here and there rather than in whole groves, several times

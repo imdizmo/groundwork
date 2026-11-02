@@ -141,6 +141,23 @@ public class ZoneGeneratorTests
     }
 
     [Fact]
+    public void FloatingIslandsHangApartWithTheirTopsPlanted()
+    {
+        var island = new MapTools.Kind("FloatingIsland_Test_2", "Floating island 3", FloatingIsland.Category, 1, 1, null);
+        var z = ZoneGenerator.Generate(new ZoneGenerator.Spec(RimHeight: 0, LakeHectares: [], Woods: 0, OpenTrees: 0, Small: 0, Floaters: 4), 400, 400, -200, -200, Kinds with { Islands = [island] });
+        var islands = z.Objects.Where(o => o.Model == island.Model).ToList();
+        Assert.InRange(islands.Count, 2, 4);
+        // every tree is on an island's top: within its edge, at its top's height there
+        var trees = z.Objects.Where(o => o.Model == "Tree").ToList();
+        Assert.NotEmpty(trees);
+        Assert.All(trees, t => Assert.Contains(islands, i =>
+        {
+            var local = ZoneGenerator.Turn((t.At.X - i.At.X) / i.Scale, (t.At.Z - i.At.Z) / i.Scale, -i.Yaw);
+            return FloatingIsland.TopAt(2, local.X, local.Y) is { } top && MathF.Abs(i.At.Y + (top * i.Scale) - 0.3f - t.At.Y) < 0.01f;
+        }));
+    }
+
+    [Fact]
     public void RoughGroundHasLessFlat()
     {
         int Flat(ZoneGenerator.Zone z) => Enumerable.Range(0, 400 * 400).Count(p => ZoneGenerator.Slope(z.Heights, 400, 400, p % 400, p / 400) < 10);

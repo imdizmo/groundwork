@@ -320,9 +320,17 @@ public static partial class ZoneGenerator
         return wet;
     }
 
-    /// <summary>Big rocks hanging in the air (floating islands): the largest of the Rocks kinds, scaled up, 50 to 200 m over the ground.</summary>
+    /// <summary>
+    /// Rocks in the air, 50 to 200 m over the ground: floating islands where the map has them (their tops planted with its
+    /// trees, bushes and rocks), else the largest of the Rocks kinds, scaled up.
+    /// </summary>
     private static void Float(Spec spec, float[] h, int cols, int rows, float x0, float y0, Planting kinds, Random rng, List<(string, Vector3, float, float)> objects)
     {
+        if (kinds.Islands.Count > 0)
+        {
+            Islands(spec, h, cols, rows, x0, y0, kinds, rng, objects);
+            return;
+        }
         var big = kinds.Rocks.Where(k => k.Model.Contains("Big", StringComparison.OrdinalIgnoreCase) || k.Label.Contains("Big", StringComparison.OrdinalIgnoreCase)).ToList();
         var from = big.Count > 0 ? big : [.. kinds.Rocks];
         if (from.Count == 0)
@@ -334,6 +342,56 @@ public static partial class ZoneGenerator
             float c = 40 + (rng.NextSingle() * (cols - 80)), r = 40 + (rng.NextSingle() * (rows - 80));
             float up = 50 + (rng.NextSingle() * 150);
             objects.Add((from[rng.Next(from.Count)].Model, new Vector3(c + x0, At(h, cols, rows, c, r) + up, -(r + y0)), rng.NextSingle() * 360, 8 + (rng.NextSingle() * 22)));
+        }
+    }
+
+    /// <summary>A point of a model turned by its yaw (degrees), as the editor turns it.</summary>
+    internal static Vector2 Turn(float x, float z, float yaw)
+    {
+        float a = yaw * MathF.PI / 180, cos = MathF.Cos(a), sin = MathF.Sin(a);
+        return new((x * cos) + (z * sin), (z * cos) - (x * sin));
+    }
+
+    /// <summary>Floating islands, mostly small and a few large, apart from each other, their tops planted.</summary>
+    private static void Islands(Spec spec, float[] h, int cols, int rows, float x0, float y0, Planting kinds, Random rng, List<(string, Vector3, float, float)> objects)
+    {
+        var placed = new List<(Vector2 At, float Reach)>();
+        for (int i = 0; i < spec.Floaters; i++)
+        {
+            var kind = kinds.Islands[rng.Next(kinds.Islands.Count)];
+            int variant = FloatingIsland.VariantOf(kind.Model);
+            float scale = 0.5f + (2.2f * rng.NextSingle() * rng.NextSingle()), reach = FloatingIsland.Radius * scale * 1.3f;
+            Vector2 at = default;
+            bool free = false;
+            for (int tries = 0; tries < 30 && !free; tries++)
+            {
+                at = new(reach + (rng.NextSingle() * (cols - (2 * reach))), reach + (rng.NextSingle() * (rows - (2 * reach))));
+                free = placed.All(p => Vector2.Distance(p.At, at) > p.Reach + reach);
+            }
+            if (!free || variant < 0)
+            {
+                continue;
+            }
+            placed.Add((at, reach));
+            float yaw = rng.NextSingle() * 360, y = At(h, cols, rows, at.X, at.Y) + 50 + (rng.NextSingle() * 150);
+            objects.Add((kind.Model, new Vector3(at.X + x0, y, -(at.Y + y0)), yaw, scale));
+            // its top: trees, bushes and a rock or two, as many as its size holds
+            float area = MathF.PI * MathF.Pow(FloatingIsland.Radius * scale, 2);
+            foreach (var (from, each) in new[] { (kinds.Trees, 350f), (kinds.Bushes, 120f), (kinds.Rocks.Where(k => !k.Model.Contains("Big", StringComparison.OrdinalIgnoreCase)).ToList(), 600f) })
+            {
+                for (int n = (int)MathF.Round(area / each * (0.6f + (0.8f * rng.NextSingle()))); n > 0 && from.Count > 0; n--)
+                {
+                    float ang = rng.NextSingle() * MathF.Tau, t = 0.75f * MathF.Sqrt(rng.NextSingle());
+                    float lx = MathF.Cos(ang) * t * FloatingIsland.Edge(variant, ang), lz = MathF.Sin(ang) * t * FloatingIsland.Edge(variant, ang);
+                    if (FloatingIsland.TopAt(variant, lx, lz) is not { } top)
+                    {
+                        continue;
+                    }
+                    var k = from[rng.Next(from.Count)];
+                    var w = Turn(lx * scale, lz * scale, yaw);
+                    objects.Add((k.Model, new Vector3(at.X + x0 + w.X, y + (top * scale) - 0.3f, -(at.Y + y0) + w.Y), rng.NextSingle() * 360, k.MinScale + (rng.NextSingle() * (k.MaxScale - k.MinScale))));
+                }
+            }
         }
     }
 }
