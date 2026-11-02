@@ -305,7 +305,8 @@ public static partial class ZoneGenerator
                 }
             }
         }
-        for (int i = 0; spec.Coast > 0 && !spec.CoastDry && i < w * ht; i++)
+        // the sea: any ground under its level (0) unless the edge is a drop, a coast or not
+        for (int i = 0; !spec.CoastDry && i < w * ht; i++)
         {
             if (G(i) < -0.5f)
             {

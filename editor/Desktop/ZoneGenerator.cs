@@ -78,17 +78,17 @@ public static partial class ZoneGenerator
         float[] h = new float[cols * rows];
         float Edge(int c, int r) => spec.Coast > 0 ? FarEdge(spec, c, r, cols, rows) : MathF.Min(MathF.Min(c, cols - 1 - c), MathF.Min(r, rows - 1 - r));
         // the rolling ground: noise of the hills' size and smaller, stretched so that it reaches from Low to High (its
-        // lowest and highest hundredth), more low ground than high
-        for (int r = 0; r < rows; r++)
+        // lowest and highest hundredth), more low ground than high (each pixel on its own: the rows in parallel)
+        Parallel.For(0, rows, r =>
         {
             for (int c = 0; c < cols; c++)
             {
                 h[(r * cols) + c] = Fbm((c + x0) / spec.HillSize, (r + y0) / spec.HillSize, spec.Seed, 5);
             }
-        }
+        });
         float[] sample = [.. h.Where((_, i) => i % 97 == 0).Order()];
         float lo = sample[sample.Length / 100], hi = sample[sample.Length * 99 / 100];
-        for (int r = 0; r < rows; r++)
+        Parallel.For(0, rows, r =>
         {
             for (int c = 0; c < cols; c++)
             {
@@ -112,7 +112,7 @@ public static partial class ZoneGenerator
                 }
                 h[(r * cols) + c] = Marshed(spec, Coasted(spec, ground + rim, c, r, cols, rows, x, y), x, y);
             }
-        }
+        });
         var lakes = PlaceLakes(spec, h, cols, rows, x0, y0, rng);
         var rivers = MakeRivers(spec, h, cols, rows, x0, y0, lakes, rng);
         bool[] wet = Wet(spec, h, cols, rows, x0, y0, rivers);
@@ -181,7 +181,7 @@ public static partial class ZoneGenerator
         float reach = (radius * 1.4f) + MathF.Min(100, radius * 2);
         int c0 = Math.Max(0, (int)(middle.X - reach)), c1 = Math.Min(cols - 1, (int)(middle.X + reach));
         int r0 = Math.Max(0, (int)(middle.Y - reach)), r1 = Math.Min(rows - 1, (int)(middle.Y + reach));
-        for (int r = r0; r <= r1; r++)
+        Parallel.For(r0, r1 + 1, r =>
         {
             for (int c = c0; c <= c1; c++)
             {
@@ -198,7 +198,7 @@ public static partial class ZoneGenerator
                     h[p] = bank + ((h[p] - bank) * Smooth(MathF.Min(25, radius * 0.5f), MathF.Min(90, radius * 1.6f), -inside));
                 }
             }
-        }
+        });
         return new Lake(middle + new Vector2(x0, y0), [.. outline.Select(p => p + new Vector2(x0, y0))], level, depth);
     }
 
@@ -208,16 +208,21 @@ public static partial class ZoneGenerator
     private static float[] Woods(Spec spec, float[] h, int cols, int rows, float x0, float y0, float[] lakeIn, bool[] wet)
     {
         float[] n = new float[cols * rows];
-        var growable = new List<float>();
-        for (int r = 0; r < rows; r++)
+        Parallel.For(0, rows, r =>
         {
             for (int c = 0; c < cols; c++)
             {
-                int p = (r * cols) + c;
-                n[p] = Fbm((c + x0) / 160, (r + y0) / 160, spec.Seed + 31, 4);
-                if ((r % 7 == 0) && (c % 7 == 0) && Grows(h, cols, rows, c, r, lakeIn, wet))
+                n[(r * cols) + c] = Fbm((c + x0) / 160, (r + y0) / 160, spec.Seed + 31, 4);
+            }
+        });
+        var growable = new List<float>();
+        for (int r = 0; r < rows; r += 7)
+        {
+            for (int c = 0; c < cols; c += 7)
+            {
+                if (Grows(h, cols, rows, c, r, lakeIn, wet))
                 {
-                    growable.Add(n[p]);
+                    growable.Add(n[(r * cols) + c]);
                 }
             }
         }
@@ -228,14 +233,14 @@ public static partial class ZoneGenerator
         growable.Sort();
         float cut = growable[Math.Clamp((int)((1 - spec.Woods) * growable.Count), 0, growable.Count - 1)];
         float[] w = new float[cols * rows];
-        for (int r = 0; r < rows; r++)
+        Parallel.For(0, rows, r =>
         {
             for (int c = 0; c < cols; c++)
             {
                 int p = (r * cols) + c;
                 w[p] = Grows(h, cols, rows, c, r, lakeIn, wet) ? Smooth(cut - 0.03f, cut + 0.03f, n[p]) : 0;
             }
-        }
+        });
         return w;
     }
 
@@ -248,7 +253,7 @@ public static partial class ZoneGenerator
     {
         byte[] mask = new byte[cols * rows * 4];
         float open = Quantile(spec, cols, rows, x0, y0, 1 - spec.OpenDirt);
-        for (int r = 0; r < rows; r++)
+        Parallel.For(0, rows, r =>
         {
             for (int c = 0; c < cols; c++)
             {
@@ -280,7 +285,7 @@ public static partial class ZoneGenerator
                 mask[(p * 4) + 2] = Byte(rock * (1 - snow));
                 mask[(p * 4) + 3] = 255;
             }
-        }
+        });
         return mask;
     }
 
@@ -335,14 +340,14 @@ public static partial class ZoneGenerator
         {
             int c0 = Math.Max(0, (int)(l.Outline.Min(p => p.X) - x0 - reach)), c1 = Math.Min(cols - 1, (int)(l.Outline.Max(p => p.X) - x0 + reach));
             int r0 = Math.Max(0, (int)(l.Outline.Min(p => p.Y) - y0 - reach)), r1 = Math.Min(rows - 1, (int)(l.Outline.Max(p => p.Y) - y0 + reach));
-            for (int r = r0; r <= r1; r++)
+            Parallel.For(r0, r1 + 1, r =>
             {
                 for (int c = c0; c <= c1; c++)
                 {
                     int p = (r * cols) + c;
                     f[p] = MathF.Max(f[p], InsideBy(l.Outline, new Vector2(c + x0, r + y0)));
                 }
-            }
+            });
         }
         return f;
     }

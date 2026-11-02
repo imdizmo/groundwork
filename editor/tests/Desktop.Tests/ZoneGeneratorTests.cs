@@ -145,6 +145,19 @@ public class ZoneGeneratorTests
     }
 
     [Fact]
+    public void ARiverEndsWhereItReachesTheSeaWithoutACoast()
+    {
+        // low ground under the sea's level (0), no coast: the sea there is where the rivers end, not run on through
+        var spec = ZoneGenerator.Styles.Single(s => s.Name == "Grassland with plateaus").Spec with { RimWidth = 101, LakeHectares = [] };
+        var z = Make(spec, 800);
+        var dry = Make(spec with { Rivers = 0 }, 800);
+        Assert.NotEmpty(z.Rivers);
+        var points = z.Rivers.SelectMany(r => r.Points).ToList();
+        int inSea = points.Count(p => dry.Heights[(Math.Clamp((int)MathF.Round(p.Y + 200), 0, 799) * 800) + Math.Clamp((int)MathF.Round(p.X + 200), 0, 799)] < -1);
+        Assert.True(inSea <= z.Rivers.Count, $"{inSea} of {points.Count} river points out in the sea");
+    }
+
+    [Fact]
     public void FloatersHangHighAboveTheGroundAndSnowLiesHigh()
     {
         var z = Make(new ZoneGenerator.Spec(Low: 20, High: 200, RimHeight: 0, LakeHectares: [], Woods: 0, OpenTrees: 0, Small: 0, Floaters: 6, SnowLine: 150));
