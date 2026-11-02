@@ -35,7 +35,7 @@ public static class FloatingIsland
             [.. Enumerable.Range(0, 4).Select(_ => (0.5f + R(), new Vector2(R() - 0.5f, R() - 0.5f) * 0.5f, R() * MathF.Tau))],
             Radius * (0.7f + (0.5f * R())),
             [.. Enumerable.Range(2, 2).Select(f => (0.2f + (0.15f * R()), f, R() * MathF.Tau))],
-            [.. Enumerable.Range(3, 3).Select(f => (0.05f + (0.04f * R()), new Vector2(f, 2 + (4 * R())), R() * MathF.Tau))],
+            [.. Enumerable.Range(3, 6).Select(f => (0.035f + (0.035f * R()), new Vector2(f, 3 + (7 * R())), R() * MathF.Tau))],
             new Vector2(R() - 0.5f, R() - 0.5f) * Radius * 0.3f);
     }
 
@@ -148,6 +148,16 @@ public static class FloatingIsland
         // bottom leaning; smooth, each corner shared by the faces round it
         var below = (V: new List<float>(), I: new List<int>());
         var grid = new Vector3[BelowRings + 1, Around + 1];
+        // a little roughness on each corner (its normals still shared): broken ground, not a polished pebble
+        var rng = new Random(4513 + variant);
+        var rough = new Vector2[BelowRings + 1, Around];
+        for (int k = 1; k < BelowRings; k++)
+        {
+            for (int a = 0; a < Around; a++)
+            {
+                rough[k, a] = new Vector2(0.94f + (0.12f * rng.NextSingle()), (rng.NextSingle() - 0.5f) * 3);
+            }
+        }
         for (int k = 0; k <= BelowRings; k++)
         {
             for (int a = 0; a <= Around; a++)
@@ -155,9 +165,10 @@ public static class FloatingIsland
                 float ang = a * MathF.Tau / Around, e = Edge(variant, ang), u = (float)k / BelowRings, th = u * MathF.PI / 2;
                 float lobes = 1 + (s.Lobes.Sum(l => l.A * MathF.Sin((l.F * ang) + l.P)) * MathF.Sin(MathF.PI * u));
                 float lumps = 1 + (s.Lumps.Sum(l => l.A * MathF.Sin((l.F.X * ang) + (l.F.Y * th) + l.P)) * MathF.Sin(MathF.PI * u));
-                float r = e * MathF.Pow(Math.Max(0, MathF.Cos(th)), 0.7f) * lumps;
+                var j = k is 0 or BelowRings ? new Vector2(1, 0) : rough[k, a % Around];
+                float r = e * MathF.Pow(Math.Max(0, MathF.Cos(th)), 0.7f) * lumps * j.X;
                 var lean = s.Lean * u * u;
-                grid[k, a] = new Vector3((r * MathF.Cos(ang)) + lean.X, -s.Depth * MathF.Sin(th) * lobes, (r * MathF.Sin(ang)) + lean.Y);
+                grid[k, a] = new Vector3((r * MathF.Cos(ang)) + lean.X, (-s.Depth * MathF.Sin(th) * lobes) + j.Y, (r * MathF.Sin(ang)) + lean.Y);
             }
         }
         // each corner's normal: its faces' added, turned away from a point inside (the seam's two columns as one)
