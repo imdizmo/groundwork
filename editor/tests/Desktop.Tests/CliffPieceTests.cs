@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Groundwork.Desktop.Tests;
 
-/// <summary>Cliff pieces: a .glb the model loader reads, a face of rock standing out of its plane in ledges.</summary>
+/// <summary>Cliff pieces: a .glb the model loader reads, a wall of rock columns standing out of its plane, grass on their tops.</summary>
 public class CliffPieceTests
 {
     [Fact]
@@ -18,7 +18,7 @@ public class CliffPieceTests
             var rock = prims[0].GetVertexAccessor("POSITION").AsVector3Array();
             var grass = prims[1].GetVertexAccessor("POSITION").AsVector3Array();
             Assert.True(grass.Max(p => p.Y) > CliffPiece.Height - 3, "the top on top");
-            Assert.InRange(rock.Max(p => p.Y), CliffPiece.Height - 3, CliffPiece.Height + 0.01f);
+            Assert.InRange(rock.Max(p => p.Y), CliffPiece.Height - 3, CliffPiece.Height + 1);   // its tallest leaning a little
             Assert.True(rock.Min(p => p.Z) <= -CliffPiece.Depth + 0.01f, "it reaches back into the hill");
             // the face is not flat: ledges stand out of it by a metre or more
             var face = Enumerable.Range(0, 20).Select(i => CliffPiece.Face(0)(0, i * 0.5f)).ToList();
@@ -31,30 +31,34 @@ public class CliffPieceTests
     }
 
     [Fact]
-    public void ItsFaceIsPillarsInBedsWithGrassOnItsLedgesAndOverItsEdge()
+    public void ItsFaceIsColumnsTwiceAsTallAsWideTheirFeetDrawnInGrassOnTheirLowerTops()
     {
+        static float Area(System.Numerics.Vector2[] p) => MathF.Abs(Enumerable.Range(0, p.Length).Sum(i => (p[i].X * p[(i + 1) % p.Length].Y) - (p[(i + 1) % p.Length].X * p[i].Y)) / 2);
         for (int v = 0; v < CliffPiece.Variants; v++)
         {
+            var columns = CliffPiece.Columns(v);
+            // columns: several of them two to three and a half times as tall as wide, a few-sided prism each
+            var tall = columns.Where(c => c.H / c.W is >= 2 and <= 3.5f).ToList();
+            Assert.True(tall.Count >= 2, $"variant {v}: {tall.Count} tall columns");
+            Assert.All(columns, c => Assert.InRange(c.Corners, 5, 7));
+            // their feet drawn in: the section at the foot well under the one halfway up
+            foreach (var c in tall)
+            {
+                var rings = CliffPiece.Rings(c);
+                Assert.True(Area(rings[0].P) < 0.5f * Area(rings[rings.Length / 2].P), $"variant {v}: a column's foot not drawn in");
+            }
+            // joints: across the face at mid height, the face steps out or back half a metre or more within 0.3 m
             var face = CliffPiece.Face(v);
-            // pillars: across the face at mid height, the face steps out or back half a metre or more within 0.3 m
             int joints = Enumerable.Range(0, 80).Count(i =>
             {
                 float x = -CliffPiece.Width * 0.4f + (i * CliffPiece.Width * 0.8f / 80);
                 return MathF.Abs(face(x + 0.3f, CliffPiece.Height / 2) - face(x, CliffPiece.Height / 2)) > 0.5f;
             });
             Assert.True(joints >= 2, $"variant {v}: {joints} joints across it");
-            // beds: up the face, thin grooves every metre or two
-            var up = Enumerable.Range(0, 100).Select(j => face(1, j * CliffPiece.Height * 0.8f / 100)).ToList();
-            int grooves = Enumerable.Range(1, 98).Count(j => up[j] < up[j - 1] - 0.04f && up[j] < up[j + 1] - 0.04f);
-            Assert.True(grooves >= 3, $"variant {v}: {grooves} bedding grooves up it");
-            // grass: on ledges down the face, and its top rolling forward over the edge
-            var (_, grassI) = CliffPiece.Mesh(v, 4, 4)[1];
+            // grass on the tops of the columns stepping down under the tallest (seen from the front, not under the ground)
             var g = CliffPiece.Mesh(v, 4, 4)[1].V;
             var at = Enumerable.Range(0, g.Count / 8).Select(k => new System.Numerics.Vector3(g[k * 8], g[(k * 8) + 1], g[(k * 8) + 2])).ToList();
-            Assert.True(at.Any(p => p.Y < CliffPiece.Height - 4), $"variant {v}: no grass on a ledge");
-            float edge = Enumerable.Range(0, 9).Max(i => face((i - 4) * 1f, CliffPiece.Top(v)((i - 4) * 1f) - 0.1f));
-            Assert.True(at.Max(p => p.Z) > edge, $"variant {v}: the grass stops short of the edge");
-            Assert.NotEmpty(grassI);
+            Assert.True(at.Any(p => p.Y is < (CliffPiece.Height - 2) and > 1), $"variant {v}: no grass on a lower top");
         }
     }
 }
