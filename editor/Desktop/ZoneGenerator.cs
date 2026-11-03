@@ -81,6 +81,17 @@ public static partial class ZoneGenerator
         var rng = new Random(spec.Seed);
         float[] h = new float[cols * rows];
         float Edge(int c, int r) => spec.Coast > 0 ? FarEdge(spec, c, r, cols, rows) : MathF.Min(MathF.Min(c, cols - 1 - c), MathF.Min(r, rows - 1 - r));
+        // how far out of the rim a point is: under 1 in it (its width changing along the edge), 0 at the edge; no rim: 2
+        float RimAt(int c, int r)
+        {
+            if (spec.RimHeight <= 0 || spec.RimWidth <= 0)
+            {
+                return 2;
+            }
+            float x = c + x0, y = r + y0;
+            float wander = 1 + (0.6f * Fbm(x / (spec.RimWidth * 2.5f), y / (spec.RimWidth * 2.5f), spec.Seed + 7, 3));
+            return Edge(c, r) / (spec.RimWidth * wander);
+        }
         // the rolling ground: noise of the hills' size and smaller, stretched so that it reaches from Low to High (its
         // lowest and highest hundredth), more low ground than high (each pixel on its own: the rows in parallel)
         Parallel.For(0, rows, r =>
@@ -101,18 +112,14 @@ public static partial class ZoneGenerator
                 float ground = Shaped(spec, spec.Low + ((spec.High - spec.Low) * MathF.Pow(t, 1.3f)), x, y);
                 // the rim: a wall of ridged mountains round the edge, its foot wandering in and out
                 float rim = 0;
-                if (spec.RimHeight > 0 && spec.RimWidth > 0)
+                float d = RimAt(c, r);
+                if (d < 1)
                 {
-                    // its width and height change along the edge: high peaks in places, low hills or a gap in others
-                    float wander = 1 + (0.6f * Fbm(x / (spec.RimWidth * 2.5f), y / (spec.RimWidth * 2.5f), spec.Seed + 7, 3));
+                    // its height changes along the edge: high peaks in places, low hills or a gap in others
                     float tall = 0.5f + (0.5f * Smooth(-0.35f, 0.45f, Fbm(x / 900, y / 900, spec.Seed + 3, 2)));
-                    float d = Edge(c, r) / (spec.RimWidth * wander);
-                    if (d < 1)
-                    {
-                        float rise = MathF.Pow(Smooth(1, 0.25f, d), 1.25f);   // foothills first, then steep
-                        float ridges = 0.6f + (0.4f * Ridged(x / 110, y / 110, spec.Seed + 11, 4));
-                        rim = spec.RimHeight * tall * rise * ridges;
-                    }
+                    float rise = MathF.Pow(Smooth(1, 0.25f, d), 1.25f);   // foothills first, then steep
+                    float ridges = 0.6f + (0.4f * Ridged(x / 110, y / 110, spec.Seed + 11, 4));
+                    rim = spec.RimHeight * tall * rise * ridges;
                 }
                 h[(r * cols) + c] = Marshed(spec, Coasted(spec, ground + rim, c, r, cols, rows, x, y), x, y);
             }
@@ -128,7 +135,7 @@ public static partial class ZoneGenerator
         bool[] busy = Busy(cols, rows, camps, road, wet);
         // the cliffs before the woods and the paint: they step the ground (painted rock, nothing growing on the step)
         var cliffs = new List<(string, Vector3, float, float)>();
-        Cliffs(spec, h, cols, rows, x0, y0, planting.Cliffs, rng, cliffs, (c, r) => !busy[(r * cols) + c] && lakeIn[(r * cols) + c] <= -2);
+        Cliffs(spec, h, cols, rows, x0, y0, planting.Cliffs, rng, cliffs, (c, r) => !busy[(r * cols) + c] && lakeIn[(r * cols) + c] <= -2 && RimAt(c, r) > 0.8f);   // the rim's mountains past its foothills: no steps
         float[] wooded = Woods(spec, h, cols, rows, x0, y0, lakeIn, busy);
         byte[] mask = Paint(spec, h, cols, rows, x0, y0, lakeIn, wooded, wet);
         PaintRoads(mask, road, camps, cols, rows, spec.RoadChannel == 0 ? 0 : 1);
@@ -266,25 +273,30 @@ public static partial class ZoneGenerator
             return;
         }
         float ease = spec.CliffSlope * 0.6f;
+        // each judged on the ground as it was (a piece's fill makes a shelf, and the next one up would take it for a
+        // step: pieces stacked up a mountainside); the fills go into h
+        float[] g = (float[])h.Clone();
         Vector2 Down(Vector2 p)
         {
-            var g = new Vector2(At(h, cols, rows, p.X + 1, p.Y) - At(h, cols, rows, p.X - 1, p.Y), At(h, cols, rows, p.X, p.Y + 1) - At(h, cols, rows, p.X, p.Y - 1));
-            return g.LengthSquared() > 1e-8f ? -Vector2.Normalize(g) : Vector2.Zero;
+            var grad = new Vector2(At(g, cols, rows, p.X + 1, p.Y) - At(g, cols, rows, p.X - 1, p.Y), At(g, cols, rows, p.X, p.Y + 1) - At(g, cols, rows, p.X, p.Y - 1));
+            return grad.LengthSquared() > 1e-8f ? -Vector2.Normalize(grad) : Vector2.Zero;
         }
         bool Inside(Vector2 p) => p.X >= 1 && p.Y >= 1 && p.X < cols - 2 && p.Y < rows - 2;
-        // where the slope eases, walking one way from a point (at most 30 m)
-        Vector2 Walk(Vector2 p, float way)
+        // where the slope eases, walking one way from a point (at most 30 m), and whether it did
+        (Vector2 At, bool Eased) Walk(Vector2 p, float way)
         {
+            bool eased = false;
             for (int k = 0; k < 30 && Inside(p); k++)
             {
                 var d = Down(p) * way;
-                if (d == Vector2.Zero || Slope(h, cols, rows, (int)p.X, (int)p.Y) < ease)
+                if (d == Vector2.Zero || Slope(g, cols, rows, (int)p.X, (int)p.Y) < ease)
                 {
+                    eased = true;
                     break;
                 }
                 p += d;
             }
-            return Vector2.Clamp(p, Vector2.One, new Vector2(cols - 2, rows - 2));
+            return (Vector2.Clamp(p, Vector2.One, new Vector2(cols - 2, rows - 2)), eased);
         }
         var middles = new List<(Vector2 At, float Width)>();
         var made = new List<(Vector2 At, float Yaw, float S, float Back)>();
@@ -324,13 +336,14 @@ public static partial class ZoneGenerator
                 }
             }
         }
-        // candidates every 3 m, jittered, in a shuffled order
+        // candidates every 3 m, jittered, in a shuffled order: only on cliff lines (not every steep bump)
+        bool[] lines = CliffLines(spec, g, cols, rows, free);
         var candidates = new List<Vector2>();
         for (int r = 2; r < rows - 2; r += 3)
         {
             for (int c = 2; c < cols - 2; c += 3)
             {
-                if (Slope(h, cols, rows, c, r) > spec.CliffSlope && free(c, r))
+                if (lines[((r / 3) * ((cols + 2) / 3)) + (c / 3)])
                 {
                     candidates.Add(new Vector2(c + rng.NextSingle(), r + rng.NextSingle()));
                 }
@@ -338,9 +351,13 @@ public static partial class ZoneGenerator
         }
         foreach (var p in candidates.OrderBy(_ => rng.Next()))
         {
-            var foot = Walk(p, 1);
-            var top = Walk(p, -1);
-            float drop = At(h, cols, rows, top.X, top.Y) - At(h, cols, rows, foot.X, foot.Y), run = Vector2.Distance(foot, top);
+            var (foot, _) = Walk(p, 1);
+            var (top, shelf) = Walk(p, -1);
+            if (!shelf)
+            {
+                continue;   // still climbing 30 m up: a mountainside, no step to face (painted rock)
+            }
+            float drop = At(g, cols, rows, top.X, top.Y) - At(g, cols, rows, foot.X, foot.Y), run = Vector2.Distance(foot, top);
             var middle = (foot + top) / 2;
             if (drop < 6 || middles.Any(m => Vector2.Distance(m.At, middle) < m.Width * 0.3f))
             {
@@ -351,16 +368,18 @@ public static partial class ZoneGenerator
             // (the ground behind it is filled, so it need not reach back)
             var d = Down(p);
             var across = new Vector2(-d.Y, d.X) * CliffPiece.Width * Math.Clamp((drop + 1.9f) / CliffPiece.Height, 0.3f, 6) * 0.4f;
-            float topHeight = MathF.Min(At(h, cols, rows, top.X, top.Y), MathF.Min(At(h, cols, rows, Math.Clamp(top.X + across.X, 0, cols - 1), Math.Clamp(top.Y + across.Y, 0, rows - 1)), At(h, cols, rows, Math.Clamp(top.X - across.X, 0, cols - 1), Math.Clamp(top.Y - across.Y, 0, rows - 1))));
-            drop = topHeight - At(h, cols, rows, foot.X, foot.Y);
+            float topHeight = MathF.Min(At(g, cols, rows, top.X, top.Y), MathF.Min(At(g, cols, rows, Math.Clamp(top.X + across.X, 0, cols - 1), Math.Clamp(top.Y + across.Y, 0, rows - 1)), At(g, cols, rows, Math.Clamp(top.X - across.X, 0, cols - 1), Math.Clamp(top.Y - across.Y, 0, rows - 1))));
+            drop = topHeight - At(g, cols, rows, foot.X, foot.Y);
             if (drop < 6 || drop + 1.9f > CliffPiece.Height * 6)
             {
                 continue;
             }
             float s = MathF.Max(0.3f, (drop + 1.9f) / CliffPiece.Height);
-            // none where the slope tops out on a ridge (the ground falling away behind would leave the rock standing up)
+            // a step: the ground behind its top about level, not falling away (a ridge: the rock would stand up out of
+            // it) nor climbing on (a mountainside: pieces stacked up it)
             var beyond = Vector2.Clamp(top - (d * CliffPiece.Depth * s * 0.6f), Vector2.Zero, new Vector2(cols - 1, rows - 1));
-            if (At(h, cols, rows, beyond.X, beyond.Y) < At(h, cols, rows, top.X, top.Y) - 1.5f)
+            float rise = At(g, cols, rows, beyond.X, beyond.Y) - At(g, cols, rows, top.X, top.Y);
+            if (rise < -1.5f || rise > MathF.Max(3, drop * 0.3f))
             {
                 continue;
             }
@@ -379,6 +398,101 @@ public static partial class ZoneGenerator
             Fill(at, yaw, s, CliffPiece.VariantOf(pieces[k].Model), topHeight, run + 1.5f);
             middles.Add((middle, CliffPiece.Width * s));
         }
+    }
+
+    /// <summary>
+    /// The cliff lines, on a 3 m grid ((cols + 2) / 3 across): cells steeper than CliffSlope on the ground blurred over
+    /// 21 m (rough bumps are no cliffs), joined into bands that face within 45° of where each started (a cliff faces one
+    /// way along it; the steep ring round a bump faces every way, and breaks into short arcs), the bands 50 m long or more.
+    /// </summary>
+    private static bool[] CliffLines(Spec spec, float[] h, int cols, int rows, Func<int, int, bool> free)
+    {
+        const int Cell = 3, Blur = 10, Long = 50;
+        float turn = MathF.Cos(45 * MathF.PI / 180);
+        float[] soft = BoxBlur(h, cols, rows, Blur);
+        int gc = (cols + Cell - 1) / Cell, gr = (rows + Cell - 1) / Cell;
+        bool[] steep = new bool[gc * gr], kept = new bool[gc * gr], seen = new bool[gc * gr];
+        var facing = new Vector2[gc * gr];
+        Parallel.For(0, gr, j =>
+        {
+            for (int i = 0; i < gc; i++)
+            {
+                int c = Math.Min(cols - 1, i * Cell), r = Math.Min(rows - 1, j * Cell);
+                steep[(j * gc) + i] = Slope(soft, cols, rows, c, r) > spec.CliffSlope && free(c, r);
+                var g = new Vector2(At(soft, cols, rows, c + 1, r) - At(soft, cols, rows, c - 1, r), At(soft, cols, rows, c, r + 1) - At(soft, cols, rows, c, r - 1));
+                facing[(j * gc) + i] = g.LengthSquared() > 1e-8f ? Vector2.Normalize(g) : Vector2.Zero;
+            }
+        });
+        var band = new List<int>();
+        var queue = new Queue<int>();
+        for (int start = 0; start < steep.Length; start++)
+        {
+            if (!steep[start] || seen[start])
+            {
+                continue;
+            }
+            // the band through it (8 neighbours), and how far it runs (its box's diagonal)
+            band.Clear();
+            queue.Enqueue(start);
+            seen[start] = true;
+            int i0 = int.MaxValue, i1 = int.MinValue, j0 = int.MaxValue, j1 = int.MinValue;
+            while (queue.TryDequeue(out int k))
+            {
+                band.Add(k);
+                int i = k % gc, j = k / gc;
+                (i0, i1, j0, j1) = (Math.Min(i0, i), Math.Max(i1, i), Math.Min(j0, j), Math.Max(j1, j));
+                for (int dj = -1; dj <= 1; dj++)
+                {
+                    for (int di = -1; di <= 1; di++)
+                    {
+                        int ni = i + di, nj = j + dj, n = (nj * gc) + ni;
+                        if (ni >= 0 && nj >= 0 && ni < gc && nj < gr && steep[n] && !seen[n] && Vector2.Dot(facing[n], facing[start]) > turn)
+                        {
+                            seen[n] = true;
+                            queue.Enqueue(n);
+                        }
+                    }
+                }
+            }
+            if (MathF.Sqrt(((i1 - i0) * (i1 - i0)) + ((j1 - j0) * (j1 - j0))) * Cell >= Long)
+            {
+                band.ForEach(k => kept[k] = true);
+            }
+        }
+        return kept;
+    }
+
+    /// <summary>The heights averaged over a square <paramref name="radius"/> pixels each way (rows, then columns).</summary>
+    private static float[] BoxBlur(float[] h, int cols, int rows, int radius)
+    {
+        float[] across = new float[h.Length], both = new float[h.Length];
+        Parallel.For(0, rows, r =>
+        {
+            for (int c = 0; c < cols; c++)
+            {
+                float sum = 0;
+                int c0 = Math.Max(0, c - radius), c1 = Math.Min(cols - 1, c + radius);
+                for (int k = c0; k <= c1; k++)
+                {
+                    sum += h[(r * cols) + k];
+                }
+                across[(r * cols) + c] = sum / (c1 - c0 + 1);
+            }
+        });
+        Parallel.For(0, cols, c =>
+        {
+            for (int r = 0; r < rows; r++)
+            {
+                float sum = 0;
+                int r0 = Math.Max(0, r - radius), r1 = Math.Min(rows - 1, r + radius);
+                for (int k = r0; k <= r1; k++)
+                {
+                    sum += across[(k * cols) + c];
+                }
+                both[(r * cols) + c] = sum / (r1 - r0 + 1);
+            }
+        });
+        return both;
     }
 
     /// <summary>Whether trees may stand at a point: not a cliff (woods climb steep hillsides), not in a lake.</summary>

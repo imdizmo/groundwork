@@ -186,6 +186,26 @@ public class ZoneGeneratorTests
     }
 
     [Fact]
+    public void CliffPiecesKeepToLongCliffLinesNotRoughBumps()
+    {
+        var cliff = new MapTools.Kind("Cliff_0", "Cliff", CliffPiece.Category, 1, 1, null);
+        var kinds = Kinds with { Cliffs = [cliff] };
+        List<(string Model, Vector3 At, float Yaw, float Scale)> Pieces(ZoneGenerator.Spec s) =>
+            [.. ZoneGenerator.Generate(s, 500, 500, -200, -200, kinds).Objects.Where(o => o.Model == "Cliff_0")];
+        // rough bumps on gentle hills: steep here and there, but no cliff anywhere
+        var bumpy = Pieces(new ZoneGenerator.Spec(Low: 0, High: 40, HillSize: 300, RimHeight: 0, LakeHectares: [], Woods: 0, Small: 0, Rough: 8, CliffSlope: 35));
+        Assert.True(bumpy.Count <= 10, $"{bumpy.Count} pieces on rough ground");
+        // the rim's mountains: painted rock, no steps (terraced ground under them or not)
+        var rim = Pieces(new ZoneGenerator.Spec(Low: 0, High: 50, HillSize: 250, RimHeight: 300, RimWidth: 200, LakeHectares: [], Woods: 0, Small: 0, Rough: 3, Terraces: 20, CliffSlope: 35));
+        Assert.DoesNotContain(rim, p => MathF.Min(MathF.Min(p.At.X + 200, 299 - p.At.X), MathF.Min(-p.At.Z + 200, 299 + p.At.Z)) < 200 * 0.4f * 0.8f);
+        // terraces: lines of rock along each step, no piece alone
+        var stepped = Pieces(new ZoneGenerator.Spec(Low: 0, High: 50, HillSize: 250, RimHeight: 0, LakeHectares: [], Woods: 0, Small: 0, Rough: 3, Terraces: 20, CliffSlope: 35));
+        Assert.True(stepped.Count > 20, $"{stepped.Count} pieces on terraces");
+        int alone = stepped.Count(p => !stepped.Any(q => q != p && Vector3.Distance(q.At, p.At) < CliffPiece.Width * MathF.Max(p.Scale, q.Scale) * 1.5f));
+        Assert.True(alone <= stepped.Count / 10, $"{alone} of {stepped.Count} pieces with no neighbour along their line");
+    }
+
+    [Fact]
     public void FloatersHangHighAboveTheGroundAndSnowLiesHigh()
     {
         var z = Make(new ZoneGenerator.Spec(Low: 20, High: 200, RimHeight: 0, LakeHectares: [], Woods: 0, OpenTrees: 0, Small: 0, Floaters: 6, SnowLine: 150));
