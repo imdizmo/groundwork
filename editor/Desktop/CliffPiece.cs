@@ -6,10 +6,11 @@ namespace Groundwork.Desktop;
 /// Cliff pieces: a map's kit of rock walls the generator sets along its steep ground, overlapping, each at a slope's
 /// foot facing down it and reaching back into the hill, so that the slope shows as a face of rock (the landscape
 /// cannot stand that steep, nor hang over). Each a few columns of rock side by side, overlapping: prisms of five to
-/// seven flat fluted sides, two to two and a half times as tall as wide, their feet drawn in, their tops cut flat with
-/// grass on them, the tallest to the piece's top (under the ground above) and the others stepping down under it, the
-/// tall ones leaning back into the hill a few degrees (each shape its own way); some
-/// with blocks at the top, pillars, low blocks or boulders at the foot; a core behind them back into the hill.
+/// seven flat sides, two to two and a half times as tall as wide, their corners and tops chipped off in flat facets,
+/// their feet drawn in, the tallest to the piece's top (under the ground above) and the others stepping down under it,
+/// the tall ones leaning back into the hill a few degrees (each shape its own way); some with blocks at the top,
+/// pillars, low blocks or boulders at the foot; a row of columns behind them filling the gaps. All of it rock (what
+/// grows on it is the map's to paint).
 /// </summary>
 public static class CliffPiece
 {
@@ -32,7 +33,7 @@ public static class CliffPiece
     }
 
     /// <summary>
-    /// Writes a map's cliff pieces into its models folder (its rock, its first layer on top) and puts them in its catalog
+    /// Writes a map's cliff pieces into its models folder (in its rock) and puts them in its catalog
     /// under <see cref="Category"/>.
     /// </summary>
     /// <returns>The pieces' kinds.</returns>
@@ -44,28 +45,29 @@ public static class CliffPiece
         GeneratedModels.NoLinks(folder, names);
         for (int v = 0; v < Variants; v++)
         {
-            Write(Path.Combine(folder, names[v] + ".glb"), v, GeneratedModels.Look(m, rock), GeneratedModels.Look(m, m.Layers[0]));
+            Write(Path.Combine(folder, names[v] + ".glb"), v, GeneratedModels.Look(m, rock));
         }
         var kinds = names.Select((n, v) => new MapTools.Kind(n, $"Cliff {v + 1}", Category, 1, 1, null)).ToList();
         GeneratedModels.AddToCatalog(m, kinds);
         return kinds;
     }
 
-    /// <summary>One shape as a .glb: its rock, and its top of the ground's look.</summary>
-    internal static void Write(string file, int variant, (string? Png, Vector3 Colour, float Size) rock, (string? Png, Vector3 Colour, float Size) top) =>
-        GeneratedModels.WriteGlb(file, Mesh(variant, rock.Size > 0 ? rock.Size : 4, top.Size > 0 ? top.Size : 4), [(rock.Png, rock.Colour), (top.Png, top.Colour)], ["Rock", "Top"]);
+    /// <summary>One shape as a .glb, in the rock's look.</summary>
+    internal static void Write(string file, int variant, (string? Png, Vector3 Colour, float Size) rock) =>
+        GeneratedModels.WriteGlb(file, [Mesh(variant, rock.Size > 0 ? rock.Size : 4)], [(rock.Png, rock.Colour)], ["Rock"]);
 
     /// <summary>
-    /// A column of rock in a piece (x across, y up, z out of the face; metres at scale 1): a prism of a few flat sides,
-    /// each side creased up it now and then, standing from <see cref="Base"/>, its section <see cref="Foot"/> of its middle's at its
-    /// foot (drawn in over <see cref="FootUp"/> of its height), <see cref="Taper"/> of its top's above the foot (widening
-    /// or narrowing evenly up it) and <see cref="Crown"/> of it at its top, cut flat there; leaning <see cref="Tilt"/>
-    /// (radians) towards <see cref="Way"/> (radians round from +x towards +z; NaN: its own way), its top tilting with it.
+    /// A column of rock in a piece (x across, y up, z out of the face; metres at scale 1): a prism of a few flat sides
+    /// standing from <see cref="Base"/>, its section <see cref="Taper"/> of its top's at its foot (widening or narrowing
+    /// up it), cut by flat planes: its foot drawn in on a slant (to about <see cref="Foot"/> of its width, over
+    /// <see cref="FootUp"/> of its height), chips off its corners, its top on a slant and chamfered in to about
+    /// <see cref="Crown"/> of it; leaning <see cref="Tilt"/> (radians) towards <see cref="Way"/> (radians round from +x
+    /// towards +z; NaN: its own way), its top tilting with it.
     /// </summary>
     internal readonly record struct Column(float X, float Z, float W, float D, float H, float Turn, int Corners, float Foot, float FootUp, float Crown, int Seed, float Base = 0, float Taper = 1, float Tilt = 0, float Way = float.NaN);
 
-    /// <summary>Its sections up it, from its foot to its top: each a height and the corners round it (all alike in number).</summary>
-    internal static (float Y, Vector2[] P, float[] Dy)[] Rings(Column c)
+    /// <summary>A column as a solid: its flat faces, each a convex polygon.</summary>
+    internal static List<Vector3[]> Solid(Column c)
     {
         var rng = new Random(c.Seed);
         float R(float a, float b) => a + ((b - a) * rng.NextSingle());
@@ -73,77 +75,180 @@ public static class CliffPiece
         // its section: k corners round it, unevenly spaced and each its own way out, fitted to its width and depth
         var corner = Enumerable.Range(0, k).Select(i =>
         {
-            float a = (i + R(-0.4f, 0.4f)) / k * MathF.Tau, r = R(0.8f, 1.2f);
+            float a = (i + R(-0.3f, 0.3f)) / k * MathF.Tau, r = R(0.85f, 1.15f);
             return new Vector2(MathF.Cos(a) * r, MathF.Sin(a) * r);
         }).ToArray();
         var lo = new Vector2(corner.Min(q => q.X), corner.Min(q => q.Y));
         var hi = new Vector2(corner.Max(q => q.X), corner.Max(q => q.Y));
         var size = new Vector2(c.W, c.D);
-        corner = [.. corner.Select(q => (((q - lo) / (hi - lo)) - new Vector2(0.5f)) * size)];
-        // about half the sides creased up the middle (the crease in or out a little): joints up the column
-        float crease = 0.07f * MathF.Min(c.W, c.D);
-        var flat = new List<Vector2>();
-        for (int i = 0; i < k; i++)
+        float cos = MathF.Cos(c.Turn), sin = MathF.Sin(c.Turn);
+        var section = Hull([.. corner.Select(q => (((q - lo) / (hi - lo)) - new Vector2(0.5f)) * size).Select(q => new Vector2((q.X * cos) - (q.Y * sin), (q.X * sin) + (q.Y * cos)))]);
+        int n = section.Length;
+        var faces = new List<Vector3[]>
         {
-            var (a, b) = (corner[i], corner[(i + 1) % k]);
-            flat.Add(a);
-            var outward = Vector2.Normalize(new Vector2(b.Y - a.Y, a.X - b.X));
-            if (Vector2.Dot(outward, (a + b) / 2) < 0)
+            section.Select(q => new Vector3(q.X * c.Taper, 0, q.Y * c.Taper)).ToArray(),
+            section.Select(q => new Vector3(q.X, c.H, q.Y)).ToArray(),
+        };
+        for (int i = 0; i < n; i++)
+        {
+            var (a, b) = (section[i], section[(i + 1) % n]);
+            faces.Add([new(a.X * c.Taper, 0, a.Y * c.Taper), new(b.X * c.Taper, 0, b.Y * c.Taper), new(b.X, c.H, b.Y), new(a.X, c.H, a.Y)]);
+        }
+        float Reach(Vector2 dir) => section.Max(q => Vector2.Dot(q, dir));
+        Vector2 Way(float a) => new(MathF.Cos(a), MathF.Sin(a));
+        // a cut along a line in the upright plane through the axis its way: from (out, y) to (out1, y1), what lies outside it gone
+        void Slant(Vector2 dir, float out0, float y0, float out1, float y1)
+        {
+            var normal = Vector3.Normalize(new Vector3(dir.X * (y0 - y1), out1 - out0, dir.Y * (y0 - y1)));
+            if ((normal.X * dir.X) + (normal.Z * dir.Y) < 0)
             {
-                outward = -outward;
+                normal = -normal;   // facing out its way: what lies beyond the line gone
             }
-            if (rng.NextSingle() < 0.5f)
+            Cut(faces, normal, Vector3.Dot(normal, new Vector3(dir.X * out0, y0, dir.Y * out0)));
+        }
+        // its corners bevelled a little up their length
+        foreach (var q in section)
+        {
+            var dir = Vector2.Normalize(q);
+            Cut(faces, new Vector3(dir.X, 0, dir.Y), Reach(dir) * (1 - R(0.04f, 0.1f)));
+        }
+        // its foot drawn in: cut away under it on a slant, deep on one side, less on the other
+        float footUp = c.FootUp * c.H, one = R(0, MathF.Tau);
+        var d0 = Way(one);
+        var d1 = Way(one + MathF.PI + R(-0.6f, 0.6f));
+        float r0 = Reach(d0) * c.Taper, r1 = Reach(d1) * c.Taper;
+        Slant(d0, r0 * ((2 * c.Foot) - 1), 0, r0, footUp);
+        Slant(d1, r1 * R(0.6f, 0.9f), 0, r1, footUp * R(0.4f, 0.8f));
+        // chips off its corners: flat cuts a little in from a corner, upright anywhere up it, slanting up near its top and
+        // down near its foot (or the slant would run in across it and take its top or foot away)
+        for (int m = 2 + rng.Next(3) + (int)(MathF.Max(c.W, c.H) / 4); m > 0; m--)
+        {
+            var dir = Vector2.Normalize(section[rng.Next(n)] + (Way(R(0, MathF.Tau)) * 0.3f * Reach(Way(0))));
+            float lean = R(-0.5f, 0.6f), y = (lean > 0.15f ? R(0.8f, 1) : lean < -0.15f ? R(0, 0.25f) : R(0.1f, 1)) * c.H, t = c.Taper + ((1 - c.Taper) * y / c.H);
+            var normal = Vector3.Normalize(new Vector3(dir.X, lean, dir.Y));
+            Cut(faces, normal, Vector3.Dot(normal, new Vector3(dir.X, 0, dir.Y) * (Reach(dir) * t * R(0.78f, 0.93f))) + (normal.Y * y));
+        }
+        // its top: on a slant (lower its one way), chamfered in at some corners (all of them on the rounder ones)
+        var slant = Way(R(0, MathF.Tau)) * R(0.05f, 0.3f);
+        var up = Vector3.Normalize(new Vector3(slant.X, 1, slant.Y));
+        Cut(faces, up, up.Y * c.H);
+        foreach (var q in section.Where(_ => c.Crown < 0.7f || rng.NextSingle() < 0.45f))
+        {
+            var dir = Vector2.Normalize(q);
+            float reach = Reach(dir);
+            Slant(dir, reach * c.Crown, c.H, reach, c.H - (reach * (1 - c.Crown) * R(0.6f, 1.3f)));
+        }
+        // its lean, and where it stands
+        float way = R(0, MathF.Tau), tan = MathF.Tan(c.Tilt);
+        way = float.IsNaN(c.Way) ? way : c.Way;
+        var tilt = Way(way) * tan;
+        return [.. faces.Select(f => f.Select(p => new Vector3(p.X + (tilt.X * p.Y) + c.X, p.Y - (tilt.X * p.X) - (tilt.Y * p.Z) + c.Base, p.Z + (tilt.Y * p.Y) + c.Z)).ToArray())];
+    }
+
+    /// <summary>A convex solid's faces cut by a plane: what lies past it (n·p > d) gone, the cut closed by a new face.</summary>
+    private static void Cut(List<Vector3[]> faces, Vector3 n, float d)
+    {
+        var cap = new List<Vector3>();
+        for (int f = faces.Count - 1; f >= 0; f--)
+        {
+            var poly = faces[f];
+            var kept = new List<Vector3>();
+            for (int i = 0; i < poly.Length; i++)
             {
-                flat.Add(Vector2.Lerp(a, b, R(0.3f, 0.7f)) + (outward * crease * (rng.NextSingle() < 0.6f ? -1 : 0.5f)));
+                var (a, b) = (poly[i], poly[(i + 1) % poly.Length]);
+                float da = Vector3.Dot(n, a) - d, db = Vector3.Dot(n, b) - d;
+                if (da <= 0)
+                {
+                    kept.Add(a);
+                }
+                if ((da < 0 && db > 0) || (da > 0 && db < 0))
+                {
+                    var x = Vector3.Lerp(a, b, da / (da - db));
+                    kept.Add(x);
+                    cap.Add(x);
+                }
+            }
+            if (kept.Count >= 3)
+            {
+                faces[f] = [.. kept];
             }
             else
             {
-                flat.Add((a + b) / 2);   // every section the same number of corners
+                faces.RemoveAt(f);
             }
         }
-        float cos = MathF.Cos(c.Turn), sin = MathF.Sin(c.Turn);
-        var section = flat.Select(q => new Vector2((q.X * cos) - (q.Y * sin), (q.X * sin) + (q.Y * cos))).ToArray();
-        // up it: its foot drawn in, a few sections between each a little wider or narrower and leaning, its top edge
-        // bevelled to its crown
-        float bevel = MathF.Min(0.6f, 0.1f * MathF.Min(c.W, c.D)), footUp = c.FootUp * c.H;
-        var up = new List<(float Y, float S)> { (0, c.Foot * c.Taper), (footUp * 0.45f, (c.Foot + ((1 - c.Foot) * 0.7f)) * c.Taper), (footUp, c.Taper) };
-        int mids = 2 + rng.Next(3);
-        for (int m = 1; m <= mids; m++)
+        // the new face: its corners in order round its middle
+        var mid = cap.Count > 0 ? cap.Aggregate(Vector3.Zero, (s, p) => s + p) / cap.Count : Vector3.Zero;
+        var u = Vector3.Normalize(Vector3.Cross(n, MathF.Abs(n.Y) < 0.9f ? Vector3.UnitY : Vector3.UnitX));
+        var v = Vector3.Cross(n, u);
+        var ring = cap.OrderBy(p => MathF.Atan2(Vector3.Dot(p - mid, v), Vector3.Dot(p - mid, u))).ToList();
+        ring = [.. ring.Where((p, i) => Vector3.DistanceSquared(p, ring[(i + 1) % ring.Count]) > 1e-8f)];
+        if (ring.Count >= 3)
         {
-            float t = (m + R(-0.3f, 0.3f)) / (mids + 1);
-            up.Add((footUp + ((c.H - bevel - footUp) * t), (c.Taper + ((1 - c.Taper) * t)) * R(0.97f, 1.03f)));
+            faces.Add([.. ring]);
         }
-        up.AddRange([(c.H - bevel, 1), (c.H, c.Crown)]);
-        up.Sort((a, b) => a.Y.CompareTo(b.Y));
-        // the foot drawn in towards a point near one side (one side straight down, the other cut away on a slant)
-        var anchor = section[rng.Next(section.Length)] * 0.6f;
-        // its lean: each section moved its way the higher it is, and tilted with it (a corner its way lower)
-        float way = R(0, MathF.Tau), tan = MathF.Tan(c.Tilt);
-        way = float.IsNaN(c.Way) ? way : c.Way;
-        var tilt = new Vector2(MathF.Cos(way), MathF.Sin(way)) * tan;
-        var lean = Vector2.Zero;
-        var rings = new List<(float, Vector2[], float[])>();
-        foreach (var (y, s) in up)
-        {
-            lean += new Vector2(R(-1, 1), R(-1, 1)) * 0.02f * c.W;
-            var shift = lean + (tilt * y) + new Vector2(c.X, c.Z);
-            var about = y < footUp ? anchor : Vector2.Zero;
-            var ring = section.Select(q => about + ((q - about) * s * R(0.985f, 1.015f))).ToArray();
-            rings.Add((c.Base + y, [.. ring.Select(q => q + shift)], [.. ring.Select(q => -Vector2.Dot(q, tilt))]));
-        }
-        return [.. rings];
     }
 
-    /// <summary>A section of a column at a height (between two of its rings), or null outside it.</summary>
-    private static Vector2[]? SectionAt((float Y, Vector2[] P, float[] Dy)[] rings, float y)
+    /// <summary>The convex hull of some points, counter-clockwise.</summary>
+    private static Vector2[] Hull(Vector2[] points)
     {
-        if (y < rings[0].Y || y > rings[^1].Y)
+        var p = points.OrderBy(q => q.X).ThenBy(q => q.Y).ToArray();
+        static float Turn(Vector2 o, Vector2 a, Vector2 b) => ((a.X - o.X) * (b.Y - o.Y)) - ((a.Y - o.Y) * (b.X - o.X));
+        var h = new List<Vector2>();
+        foreach (var pass in new[] { p, [.. p.Reverse()] })
+        {
+            int start = h.Count;
+            foreach (var q in pass)
+            {
+                while (h.Count >= start + 2 && Turn(h[^2], h[^1], q) <= 0)
+                {
+                    h.RemoveAt(h.Count - 1);
+                }
+                h.Add(q);
+            }
+            h.RemoveAt(h.Count - 1);
+        }
+        return [.. h];
+    }
+
+    /// <summary>A column's sections every <paramref name="step"/> up it, from its lowest point to its highest: each a height and its outline (counter-clockwise).</summary>
+    internal static (float Y, Vector2[] P)[] Sections(Column c, float step = 0.25f)
+    {
+        var faces = Solid(c);
+        float y0 = faces.Min(f => f.Min(p => p.Y)), y1 = faces.Max(f => f.Max(p => p.Y));
+        var list = new List<(float, Vector2[])>();
+        for (float y = y0 + 0.01f; y < y1; y += step)
+        {
+            var at = new List<Vector2>();
+            foreach (var f in faces)
+            {
+                for (int i = 0; i < f.Length; i++)
+                {
+                    var (a, b) = (f[i], f[(i + 1) % f.Length]);
+                    if ((a.Y - y) * (b.Y - y) < 0)
+                    {
+                        var x = Vector3.Lerp(a, b, (y - a.Y) / (b.Y - a.Y));
+                        at.Add(new Vector2(x.X, x.Z));
+                    }
+                }
+            }
+            if (at.Count >= 3)
+            {
+                list.Add((y, Hull([.. at])));
+            }
+        }
+        return [.. list];
+    }
+
+    /// <summary>A column's section nearest a height, or null outside it.</summary>
+    private static Vector2[]? SectionAt((float Y, Vector2[] P)[] sections, float y)
+    {
+        if (sections.Length == 0 || y < sections[0].Y - 0.13f || y > sections[^1].Y + 0.13f)
         {
             return null;
         }
-        int j = Math.Clamp(Array.FindLastIndex(rings, r => r.Y <= y), 0, rings.Length - 2);
-        float t = (y - rings[j].Y) / MathF.Max(1e-4f, rings[j + 1].Y - rings[j].Y);
-        return [.. rings[j].P.Select((p, i) => Vector2.Lerp(p, rings[j + 1].P[i], t))];
+        int j = Math.Clamp((int)MathF.Round((y - sections[0].Y) / 0.25f), 0, sections.Length - 1);
+        return sections[j].P;
     }
 
     /// <summary>How far a section reaches out of the face (+z) along the line across it at x, or null when it misses it.</summary>
@@ -162,14 +267,14 @@ public static class CliffPiece
         return best;
     }
 
-    /// <summary>The front of the core behind a piece's columns (a block back into the hill, filling the gaps), z.</summary>
+    /// <summary>Where a piece's face is taken to be where no column stands (the row behind fills it), z.</summary>
     private const float Core = -2;
 
     /// <summary>
     /// A shape's columns. All stand side by side across the face, overlapping, each its own width (two to two and a half
-    /// times as tall as wide), standing out its own way, the tallest to the piece's top and the others a little under it
-    /// (grass on their tops); some shapes with blocks on a lower wall at the top, short pillars or low blocks and
-    /// boulders in front at the foot.
+    /// times as tall as wide), standing out its own way, the tallest to the piece's top and the others a little under it;
+    /// some shapes with blocks on a lower wall at the top, short pillars or low blocks and boulders in front at the foot;
+    /// behind them all a row of columns a little under the top, filling the gaps between them.
     /// </summary>
     internal static List<Column> Columns(int variant)
     {
@@ -187,18 +292,38 @@ public static class CliffPiece
         // the wall: from a little past one side to a little past the other
         float WallTo(float top, float low)
         {
-            // (the lower ones standing further out: ledges with grass on them, stepping up to the top)
+            // (the lower ones standing further out: ledges stepping up to the top; some of them broken across)
             float x = (-Width / 2) + R(0, 0.8f), tallest = R(-Width / 3, Width / 3), highest = 0;
             while (x < Width / 2)
             {
                 bool tall = MathF.Abs(x - tallest) < 2.5f;
                 float h = tall ? top : top - R(low * 0.2f, low * 1.6f);
-                float w = MathF.Min(h / R(2, 2.6f), R(1.8f, 6)), d = w * R(0.5f, 0.7f);
-                list.Add(Make(x + (w * 0.4f), R(-1.2f, 1.5f) - (d * 0.2f) + ((top - h) / top * R(4, 9)), w, d, h, R(0.35f, 0.5f), R(0.15f, 0.25f), R(0.8f, 0.88f), 0, R(0.92f, 0.98f)));
+                float w = MathF.Min(h / R(1.9f, 2.4f), R(4, 6.5f)), d = w * R(0.5f, 0.7f);
+                float cx = x + (w * 0.4f), cz = R(-1.4f, 2) - (d * 0.2f) + ((top - h) / top * R(4, 9));
+                if (!tall && h > 6 && rng.NextSingle() < 0.6f)
+                {
+                    // broken across: a block standing on a shorter column (set a little back or out on it), both leaning
+                    // back with the wall
+                    float under = h * R(0.4f, 0.65f), footUp = R(0.15f, 0.25f) * h;
+                    list.Add(new(cx, cz, w, d, under, R(-0.6f, 0.6f), 5 + rng.Next(3), R(0.35f, 0.5f), MathF.Min(0.5f, footUp / under), R(0.85f, 0.92f), seed++, 0, R(0.92f, 0.98f), back, -MathF.PI / 2));
+                    list.Add(new(cx + R(-0.4f, 0.4f), cz - R(-0.3f, 0.8f) - (MathF.Tan(back) * under), w * R(0.85f, 1.05f), d * R(0.85f, 1.05f), h - under + 0.15f, R(-0.6f, 0.6f), 5 + rng.Next(3), R(0.8f, 0.95f), 0.1f, R(0.8f, 0.88f), seed++, under - 0.15f, R(0.95f, 1), back, -MathF.PI / 2));
+                }
+                else
+                {
+                    list.Add(Make(cx, cz, w, d, h, R(0.35f, 0.5f), R(0.15f, 0.25f), R(0.8f, 0.88f), 0, R(0.92f, 0.98f)));
+                }
                 highest = MathF.Max(highest, h);
-                x += w * R(0.45f, 0.8f);
+                x += w * R(0.7f, 0.9f);
             }
             return highest;
+        }
+        // the row behind: wide columns, from side to side, upright from the foot to under the top (in the ground
+        // there), the wall leaning back into it
+        for (float x = (-Width / 2) - 0.5f; x < Width / 2;)
+        {
+            float w = R(5.8f, 7.5f), d = w * R(0.5f, 0.65f);
+            list.Add(new(x + (w * 0.4f), (-d * 0.3f) - R(0.5f, 1), w, d, Height - R(0.8f, 2), R(-0.15f, 0.15f), 5 + rng.Next(3), R(0.85f, 0.95f), 0.1f, 0.9f, seed++, 0, 1));
+            x += w * R(0.4f, 0.55f);
         }
         switch (variant % Variants)
         {
@@ -267,19 +392,19 @@ public static class CliffPiece
     /// <summary>The top of a shape along it: its highest column over x, metres at scale 1 (the core's top between columns).</summary>
     internal static Func<float, float> Top(int variant)
     {
-        var rings = Columns(variant).Select(Rings).ToArray();
-        return x => rings.Where(r => SectionAt(r, (r[0].Y + r[^1].Y) / 2) is { } s && s.Min(p => p.X) <= x && s.Max(p => p.X) >= x)
+        var sections = Columns(variant).Select(c => Sections(c)).Where(s => s.Length > 0).ToArray();
+        return x => sections.Where(r => r[r.Length / 2].P is var s && s.Min(p => p.X) <= x && s.Max(p => p.X) >= x)
             .Select(r => r[^1].Y).DefaultIfEmpty(Height - 1.5f).Max();
     }
 
     /// <summary>How far the face stands out of its plane (z = 0, facing +z) at a point of it: its columns' fronts, metres at scale 1.</summary>
     internal static Func<float, float, float> Face(int variant)
     {
-        var rings = Columns(variant).Select(Rings).ToArray();
+        var sections = Columns(variant).Select(c => Sections(c)).ToArray();
         return (x, y) =>
         {
             float z = Core;
-            foreach (var r in rings)
+            foreach (var r in sections)
             {
                 if (SectionAt(r, y) is { } s && FrontAt(s, x) is { } f)
                 {
@@ -290,27 +415,19 @@ public static class CliffPiece
         };
     }
 
-    /// <summary>One shape's mesh: its rock and its top (grass on what faces up) (corners: position, normal, uv; triangles).</summary>
-    internal static (List<float> V, List<int> I)[] Mesh(int variant, float rockSize, float topSize)
+    /// <summary>One shape's mesh (corners: position, normal, uv; triangles).</summary>
+    internal static (List<float> V, List<int> I) Mesh(int variant, float rockSize)
     {
         var rock = (V: new List<float>(), I: new List<int>());
-        var top = (V: new List<float>(), I: new List<int>());
         foreach (var c in Columns(variant))
         {
-            ColumnMesh(c, rock, top, rockSize, topSize);
+            ColumnMesh(c, rock, rockSize);
         }
-        // the core: a block behind the columns back into the hill, under the top, filling the gaps between them
-        float hw = (Width / 2) - 0.3f, ch = Height - 1.5f;
-        Vector3[] box = [new(-hw, 0, Core), new(hw, 0, Core), new(hw, ch, Core), new(-hw, ch, Core), new(-hw, 0, -Depth), new(hw, 0, -Depth), new(hw, ch, -Depth), new(-hw, ch, -Depth)];
-        foreach (var (q, n) in new[] { ((0, 1, 2, 3), Vector3.UnitZ), ((5, 4, 7, 6), -Vector3.UnitZ), ((4, 0, 3, 7), -Vector3.UnitX), ((1, 5, 6, 2), Vector3.UnitX), ((3, 2, 6, 7), Vector3.UnitY) })
-        {
-            Flat(rock, [box[q.Item1], box[q.Item2], box[q.Item3], box[q.Item4]], n, p => new Vector2(p.X + p.Z, p.Y) / rockSize);
-        }
-        return [rock, top];
+        return rock;
     }
 
     /// <summary>The role samples the kit's shapes are made of, one each, alone (for comparing them with other kits').</summary>
-    internal static IEnumerable<(string Name, (List<float> V, List<int> I)[] Parts)> RoleSamples(float rockSize, float topSize)
+    internal static IEnumerable<(string Name, (List<float> V, List<int> I) Mesh)> RoleSamples(float rockSize)
     {
         (string, Column)[] samples =
         [
@@ -323,67 +440,28 @@ public static class CliffPiece
         foreach (var (name, c) in samples)
         {
             var rock = (V: new List<float>(), I: new List<int>());
-            var top = (V: new List<float>(), I: new List<int>());
-            ColumnMesh(c, rock, top, rockSize, topSize);
-            yield return (name, [rock, top]);
+            ColumnMesh(c, rock, rockSize);
+            yield return (name, rock);
         }
     }
 
-    /// <summary>A column's flat sides (into the rock, or the top where one faces up), its foot and its top (grass, rolling a little over its edge).</summary>
-    private static void ColumnMesh(Column c, (List<float> V, List<int> I) rock, (List<float> V, List<int> I) top, float rockSize, float topSize)
+    /// <summary>A column's flat faces (an upward one's texture laid from above, the others' from the side).</summary>
+    private static void ColumnMesh(Column c, (List<float> V, List<int> I) rock, float rockSize)
     {
-        var rings = Rings(c);
-        int n = rings[0].P.Length;
-        var centre = new Vector2(c.X, c.Z);
-        float[] along = new float[n + 1];
-        for (int i = 0; i < n; i++)
+        var faces = Solid(c);
+        var middle = faces.SelectMany(f => f).Aggregate(Vector3.Zero, (s, p) => s + p) / faces.Sum(f => f.Length);
+        foreach (var f in faces)
         {
-            along[i + 1] = along[i] + Vector2.Distance(rings[0].P[i], rings[0].P[(i + 1) % n]);
-        }
-        Vector3 At(int j, int i) => new(rings[j].P[i % n].X, rings[j].Y + rings[j].Dy[i % n], rings[j].P[i % n].Y);
-        for (int j = 0; j + 1 < rings.Length; j++)
-        {
-            for (int i = 0; i < n; i++)
+            var centre = f.Aggregate(Vector3.Zero, (s, p) => s + p) / f.Length;
+            var n = Enumerable.Range(0, f.Length).Aggregate(Vector3.Zero, (s, i) => s + Vector3.Cross(f[i], f[(i + 1) % f.Length]));   // Newell's: sound however its corners lie
+            if (n.LengthSquared() < 1e-12f)
             {
-                Vector3[] q = [At(j, i), At(j, i + 1), At(j + 1, i + 1), At(j + 1, i)];
-                var mid = (q[0] + q[2]) / 2;
-                var outward = new Vector3(mid.X - centre.X, 0, mid.Z - centre.Y);
-                Vector2[] uv = [new(along[i], q[0].Y), new(along[i + 1], q[1].Y), new(along[i + 1], q[2].Y), new(along[i], q[3].Y)];
-                foreach (var (a, b, d) in new[] { (0, 1, 2), (0, 2, 3) })
-                {
-                    var nrm = Vector3.Normalize(Vector3.Cross(q[b] - q[a], q[d] - q[a]));
-                    if (Vector3.Dot(nrm, outward) < 0)
-                    {
-                        nrm = -nrm;
-                    }
-                    bool up = nrm.Y > 0.6f;   // a chamfer or a step facing up: grass on it
-                    var (V, I) = up ? top : rock;
-                    int first = V.Count / 8;
-                    foreach (int e in new[] { a, b, d })
-                    {
-                        Corner(V, q[e], nrm, up ? new Vector2(q[e].X, q[e].Z) / topSize : uv[e] / rockSize);
-                    }
-                    Facing(I, V, first, first + 1, first + 2, nrm);
-                }
+                continue;
             }
-        }
-        // its foot, and its top: domed a little, its grass rolling 0.15 m over the edge and 0.3 m down it
-        var (Y, P, Dy) = rings[0];
-        var cap = rings[^1];
-        var mid0 = new Vector3(P.Average(p => p.X), Y + Dy.Average(), P.Average(p => p.Y));
-        var mid1 = new Vector3(cap.P.Average(p => p.X), cap.Y + cap.Dy.Average() + 0.08f, cap.P.Average(p => p.Y));
-        for (int i = 0; i < n; i++)
-        {
-            Flat(rock, [mid0, At(0, i + 1), At(0, i)], -Vector3.UnitY, p => new Vector2(p.X, p.Z) / rockSize);
-            var (a, b) = (At(rings.Length - 1, i), At(rings.Length - 1, i + 1));
-            Flat(top, [mid1, a, b], Vector3.UnitY, p => new Vector2(p.X, p.Z) / topSize);
-            Vector3 Over(Vector3 p)
-            {
-                var o = Vector3.Normalize(new Vector3(p.X - mid1.X, 0, p.Z - mid1.Z));
-                return p + (o * 0.15f) - new Vector3(0, 0.3f, 0);
-            }
-            var side = Vector3.Normalize(new Vector3(((a.X + b.X) / 2) - mid1.X, 0.6f, ((a.Z + b.Z) / 2) - mid1.Z));
-            Flat(top, [a, Over(a), Over(b), b], side, p => new Vector2(p.X, p.Z) / topSize);
+            n = Vector3.Normalize(n);
+            n = Vector3.Dot(n, centre - middle) < 0 ? -n : n;
+            var side = MathF.Abs(n.Y) > 0.6f ? Vector3.Zero : Vector3.Normalize(Vector3.Cross(Vector3.UnitY, n));
+            Flat(rock, f, n, p => (side == Vector3.Zero ? new Vector2(p.X, p.Z) : new Vector2(Vector3.Dot(p, side), p.Y)) / rockSize);
         }
     }
 
