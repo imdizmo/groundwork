@@ -7,7 +7,8 @@ namespace Groundwork.Desktop;
 /// foot facing down it and reaching back into the hill, so that the slope shows as a face of rock (the landscape
 /// cannot stand that steep, nor hang over). Each a few columns of rock side by side, overlapping: prisms of five to
 /// seven flat fluted sides, two to two and a half times as tall as wide, their feet drawn in, their tops cut flat with
-/// grass on them, the tallest to the piece's top (under the ground above) and the others stepping down under it; some
+/// grass on them, the tallest to the piece's top (under the ground above) and the others stepping down under it, the
+/// tall ones leaning back into the hill a few degrees (each shape its own way); some
 /// with blocks at the top, pillars, low blocks or boulders at the foot; a core behind them back into the hill.
 /// </summary>
 public static class CliffPiece
@@ -59,9 +60,9 @@ public static class CliffPiece
     /// each side creased up it now and then, standing from <see cref="Base"/>, its section <see cref="Foot"/> of its middle's at its
     /// foot (drawn in over <see cref="FootUp"/> of its height), <see cref="Taper"/> of its top's above the foot (widening
     /// or narrowing evenly up it) and <see cref="Crown"/> of it at its top, cut flat there; leaning <see cref="Tilt"/>
-    /// (radians) its own way, its top tilting with it.
+    /// (radians) towards <see cref="Way"/> (radians round from +x towards +z; NaN: its own way), its top tilting with it.
     /// </summary>
-    internal readonly record struct Column(float X, float Z, float W, float D, float H, float Turn, int Corners, float Foot, float FootUp, float Crown, int Seed, float Base = 0, float Taper = 1, float Tilt = 0);
+    internal readonly record struct Column(float X, float Z, float W, float D, float H, float Turn, int Corners, float Foot, float FootUp, float Crown, int Seed, float Base = 0, float Taper = 1, float Tilt = 0, float Way = float.NaN);
 
     /// <summary>Its sections up it, from its foot to its top: each a height and the corners round it (all alike in number).</summary>
     internal static (float Y, Vector2[] P, float[] Dy)[] Rings(Column c)
@@ -118,6 +119,7 @@ public static class CliffPiece
         var anchor = section[rng.Next(section.Length)] * 0.6f;
         // its lean: each section moved its way the higher it is, and tilted with it (a corner its way lower)
         float way = R(0, MathF.Tau), tan = MathF.Tan(c.Tilt);
+        way = float.IsNaN(c.Way) ? way : c.Way;
         var tilt = new Vector2(MathF.Cos(way), MathF.Sin(way)) * tan;
         var lean = Vector2.Zero;
         var rings = new List<(float, Vector2[], float[])>();
@@ -175,8 +177,13 @@ public static class CliffPiece
         float R(float a, float b) => a + ((b - a) * rng.NextSingle());
         int seed = 1000 * (variant + 1);
         var list = new List<Column>();
+        // the wall leaning back into the hill (its own way: most a few degrees back, some upright, now and then a little
+        // forward), its tall columns with it; the others leaning their own ways
+        float back = (variant % Variants == 3 ? R(-3, 2) : R(2, 10)) * MathF.PI / 180;
         Column Make(float x, float z, float w, float d, float h, float foot, float footUp, float crown, float b = 0, float taper = 1) =>
-            new(x, z, w, d, h, R(-0.6f, 0.6f), 5 + rng.Next(3), foot, footUp, crown, seed++, b, taper, R(0, h > 2.2f * w ? 6 : 14) * MathF.PI / 180);
+            h > 2.2f * w
+                ? new(x, z, w, d, h, R(-0.6f, 0.6f), 5 + rng.Next(3), foot, footUp, crown, seed++, b, taper, back * R(0.6f, 1.4f), (-MathF.PI / 2) + R(-0.7f, 0.7f))
+                : new(x, z, w, d, h, R(-0.6f, 0.6f), 5 + rng.Next(3), foot, footUp, crown, seed++, b, taper, R(0, 14) * MathF.PI / 180);
         // the wall: from a little past one side to a little past the other
         float WallTo(float top, float low)
         {

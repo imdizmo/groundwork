@@ -31,8 +31,9 @@ public class CliffPieceTests
     }
 
     [Fact]
-    public void ItsFaceIsColumnsTwiceAsTallAsWideTheirFeetDrawnInGrassOnTheirLowerTops()
+    public void ItsFaceIsColumnsTwiceAsTallAsWideLeaningBackTheirFeetDrawnInGrassOnTheirLowerTops()
     {
+        int backs = 0;
         static float Area(System.Numerics.Vector2[] p) => MathF.Abs(Enumerable.Range(0, p.Length).Sum(i => (p[i].X * p[(i + 1) % p.Length].Y) - (p[(i + 1) % p.Length].X * p[i].Y)) / 2);
         for (int v = 0; v < CliffPiece.Variants; v++)
         {
@@ -47,6 +48,9 @@ public class CliffPieceTests
                 var rings = CliffPiece.Rings(c);
                 Assert.True(Area(rings[0].P) < 0.5f * Area(rings[rings.Length / 2].P), $"variant {v}: a column's foot not drawn in");
             }
+            // most shapes' walls leaning back into the hill: their tall columns' tops behind (-z) their feet
+            float lean = tall.Average(c => { var r = CliffPiece.Rings(c); return r[^1].P.Average(p => p.Y) - r[2].P.Average(p => p.Y); });
+            backs += lean < -0.2f ? 1 : 0;
             // joints: across the face at mid height, the face steps out or back half a metre or more within 0.3 m
             var face = CliffPiece.Face(v);
             int joints = Enumerable.Range(0, 80).Count(i =>
@@ -60,5 +64,6 @@ public class CliffPieceTests
             var at = Enumerable.Range(0, g.Count / 8).Select(k => new System.Numerics.Vector3(g[k * 8], g[(k * 8) + 1], g[(k * 8) + 2])).ToList();
             Assert.True(at.Any(p => p.Y is < (CliffPiece.Height - 2) and > 1), $"variant {v}: no grass on a lower top");
         }
+        Assert.True(backs >= CliffPiece.Variants - 2, $"{backs} shapes leaning back");
     }
 }
