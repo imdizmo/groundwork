@@ -377,9 +377,14 @@ public static partial class ZoneGenerator
             float s = MathF.Max(0.3f, (drop + 1.9f) / CliffPiece.Height);
             // a step: the ground behind its top about level, not falling away (a ridge: the rock would stand up out of
             // it) nor climbing on (a mountainside: pieces stacked up it)
-            var beyond = Vector2.Clamp(top - (d * CliffPiece.Depth * s * 0.6f), Vector2.Zero, new Vector2(cols - 1, rows - 1));
-            float rise = At(g, cols, rows, beyond.X, beyond.Y) - At(g, cols, rows, top.X, top.Y);
-            if (rise < -1.5f || rise > MathF.Max(3, drop * 0.3f))
+            // (halfway back and at its back: the piece reaches back so far, and would show where the ground fell away)
+            float Behind(float share)
+            {
+                var at = Vector2.Clamp(top - (d * CliffPiece.Depth * s * share), Vector2.Zero, new Vector2(cols - 1, rows - 1));
+                return At(g, cols, rows, at.X, at.Y) - At(g, cols, rows, top.X, top.Y);
+            }
+            float rise = Behind(0.6f);
+            if (MathF.Min(Behind(0.5f), Behind(1)) < -1.5f || rise > MathF.Max(3, drop * 0.3f))
             {
                 continue;
             }
