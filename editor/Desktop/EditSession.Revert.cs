@@ -31,7 +31,7 @@ public sealed partial class EditSession
 
     /// <summary>
     /// Takes a change's paint back off one ground point, when nothing repainted the point since the change: its paint
-    /// flag and its four paint values go back to what they were before the change.
+    /// flag and its paint values go back to what they were before the change.
     /// </summary>
     /// <param name="c">The change taken out.</param>
     /// <param name="k">The change's index for the point (its values are in the change's order).</param>
@@ -40,14 +40,14 @@ public sealed partial class EditSession
     {
         var g = Ground;
         bool samePaint = g.PMod[p] == c.After.PMod[k];
-        for (int ch = 0; ch < 4 && samePaint; ch++)
+        for (int ch = 0; ch < g.C && samePaint; ch++)
         {
-            samePaint = MathF.Abs(g.Paint[p * 4 + ch] - c.After.Paint[k * 4 + ch]) < 1e-4f;
+            samePaint = MathF.Abs(g.Paint[(p * g.C) + ch] - c.After.Paint[(k * g.C) + ch]) < 1e-4f;
         }
         if (samePaint)
         {
             g.PMod[p] = c.Before.PMod[k];
-            Array.Copy(c.Before.Paint, k * 4, g.Paint, p * 4, 4);
+            Array.Copy(c.Before.Paint, k * g.C, g.Paint, p * g.C, g.C);
         }
     }
 }

@@ -41,10 +41,10 @@ public sealed partial class EditSession
         public Action<bool>? Extra { get; init; }
 
         /// <summary>
-        /// About how much memory it holds: 56 bytes a ground point (its index, and five values before and after), a
-        /// few for each thing (<see cref="KeepBytes"/>).
+        /// About how much memory it holds: 24 bytes a ground point (its index, its heights and flags before and after) and
+        /// 8 a paint channel (4 before, 4 after), a few for each thing (<see cref="KeepBytes"/>).
         /// </summary>
-        public long Bytes => 56L * Points.Length + 8L * Things.Length;
+        public long Bytes => (24L * Points.Length) + (8L * Before.Paint.Length) + (8L * Things.Length);
 
         /// <summary>
         /// Whether it is this very change: a change is itself, not its values, since Removed is set after it is made.

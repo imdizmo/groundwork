@@ -33,6 +33,7 @@ public sealed partial class ToolPanel
             var b = Make(RailLabel(t), key, icon, swatch);
             ToolTip.SetTip(b, Lang.T("rail.brushTip", Brush.Label(t), key, Brush.Help(t)));
             b.Click += (_, _) => Choose(t);
+            b.IsVisible = Offered(t);
             _buttons[t] = b;
         }
         // Sculpt, Paint, the map's own tools, and last the tools that only look or pick.

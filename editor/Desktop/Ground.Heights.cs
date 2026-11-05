@@ -27,7 +27,7 @@ public sealed partial class Ground
     /// <summary>
     /// The layers' weight at a point: the paint where painted, the map's otherwise.
     /// </summary>
-    public float MaskOf(int g, int c) => PMod[g] != 0 ? Paint[g * 4 + c] : BaseMask[g * 4 + c];
+    public float MaskOf(int g, int c) => PMod[g] != 0 ? Paint[(g * C) + c] : BaseMask[(g * C) + c];
 
     /// <summary>
     /// Marks a point's paint as changed, starting from what it shows: the map's paint when it was not painted yet, else
@@ -38,7 +38,7 @@ public sealed partial class Ground
     {
         if (PMod[g] == 0)
         {
-            Array.Copy(BaseMask, g * 4, Paint, g * 4, 4);
+            Array.Copy(BaseMask, g * C, Paint, g * C, C);
             PMod[g] = 1;
         }
     }

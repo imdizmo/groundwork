@@ -33,10 +33,12 @@ public sealed partial class Ground
     /// <summary>The smoothing change per point (metres, used where <c>Mod</c> is set).</summary>
     public float[] Smooth { get; }
     /// <summary>
-    /// The paint, four channels per point (dirt, cultivated, paved, vegetation), used where <c>PMod</c> is set.
+    /// Paint channels per point: the painted layers' weights and the hole (<see cref="HoleChannel"/>), at least four.
     /// </summary>
+    public int C { get; }
+    /// <summary>The paint, <see cref="C"/> channels per point, used where <c>PMod</c> is set.</summary>
     public float[] Paint { get; }
-    /// <summary>The generated paint mask, four channels per point, shown where the point is not painted.</summary>
+    /// <summary>The generated paint mask, <see cref="C"/> channels per point, shown where the point is not painted.</summary>
     public float[] BaseMask { get; }
     /// <summary>1 where the point's height was changed.</summary>
     public byte[] Mod { get; }
@@ -50,8 +52,10 @@ public sealed partial class Ground
     /// <param name="z0">The block's first zone (Z).</param>
     /// <param name="zonesX">The block's size in zones, west to east.</param>
     /// <param name="zonesZ">The block's size in zones, south to north.</param>
-    public Ground(int w, int h, int x0, int z0, int zonesX, int zonesZ)
+    /// <param name="channels">Paint channels per point (<see cref="ChannelsFor"/> of the map's layers).</param>
+    public Ground(int w, int h, int x0, int z0, int zonesX, int zonesZ, int channels = 4)
     {
+        C = Math.Max(4, channels);
         W = w;
         H = h;
         X0 = x0;
@@ -63,10 +67,22 @@ public sealed partial class Ground
         Level = new float[n];
         Smooth = new float[n];
         Mod = new byte[n];
-        Paint = new float[n * 4];
+        Paint = new float[n * C];
         PMod = new byte[n];
-        BaseMask = new float[n * 4];
+        BaseMask = new float[n * C];
     }
+
+    /// <summary>The paint channel that holds a hole (0 ground, 1 a hole: Unreal's landscape visibility).</summary>
+    public const int HoleChannel = 3;
+
+    /// <summary>
+    /// The paint channel of a painted layer (1: the second): the second to fourth in 0 to 2, the fifth on from 4
+    /// (ponytail: the hole keeps channel 3, so a map of four layers keeps the layout it always had).
+    /// </summary>
+    public static int ChannelOf(int layer) => layer <= HoleChannel ? layer - 1 : layer;
+
+    /// <summary>The paint channels a map of so many layers needs: its painted layers and the hole.</summary>
+    public static int ChannelsFor(int layers) => Math.Max(4, layers);
 
     /// <summary>An empty, unchanged ground of a square block of <paramref name="size"/> × <paramref name="size"/> zones.</summary>
     /// <param name="w">Points across.</param>

@@ -39,7 +39,7 @@ public sealed partial class WorldScene
         var c = LayerColours[0];
         for (int k = 1; k < LayerColours.Count; k++)
         {
-            c = Vector3.Lerp(c, LayerColours[k], Mask[g * 4 + k - 1] / 255f);
+            c = Vector3.Lerp(c, LayerColours[k], Mask[(g * C) + Ground.ChannelOf(k)] / 255f);
         }
         return c;
     }
@@ -49,11 +49,11 @@ public sealed partial class WorldScene
     public int LayerAt(int g)
     {
         int best = 0, most = 127;
-        for (int k = 1; k < 4; k++)
+        for (int k = 1; k < Math.Max(4, LayerColours.Count); k++)
         {
-            if (Mask[g * 4 + k - 1] > most)
+            if (Mask[(g * C) + Ground.ChannelOf(k)] > most)
             {
-                (best, most) = (k, Mask[g * 4 + k - 1]);
+                (best, most) = (k, Mask[(g * C) + Ground.ChannelOf(k)]);
             }
         }
         return best;
@@ -83,10 +83,12 @@ public sealed partial class WorldScene
     /// <summary>A map project's scene (MapProject): its tools are on the rail.</summary>
     public bool IsMap { get; init; }
     /// <summary>
-    /// The painted layers' weights per grid point, RGBA bytes: red the second layer, green the third, blue the fourth
-    /// (the paint where it was edited, the map's otherwise).
+    /// The ground's paint per grid point, <see cref="C"/> bytes a point: the painted layers' weights in their channels
+    /// (Ground.ChannelOf) and the hole (the paint where it was edited, the map's otherwise).
     /// </summary>
     public required byte[] Mask { get; init; }
+    /// <summary>The paint channels a grid point has in <see cref="Mask"/> (Ground.C).</summary>
+    public int C { get; init; } = 4;
 
     /// <summary>
     /// Where mods' extensions cut the ground, per grid point (1: not drawn, see GroundCuts), made with their shapes

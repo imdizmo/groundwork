@@ -10,11 +10,13 @@ namespace Groundwork.Desktop;
 /// <list type="bullet">
 /// <item>name, origin [x, y] (where the heightmap's pixel (0, 0) is, in the engine's metres, 1 m a pixel) and seaLevel
 /// (metres; the editor draws water there);</item>
-/// <item>files: heights (rows x cols float32 metres, .npy), layers (the ground's paint, RGBA .png), objects (name, x, y,
+/// <item>files: heights (rows x cols float32 metres, .npy), layers (the ground's paint, RGB .png; a list of them for more
+/// than four layers), objects (name, x, y,
 /// z, Euler x, y, z, scale, and an object of the data extensions keep on it when there is any; the editor's axes) and
 /// water (rivers and lakes, MapWater); relative to the folder;</item>
-/// <item>layers: the ground's colours, the first everywhere and up to three painted over it (name, colour "#rrggbb",
-/// channel "r", "g" or "b" of the layers file; in that order when not given);</item>
+/// <item>layers: the ground's colours, the first everywhere and up to seven painted over it (name, colour "#rrggbb",
+/// channel "r", "g" or "b" of the first layers file, "r2" to "b2" of the second, "r3" to "b3" of the third; in that
+/// order when not given);</item>
 /// <item>optional: catalog (the kinds Place and the scatter tools offer), models (the model folder), stamps, and
 /// unreal { project, apply, layersTexture, waterPrefix } (the Unreal project Live talks to, the script Send to Unreal
 /// runs, the texture the landscape material reads the layers from, the water bodies' label prefix), and generator { spec,
@@ -57,14 +59,31 @@ public sealed partial class MapProject
     /// <summary>The holes: a grey picture the heightmap's size, white where the ground is taken away (written once there are any).</summary>
     public string HolesFile { get; private set; } = "";
     /// <summary>
-    /// The ground's layers: the first is the ground everywhere, the others (up to three) are painted over it, each from a
-    /// channel of the layers file (ponytail: one RGBA file, so four layers; a second file when a map needs more).
+    /// The ground's layers: the first is the ground everywhere, the others (up to seven) are painted over it, each from a
+    /// channel of the layers files (r, g and b of each: an image editor paints them as they are).
     /// </summary>
     public List<Layer> Layers { get; private set; } = DefaultLayers;
 
     /// <summary>
-    /// A ground layer: its name, its colour (linear), the layers file's channel it is read from (0 to 2; the first layer
-    /// has none), and the picture drawn for it instead of its colour (null: none) repeated every Size metres.
+    /// The most layers a map has (ponytail: the 3D view blends eight; more takes a texture array in its ground shader).
+    /// </summary>
+    public const int MaxLayers = 8;
+
+    /// <summary>The paint files past the first, as map.json names them.</summary>
+    private List<string> _moreLayersFiles = [];
+
+    /// <summary>
+    /// The paint files the layers need: the first (<see cref="LayersFile"/>), and one more for each three layers past
+    /// the fourth (named after the first, layers2.png and on, unless map.json names them).
+    /// </summary>
+    public IReadOnlyList<string> LayersFiles =>
+        [LayersFile, .. Enumerable.Range(1, Layers.Max(l => l.Channel) / 3).Select(i => _moreLayersFiles.ElementAtOrDefault(i - 1)
+            ?? Inside(Path.Combine(Path.GetDirectoryName(LayersFile)!, $"{Path.GetFileNameWithoutExtension(LayersFile)}{i + 1}{Path.GetExtension(LayersFile)}")))];
+
+    /// <summary>
+    /// A ground layer: its name, its colour (linear), the layers files' channel it is read from (0 to 8: r, g, b of the
+    /// first file, then of the second and the third; the first layer has none), and the picture drawn for it instead of
+    /// its colour (null: none) repeated every Size metres.
     /// </summary>
     public sealed record Layer(string Name, System.Numerics.Vector3 Colour, int Channel, string? Texture = null, float Size = 4);
 
@@ -123,7 +142,9 @@ public sealed partial class MapProject
         var f = j["files"];
         // What the editor writes stays in the folder; the model folder is only read, anywhere.
         m.HeightsFile = m.Inside(S(f?["heights"]) ?? "height.npy");
-        m.LayersFile = m.Inside(S(f?["layers"]) ?? "layers.png");
+        var files = f?["layers"] as JsonArray;
+        m.LayersFile = m.Inside((files != null ? S(files.FirstOrDefault()) : S(f?["layers"])) ?? "layers.png");
+        m._moreLayersFiles = [.. (files ?? []).Skip(1).Select(x => m.Inside(S(x) ?? throw new InvalidDataException($"{json}: a layers file with no name")))];
         m.ObjectsFile = m.Inside(S(f?["objects"]) ?? "objects.json");
         m.WaterFile = m.Inside(S(f?["water"]) ?? "water.json");
         m.AreasFile = m.Inside(S(f?["areas"]) ?? "areas.json");
@@ -133,12 +154,12 @@ public sealed partial class MapProject
         m.Stamps = S(j["stamps"]) is string st ? m.Inside(st) : null;
         if (j["layers"] is JsonArray layers && layers.Count > 0)
         {
-            m.Layers = [.. layers.Take(4).Select((l, i) => new Layer(
+            m.Layers = [.. layers.Take(MaxLayers).Select((l, i) => new Layer(
                 S(l?["name"]) ?? $"Layer {i + 1}",
                 S(l?["colour"]) is string c && c.Length == 7 && c[0] == '#' && int.TryParse(c[1..], System.Globalization.NumberStyles.HexNumber, null, out int rgb)
                     ? Linear(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f)
                     : Linear(0.5f, 0.5f, 0.5f),
-                i == 0 ? -1 : S(l?["channel"]) is string ch ? "rgb".IndexOf(ch[0]) is int k and >= 0 ? k : i - 1 : i - 1,
+                i == 0 ? -1 : S(l?["channel"]) is string ch && ChannelNamed(ch) is int k and >= 0 ? k : i - 1,
                 S(l?["texture"]) is string t ? m.Inside(t) : null,
                 l?["size"]?.GetValue<float>() is float size && size > 0 ? size : 4))];
         }
@@ -158,13 +179,13 @@ public sealed partial class MapProject
             ["name"] = Name,
             ["origin"] = new JsonArray(X0, Y0),
             ["seaLevel"] = SeaLevel,
-            ["files"] = new JsonObject { ["heights"] = Rel(HeightsFile), ["layers"] = Rel(LayersFile), ["objects"] = Rel(ObjectsFile), ["water"] = Rel(WaterFile), ["areas"] = Rel(AreasFile), ["holes"] = Rel(HolesFile) },
+            ["files"] = new JsonObject { ["heights"] = Rel(HeightsFile), ["layers"] = LayersFiles.Count == 1 ? Rel(LayersFile) : new JsonArray([.. LayersFiles.Select(l => (JsonNode)Rel(l))]), ["objects"] = Rel(ObjectsFile), ["water"] = Rel(WaterFile), ["areas"] = Rel(AreasFile), ["holes"] = Rel(HolesFile) },
         };
         j["layers"] = new JsonArray([.. Layers.Select(l => (JsonNode)new JsonObject
         {
             ["name"] = l.Name,
             ["colour"] = $"#{Srgb(l.Colour.X):x2}{Srgb(l.Colour.Y):x2}{Srgb(l.Colour.Z):x2}",
-            ["channel"] = l.Channel < 0 ? null : "rgb"[l.Channel].ToString(),
+            ["channel"] = l.Channel < 0 ? null : ChannelName(l.Channel),
             ["texture"] = l.Texture == null ? null : Rel(l.Texture),
             ["size"] = l.Texture == null ? null : l.Size,
         })]);
@@ -200,6 +221,31 @@ public sealed partial class MapProject
         NoLinks(Path.Combine(Folder, FileName));
         System.IO.File.WriteAllText(Path.Combine(Folder, FileName), j.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
     }
+
+    /// <summary>A layers channel from its name in map.json ("r", "g", "b", "r2" ... "b3"), or -1.</summary>
+    private static int ChannelNamed(string ch) =>
+        ch.Length is 1 or 2 && "rgb".IndexOf(ch[0]) is int c and >= 0 && (ch.Length == 1 ? 1 : ch[1] - '0') is int file and >= 1 and <= 3 ? ((file - 1) * 3) + c : -1;
+
+    /// <summary>A layers channel's name in map.json.</summary>
+    internal static string ChannelName(int channel) => "rgb"[channel % 3] + (channel >= 3 ? $"{(channel / 3) + 1}" : "");
+
+    /// <summary>The paint files' pixels, RGBA a file (a file not made yet: nothing painted).</summary>
+    private byte[][] ReadLayers(Raster map) =>
+        [.. LayersFiles.Select((f, i) => i > 0 && !System.IO.File.Exists(f) ? Blank(map.Cols * map.Rows) : ReadMask(f, map))];
+
+    /// <summary>A paint file's pixels with nothing painted, opaque.</summary>
+    private static byte[] Blank(int pixels)
+    {
+        byte[] b = new byte[pixels * 4];
+        for (int i = 3; i < b.Length; i += 4)
+        {
+            b[i] = 255;
+        }
+        return b;
+    }
+
+    /// <summary>A pixel's byte of a layers channel in the paint files' pixels.</summary>
+    private static ref byte At(byte[][] masks, int px, int channel) => ref masks[channel / 3][(px * 4) + (channel % 3)];
 
     private static int Srgb(float linear) => (int)MathF.Round(MathF.Pow(Math.Clamp(linear, 0, 1), 1 / 2.2f) * 255);
 
@@ -338,13 +384,13 @@ public sealed partial class MapProject
         MapTools.ForgetGroups();
         var map = ReadRaster();
         float[] heights = Read(HeightsFile, out _, out _);
-        byte[] mask = ReadMask(LayersFile, map);
+        byte[][] masks = ReadLayers(map);
         byte[]? holes = System.IO.File.Exists(HolesFile) ? ReadMask(HolesFile, map) : null;
         // Zones of 64 m (centred on multiples of 64) round the map, editor x = X, z = -Y.
         int zx0 = (int)MathF.Floor((map.X0 + 32f) / 64f), zx1 = (int)MathF.Floor((map.X0 + map.Cols - 1 + 32f) / 64f);
         int zz0 = (int)MathF.Floor((-(map.Y0 + map.Rows - 1) + 32f) / 64f), zz1 = (int)MathF.Floor((-map.Y0 + 32f) / 64f);
         int zonesX = zx1 - zx0 + 1, zonesZ = zz1 - zz0 + 1, w = (zonesX * 64) + 1, h = (zonesZ * 64) + 1;
-        var ground = new Ground(w, h, zx0, zz0, zonesX, zonesZ);
+        var ground = new Ground(w, h, zx0, zz0, zonesX, zonesZ, Ground.ChannelsFor(Layers.Count));
         for (int gz = 0; gz < h; gz++)
         {
             for (int gx = 0; gx < w; gx++)
@@ -352,13 +398,13 @@ public sealed partial class MapProject
                 var (col, row) = map.Pixel(ground.OriginX + gx, ground.OriginZ + gz);
                 int px = (Math.Clamp(row, 0, map.Rows - 1) * map.Cols) + Math.Clamp(col, 0, map.Cols - 1), g = (gz * w) + gx;
                 ground.Base[g] = heights[px];
-                // The ground's paint channel k is layer k + 1, read from that layer's channel of the file.
+                // Each painted layer's channel of the ground, read from that layer's channel of the files.
                 for (int k = 1; k < Layers.Count; k++)
                 {
-                    ground.BaseMask[(g * 4) + k - 1] = mask[(px * 4) + Layers[k].Channel] / 255f;
+                    ground.BaseMask[(g * ground.C) + Ground.ChannelOf(k)] = At(masks, px, Layers[k].Channel) / 255f;
                 }
-                // the fourth channel: a hole (Unreal's landscape visibility), 0 where the ground is
-                ground.BaseMask[(g * 4) + 3] = holes != null ? holes[px * 4] / 255f : 0;
+                // the hole channel (Unreal's landscape visibility), 0 where the ground is
+                ground.BaseMask[(g * ground.C) + Ground.HoleChannel] = holes != null ? holes[px * 4] / 255f : 0;
             }
         }
         var scene = new WorldScene
@@ -372,7 +418,8 @@ public sealed partial class MapProject
             H = h,
             Heights = (float[])ground.Base.Clone(),
             Things = [],
-            Mask = new byte[w * h * 4],
+            Mask = new byte[w * h * ground.C],
+            C = ground.C,
             LayerColours = [.. Layers.Select(l => l.Colour)],
             LayerTextures = [.. Layers.Select(l => (l.Texture, l.Size))],
             Cx = 0,
@@ -425,7 +472,7 @@ public sealed partial class MapProject
     {
         var g = s.Session!.Ground;
         var map = ReadRaster();
-        byte[] mask = ReadMask(LayersFile, map);
+        byte[][] masks = ReadLayers(map);
         for (int gz = 0; gz < g.H; gz++)
         {
             for (int gx = 0; gx < g.W; gx++)
@@ -435,7 +482,7 @@ public sealed partial class MapProject
                 {
                     for (int k = 1; k < Layers.Count; k++)
                     {
-                        mask[((row * map.Cols) + col) * 4 + Layers[k].Channel] = Byte(g.MaskOf((gz * g.W) + gx, k - 1));
+                        At(masks, (row * map.Cols) + col, Layers[k].Channel) = Byte(g.MaskOf((gz * g.W) + gx, Ground.ChannelOf(k)));
                     }
                 }
             }
@@ -446,7 +493,7 @@ public sealed partial class MapProject
             int rest = 255;
             for (int k = 1; k < Layers.Count; k++)
             {
-                rest -= weights[k][px] = (byte)Math.Min(mask[(px * 4) + Layers[k].Channel], Math.Max(0, rest));
+                rest -= weights[k][px] = (byte)Math.Min(At(masks, px, Layers[k].Channel), Math.Max(0, rest));
             }
             weights[0][px] = (byte)Math.Max(0, rest);
         }
@@ -460,7 +507,7 @@ public sealed partial class MapProject
         var g = s.Session!.Ground;
         var map = ReadRaster();
         float[] heights = Read(HeightsFile, out _, out _);
-        byte[] mask = ReadMask(LayersFile, map);
+        byte[][] masks = ReadLayers(map);
         byte[] holes = System.IO.File.Exists(HolesFile) ? ReadMask(HolesFile, map) : new byte[map.Cols * map.Rows * 4];
         bool anyHole = System.IO.File.Exists(HolesFile);
         for (int gz = 0; gz < g.H; gz++)
@@ -474,9 +521,9 @@ public sealed partial class MapProject
                     heights[px] = g.HeightOf(p);
                     for (int k = 1; k < Layers.Count; k++)
                     {
-                        mask[(px * 4) + Layers[k].Channel] = Byte(g.MaskOf(p, k - 1));
+                        At(masks, px, Layers[k].Channel) = Byte(g.MaskOf(p, Ground.ChannelOf(k)));
                     }
-                    byte hole = Byte(g.MaskOf(p, 3));
+                    byte hole = Byte(g.MaskOf(p, Ground.HoleChannel));
                     (holes[px * 4], holes[(px * 4) + 1], holes[(px * 4) + 2], holes[(px * 4) + 3]) = (hole, hole, hole, 255);
                     anyHole |= hole > 127;
                 }
@@ -498,12 +545,16 @@ public sealed partial class MapProject
                 }
             }
         }
-        foreach (string f in new[] { HeightsFile, LayersFile, ObjectsFile, WaterFile, AreasFile })
+        var layersFiles = LayersFiles;
+        foreach (string f in new[] { HeightsFile, ObjectsFile, WaterFile, AreasFile }.Concat(layersFiles))
         {
             KeepOld(f);
         }
         Write(HeightsFile, heights, map.Rows, map.Cols);
-        WriteMask(LayersFile, mask, map);
+        for (int i = 0; i < layersFiles.Count; i++)
+        {
+            WriteMask(layersFiles[i], masks[i], map);
+        }
         if (anyHole)
         {
             KeepOld(HolesFile);
@@ -539,12 +590,12 @@ public sealed partial class MapProject
     {
         var map = ReadRaster();
         float[] old = Read(HeightsFile, out _, out _);
-        byte[] oldMask = ReadMask(LayersFile, map);
+        byte[][] oldMasks = ReadLayers(map);
         int n = (sides & Sides.North) != 0 ? metres : 0, s = (sides & Sides.South) != 0 ? metres : 0;
         int e = (sides & Sides.East) != 0 ? metres : 0, wst = (sides & Sides.West) != 0 ? metres : 0;
         var grown = new Raster(map.Cols + e + wst, map.Rows + n + s, map.X0 - wst, map.Y0 - n);
         float[] heights = new float[grown.Cols * grown.Rows];
-        byte[] mask = new byte[heights.Length * 4];
+        byte[][] masks = [.. oldMasks.Select(_ => Blank(heights.Length))];
         var noise = new Relief(seed);
         for (int row = 0; row < grown.Rows; row++)
         {
@@ -554,7 +605,10 @@ public sealed partial class MapProject
                 if (map.Holds(oc, or))
                 {
                     heights[px] = old[(or * map.Cols) + oc];
-                    Array.Copy(oldMask, ((or * map.Cols) + oc) * 4, mask, px * 4, 4);
+                    for (int i = 0; i < masks.Length; i++)
+                    {
+                        Array.Copy(oldMasks[i], ((or * map.Cols) + oc) * 4, masks[i], px * 4, 4);
+                    }
                     continue;
                 }
                 int ec = Math.Clamp(oc, 0, map.Cols - 1), er = Math.Clamp(or, 0, map.Rows - 1);
@@ -564,15 +618,19 @@ public sealed partial class MapProject
                     ? edge + ((noise.At(x, y) - noise.At(ec + map.X0, er + map.Y0)) * Smooth(0, 64, d))
                     : edge + ((flatHeight - edge) * Smooth(0, 32, d));
                 heights[px] = h;
-                mask[px * 4] = (byte)(h < 1.5f ? 255 : 0);
+                masks[0][px * 4] = (byte)(h < 1.5f ? 255 : 0);
             }
         }
-        foreach (string f in new[] { HeightsFile, LayersFile, Path.Combine(Folder, FileName) })
+        var layersFiles = LayersFiles;
+        foreach (string f in new[] { HeightsFile, Path.Combine(Folder, FileName) }.Concat(layersFiles))
         {
             KeepOld(f);
         }
         Write(HeightsFile, heights, grown.Rows, grown.Cols);
-        WriteMask(LayersFile, mask, grown);
+        for (int i = 0; i < layersFiles.Count; i++)
+        {
+            WriteMask(layersFiles[i], masks[i], grown);
+        }
         if (System.IO.File.Exists(HolesFile))
         {
             byte[] oldHoles = ReadMask(HolesFile, map), holes = new byte[heights.Length * 4];

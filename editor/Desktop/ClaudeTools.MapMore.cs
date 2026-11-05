@@ -318,7 +318,7 @@ public sealed partial class ClaudeTools
         }
         if (layer >= 1)
         {
-            found.AddRange(RoadsUnderWater(s.Ground, layer - 1, s.Scene.Water).Select(r => (-1, $"road under water {r.Depth:0.0} m", new System.Numerics.Vector3(r.X, 0, r.Z))));
+            found.AddRange(RoadsUnderWater(s.Ground, Ground.ChannelOf(layer), s.Scene.Water).Select(r => (-1, $"road under water {r.Depth:0.0} m", new System.Numerics.Vector3(r.X, 0, r.Z))));
         }
         var listed = near is { Length: >= 2 } ? found.OrderBy(f => System.Numerics.Vector2.Distance(new(f.At.X, f.At.Z), new(near[0], near[1]))) : found.AsEnumerable();
         return ToJson(new

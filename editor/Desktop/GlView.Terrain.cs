@@ -36,7 +36,7 @@ public sealed partial class GlView
                 int g = gz * w + gx, o = ((gz - z0) * n + gx - x0) * 9;
                 var nv = Vector3.Normalize(new Vector3(H(gx - 1, gz) - H(gx + 1, gz), 2f, -(H(gx, gz - 1) - H(gx, gz + 1))));
                 // a hole (the fourth paint channel): a colour below zero, which the ground's shader does not draw
-                var c = s.Mask[(g * 4) + 3] > 127 ? new Vector3(-1) : s.GroundColor(g);
+                var c = s.Mask[(g * s.C) + Ground.HoleChannel] > 127 ? new Vector3(-1) : s.GroundColor(g);
                 v[o] = gx - (w - 1) / 2f; v[o + 1] = s.Heights[g]; v[o + 2] = -(gz - (h - 1) / 2f);
                 v[o + 3] = nv.X; v[o + 4] = nv.Y; v[o + 5] = nv.Z;
                 v[o + 6] = c.X; v[o + 7] = c.Y; v[o + 8] = c.Z;

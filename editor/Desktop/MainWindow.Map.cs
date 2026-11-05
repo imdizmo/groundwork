@@ -225,10 +225,10 @@ public partial class MainWindow
     {
         int keep = MaskPanel.PaintBox.SelectedIndex;
         string[] painted = map && MapProject.Current is { } open
-            ? [.. Enumerable.Range(1, 3).Select(k => open.Layers.ElementAtOrDefault(k)?.Name ?? Lang.T("mask.paint.layer", k + 1))]
+            ? [.. Enumerable.Range(1, Math.Max(3, open.Layers.Count - 1)).Select(k => open.Layers.ElementAtOrDefault(k)?.Name ?? Lang.T("mask.paint.layer", k + 1))]
             : [.. Enumerable.Range(1, 3).Select(k => Lang.T("mask.paint.layer", k + 1))];
         MaskPanel.PaintBox.ItemsSource = (string[])[Lang.T("mask.paint.any"), Lang.T("mask.paint.unpainted"), Lang.T("mask.paint.painted"), .. painted];
-        MaskPanel.PaintBox.SelectedIndex = keep;
+        MaskPanel.PaintBox.SelectedIndex = keep < 3 + painted.Length ? keep : 0;
     }
 
     /// <summary>

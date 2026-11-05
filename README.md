@@ -11,7 +11,7 @@ editor for any map.
 ## What you can do
 
 - **Sculpt and paint the ground** with brushes that raise, lower, flatten, smooth, roughen, erode or restore it, and
-  paint up to four named layers, each in its own colour.
+  paint up to eight named layers, each in its own colour.
 - **Place objects** from the map's catalog: one by one, dragged from the drawer, scattered with a brush, or as a biome
   with its ground layer; save groups as stamps.
 - **Select, move, turn, copy and delete** objects, whole buildings included; land them on floors, rocks or the ground.

@@ -35,7 +35,7 @@ public sealed partial class EditSession
                 Ground.Level[p] = v.Level[k];
                 Ground.Smooth[p] = v.Smooth[k];
                 Ground.Mod[p] = v.Mod[k];
-                Array.Copy(v.Paint, k * 4, Ground.Paint, p * 4, 4);
+                Array.Copy(v.Paint, k * Ground.C, Ground.Paint, p * Ground.C, Ground.C);
                 Ground.PMod[p] = v.PMod[k];
                 int gx = p % Ground.W, gz = p / Ground.W;
                 x0 = Math.Min(x0, gx); z0 = Math.Min(z0, gz); x1 = Math.Max(x1, gx); z1 = Math.Max(z1, gz);

@@ -17,6 +17,7 @@ public sealed partial class GlView
         _terrainProg = Program(Shaders.TerrainVs, Shaders.TerrainFs);
         _objectProg = Program(Shaders.ObjectVs, Shaders.ObjectFs);
         _gl.VertexAttrib4(7, 1f, 1f, 1f, 1f);   // the vertex colour of meshes without one: white (an attribute off reads this)
+        _gl.VertexAttrib4(9, 0f, 0f, 0f, 0f);   // the fifth to eighth layers' weights of a map without them: none
         _waterProg = Program(Shaders.WaterVs, Shaders.WaterFs);
         Status?.Invoke(Said.Raw($"OpenGL {(_es ? "ES " : "")}{GlVersion.Major}.{GlVersion.Minor}: {_gl.GetStringS(StringName.Renderer)}"));
     }
@@ -34,7 +35,7 @@ public sealed partial class GlView
         _terrainEbo = _waterVbo = _waterEbo = 0;
         _terrainProg = _objectProg = _waterProg = _lineProg = 0;
         _terrainVao = _terrainIndexCount = _waterVao = _terrainVbo = _terrainCutVbo = 0;
-        _weightsVbo = _holeTex = _frameFbo = 0;
+        _weightsVbo = _weights2Vbo = _holeTex = _frameFbo = 0;
         Array.Clear(_layerTex);
         _ghostVbo = 0;
         // Drawn through DrawLines, which makes them only while they are 0: kept, the rivers' triangles were written

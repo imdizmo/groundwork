@@ -66,9 +66,10 @@ public sealed partial class PasteTool
         if (c.Pnt[i * 4] >= 0)
         {
             g.StartPaint(p);
+            // ponytail: a copy holds four channels (the second to fourth layers and the hole), the clipboard format's
             for (int ch = 0; ch < 4; ch++)
             {
-                g.Paint[p * 4 + ch] += (c.Pnt[i * 4 + ch] - g.Paint[p * 4 + ch]) * w;
+                g.Paint[(p * g.C) + ch] += (c.Pnt[(i * 4) + ch] - g.Paint[(p * g.C) + ch]) * w;
             }
         }
         touched.Add(p);

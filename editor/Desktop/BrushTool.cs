@@ -33,4 +33,12 @@ public enum BrushTool
     Terrace,
     /// <summary>Takes the ground away: a hole (a cave mouth, a pit), or fills one back.</summary>
     Hole,
+    /// <summary>Paints the map's fifth layer (a map of more than four layers: these last, so the others keep their numbers).</summary>
+    PaintLayer5,
+    /// <summary>Paints the map's sixth layer.</summary>
+    PaintLayer6,
+    /// <summary>Paints the map's seventh layer.</summary>
+    PaintLayer7,
+    /// <summary>Paints the map's eighth layer.</summary>
+    PaintLayer8,
 }

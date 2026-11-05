@@ -72,12 +72,12 @@ ground.
 | `origin` | Where the heightmap's first pixel is, in the engine's metres (x, y). One pixel is one metre. |
 | `seaLevel` | The water's height, metres. The editor shows heights as the file has them. |
 | `files.heights` | The ground: a float32 `.npy`, rows by columns, metres. |
-| `files.layers` | The paint: an RGBA `.png` the size of the heightmap, one layer a channel. |
+| `files.layers` | The paint: a `.png` the size of the heightmap, one layer in each of its `r`, `g` and `b`. A map of more than four layers has a list of them, three more layers a file; files the list leaves out are named after the first (`layers2.png`, `layers3.png`), and one not made yet is unpainted. |
 | `files.objects` | The objects: a JSON list of `[asset, x, y, z, turn x, y, z, scale]`, and an object of [plugin data](plugins.md) when there is any. |
 | `files.water` | The rivers and lakes ([Rivers and lakes](water.md)). |
 | `files.areas` | The areas ([Areas](areas.md)). |
 | `files.holes` | The holes: a grey `.png` the size of the heightmap, white where the ground is taken away; written once there is a hole. |
-| `layers` | Up to four: the first is the ground everywhere, the others are painted over it from a channel (`r`, `g`, `b`). A layer's `texture` (a picture in the map's folder) is drawn instead of its colour, repeated every `size` metres (4 by default). |
+| `layers` | Up to eight: the first is the ground everywhere, the others are painted over it from a channel: `r`, `g`, `b` of the first layers file, `r2`, `g2`, `b2` of the second, `r3` of the third (in that order when not given). A layer's `texture` (a picture in the map's folder) is drawn instead of its colour, repeated every `size` metres (4 by default). |
 | `catalog` | The kinds the object tools offer and the categories the View panel sorts by. |
 | `models` | The model folder the 3D view draws objects with (it may be anywhere; see [Objects](objects.md#models)). |
 | `unreal` | The Unreal project [Live](unreal.md) talks to, the script **Send to Unreal** runs, the texture the layers go into (else paint layers by name), the water bodies' label prefix. |

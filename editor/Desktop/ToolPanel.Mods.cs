@@ -73,7 +73,7 @@ public sealed partial class ToolPanel
             return;
         }
         bool paints = IsPaint(t!.Value);
-        foreach (var (tool, key) in Keys.Where(k => IsPaint(k.Tool) == paints))
+        foreach (var (tool, key) in Keys.Where(k => IsPaint(k.Tool) == paints && Offered(k.Tool)))
         {
             var (icon, swatch) = Look(tool);
             var face = new Grid
@@ -93,7 +93,7 @@ public sealed partial class ToolPanel
             }
             var button = new Button { Content = face, Padding = new Thickness(2), Margin = new Thickness(0, 0, 3, 3) }.Classed("rail");
             button.Classes.Set("on", tool == t);
-            ToolTip.SetTip(button, $"{Brush.Label(tool)} ({key})");
+            ToolTip.SetTip(button, key.Length > 0 ? $"{Brush.Label(tool)} ({key})" : Brush.Label(tool));
             button.Click += (_, _) => Choose(tool);
             _switcher.Children.Add(button);
         }
@@ -120,9 +120,9 @@ public sealed partial class ToolPanel
         MapOpen = on;
         _capSculpt.Text = on ? "GROUND" : Lang.T("rail.cap.sculpt").ToUpperInvariant();
         MakeMapRail();
-        foreach (var b in _buttons.Values)
+        foreach (var (t, b) in _buttons)
         {
-            b.IsVisible = !on;
+            b.IsVisible = !on && Offered(t);
         }
         _capPaint.IsVisible = !on;
         _sculptButton!.IsVisible = _paintButton!.IsVisible = on;

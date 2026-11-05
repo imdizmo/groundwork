@@ -148,7 +148,7 @@ public sealed partial class UnrealLive
                 for (int gx = 0; gx < g.W; gx++)
                 {
                     var (col, row) = raster.Pixel(g.OriginX + gx, g.OriginZ + gz);
-                    if (raster.Holds(col, row) && g.MaskOf((gz * g.W) + gx, 3) > 0.5f)
+                    if (raster.Holds(col, row) && g.MaskOf((gz * g.W) + gx, Ground.HoleChannel) > 0.5f)
                     {
                         holes[(row * cols) + col] = 255;
                     }

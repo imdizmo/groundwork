@@ -62,6 +62,7 @@ public sealed partial class Brush
         BrushTool.PaintLayer2 => 1,
         BrushTool.PaintLayer3 => 2,
         BrushTool.PaintLayer4 => 3,
+        >= BrushTool.PaintLayer5 and <= BrushTool.PaintLayer8 => 4 + (t - BrushTool.PaintLayer5),
         _ => -1,
     };
 
@@ -71,6 +72,7 @@ public sealed partial class Brush
         1 => BrushTool.PaintLayer2,
         2 => BrushTool.PaintLayer3,
         3 => BrushTool.PaintLayer4,
+        >= 4 and < MapProject.MaxLayers => BrushTool.PaintLayer5 + (layer - 4),
         _ => BrushTool.PaintLayer1,
     };
 
@@ -107,17 +109,24 @@ public sealed partial class Brush
     };
 
     /// <summary>
-    /// The paint each paint tool moves the ground towards (the second, third and fourth layers' weights, and a fourth
-    /// weight kept at 1); null for the sculpt tools.
+    /// The paint each paint tool moves the ground towards: its layer's channel 1, the other layers' 0 (those past the
+    /// end too), and the hole channel kept at 1 (painting leaves it as it is); null for the sculpt tools.
     /// </summary>
-    public static float[]? PaintOf(BrushTool t) => t switch
+    public static float[]? PaintOf(BrushTool t)
     {
-        BrushTool.PaintLayer2 => [1f, 0, 0, 1],
-        BrushTool.PaintLayer3 => [0f, 1, 0, 1],
-        BrushTool.PaintLayer4 => [0f, 0, 1, 1],
-        BrushTool.PaintLayer1 => [0f, 0, 0, 1],
-        _ => null,
-    };
+        int k = LayerOf(t);
+        if (k < 0)
+        {
+            return null;
+        }
+        float[] paint = new float[Math.Max(4, Ground.ChannelOf(k) + 1)];
+        paint[Ground.HoleChannel] = 1;
+        if (k > 0)
+        {
+            paint[Ground.ChannelOf(k)] = 1;
+        }
+        return paint;
+    }
 
     /// <summary>The falloff's weight, from 0 to 1, at <c>t</c>: 1 at the middle of the brush, 0 at its edge.</summary>
     public static float Fade(Falloff f, float t) => f switch

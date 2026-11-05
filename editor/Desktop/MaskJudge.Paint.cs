@@ -15,15 +15,18 @@ internal sealed partial class MaskJudge
             return true;
         }
         bool painted = _paintFlags![p] != 0;
-        float r = _colours![p * 4], gr = _colours[p * 4 + 1], b = _colours[p * 4 + 2];
+        var paint = _colours!.AsSpan(p * _c, _c);
+        float all = 0;
+        for (int c = 0; c < _c; c++)
+        {
+            all += c == Ground.HoleChannel ? 0 : paint[c];
+        }
         return _paint switch
         {
-            Mask.PaintRule.Unpainted => !painted || r + gr + b < 0.3f,
+            Mask.PaintRule.Unpainted => !painted || all < 0.3f,
             _ when !painted => false,
-            Mask.PaintRule.Painted => r + gr + b >= 0.3f,
-            Mask.PaintRule.Layer2 => r >= 0.5f,
-            Mask.PaintRule.Layer3 => gr >= 0.5f,
-            _ => b >= 0.5f,
+            Mask.PaintRule.Painted => all >= 0.3f,
+            _ => Ground.ChannelOf(_paint - Mask.PaintRule.Layer2 + 1) is int ch && ch < _c && paint[ch] >= 0.5f,
         };
     }
 }

@@ -32,6 +32,7 @@ picture down with one click.
 | Brush | Key | What it does |
 |---|---|---|
 | Layer 2, 3, 4 | `6` `7` `8` | Paint that layer of the map (named and coloured after it). |
+| Layer 5 to 8 | | The same, on a map with that many layers. |
 | Layer 1 | `9` | Take paint off: back to the first layer. |
 
 **Paint the whole map** lays the layer over the whole map in one step, where the [Mask](masks.md) lets it: sand on

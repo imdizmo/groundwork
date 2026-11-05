@@ -64,7 +64,7 @@ public sealed partial class UnrealLive
         byte[] h = new byte[g.W * g.H];
         for (int p = 0; p < h.Length; p++)
         {
-            h[p] = Byte(g.MaskOf(p, 3));
+            h[p] = Byte(g.MaskOf(p, Ground.HoleChannel));
         }
         return h;
     }
@@ -160,7 +160,7 @@ public sealed partial class UnrealLive
             int rest = 255;
             for (int k = 1; k < n; k++)
             {
-                rest -= mask[(p * n) + k] = Byte(g.MaskOf(p, k - 1));
+                rest -= mask[(p * n) + k] = Byte(g.MaskOf(p, Ground.ChannelOf(k)));
             }
             mask[p * n] = (byte)Math.Max(0, rest);
         }
@@ -237,8 +237,8 @@ public sealed partial class UnrealLive
         }
         if (mx1 >= 0 && Pixels(g, mx0, mz0, mx1, mz1) is var (mcol, mrow, mw, mh) && mw > 0)
         {
-            // into the texture's channels (map.json's unreal.layersTexture; the ground layer has none), else the
-            // landscape's paint layers by name
+            // into the texture's channels (map.json's unreal.layersTexture; the ground layer has none, nor those of the
+            // second and third layers files), else the landscape's paint layers by name
             string? texture = _project.UnrealLayersTexture;
             int n = _project.Layers.Count;
             var layers = new JsonArray();
@@ -253,7 +253,7 @@ public sealed partial class UnrealLive
                     }
                 }
                 var layer = _project.Layers[k];
-                layers.Add(new JsonObject { ["name"] = layer.Name, ["channel"] = texture == null || layer.Channel < 0 ? null : "rgb"[layer.Channel].ToString(), ["weights"] = Convert.ToBase64String(weights) });
+                layers.Add(new JsonObject { ["name"] = layer.Name, ["channel"] = texture == null || layer.Channel is < 0 or > 2 ? null : "rgb"[layer.Channel].ToString(), ["weights"] = Convert.ToBase64String(weights) });
             }
             said.Add(await Post("/groundwork/layers", new JsonObject { ["x0"] = _map.X0, ["y0"] = _map.Y0, ["col"] = mcol, ["row"] = mrow, ["w"] = mw, ["h"] = mh, ["texture"] = texture, ["layers"] = layers }));
         }

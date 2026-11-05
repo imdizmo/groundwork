@@ -10,8 +10,7 @@ namespace Groundwork.Desktop;
 public sealed class Mask
 {
     /// <summary>
-    /// Which ground passes by its paint. Layer2, Layer3 and Layer4 need painted ground with that layer (the paint's red,
-    /// green, blue) at least half.
+    /// Which ground passes by its paint. Layer2 to Layer8 need painted ground with that layer at least half.
     /// </summary>
     public enum PaintRule
     {
@@ -27,6 +26,14 @@ public sealed class Mask
         Layer3,
         /// <summary>Painted with the map's fourth layer at least half.</summary>
         Layer4,
+        /// <summary>Painted with the map's fifth layer at least half.</summary>
+        Layer5,
+        /// <summary>Painted with the map's sixth layer at least half.</summary>
+        Layer6,
+        /// <summary>Painted with the map's seventh layer at least half.</summary>
+        Layer7,
+        /// <summary>Painted with the map's eighth layer at least half.</summary>
+        Layer8,
     }
 
     /// <summary>

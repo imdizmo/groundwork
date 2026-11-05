@@ -14,9 +14,9 @@ public sealed partial class WorldScene
             {
                 int p = gz * W + gx;
                 Heights[p] = g.HeightOf(p);
-                for (int c = 0; c < 4; c++)
+                for (int c = 0; c < C; c++)
                 {
-                    Mask[p * 4 + c] = (byte)Math.Clamp((int)MathF.Round(g.MaskOf(p, c) * 255f), 0, 255);
+                    Mask[(p * C) + c] = (byte)Math.Clamp((int)MathF.Round(g.MaskOf(p, c) * 255f), 0, 255);
                 }
             }
         }

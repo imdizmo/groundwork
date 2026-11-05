@@ -51,9 +51,9 @@ public sealed partial class EditSession
     /// <summary>
     /// The values of these points only, in their order.
     /// </summary>
-    private static Ground.State Pick(Ground.State all, int[] pts) => new(
+    private Ground.State Pick(Ground.State all, int[] pts) => new(
         [.. pts.Select(p => all.Level[p])], [.. pts.Select(p => all.Smooth[p])], [.. pts.Select(p => all.Mod[p])],
-        [.. pts.SelectMany(p => new[] { all.Paint[p * 4], all.Paint[p * 4 + 1], all.Paint[p * 4 + 2], all.Paint[p * 4 + 3] })], [.. pts.Select(p => all.PMod[p])]);
+        [.. pts.SelectMany(p => all.Paint.AsSpan(p * Ground.C, Ground.C).ToArray())], [.. pts.Select(p => all.PMod[p])]);
 
     /// <summary>
     /// Puts a ground change on the undo list (its points' values from start to now) and clears the redo list. Called

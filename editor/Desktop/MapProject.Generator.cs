@@ -35,6 +35,10 @@ public sealed partial class MapProject
         var zone = ZoneGenerator.Generate(spec, map.Cols, map.Rows, map.X0, map.Y0, planting);
         Write(HeightsFile, zone.Heights, map.Rows, map.Cols);
         WriteMask(LayersFile, zone.Mask, map);
+        foreach (string f in LayersFiles.Skip(1))
+        {
+            System.IO.File.Delete(f);   // the generator paints the first four layers: the others start bare
+        }
         System.IO.File.WriteAllText(ObjectsFile, new JsonArray([.. zone.Objects.Select(o => (JsonNode)new JsonArray(o.Model, R(o.At.X), R(o.At.Y), R(o.At.Z), 0, R(o.Yaw), 0, R(o.Scale)))]).ToJsonString());
         System.IO.File.WriteAllText(WaterFile, new JsonObject
         {
@@ -79,7 +83,7 @@ public sealed partial class MapProject
     private string Print()
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        foreach (string f in new[] { HeightsFile, LayersFile, ObjectsFile, WaterFile, HolesFile, AreasFile })
+        foreach (string f in new[] { HeightsFile, LayersFile, ObjectsFile, WaterFile, HolesFile, AreasFile }.Concat(LayersFiles.Skip(1)))
         {
             hash.AppendData(System.Text.Encoding.UTF8.GetBytes(Path.GetFileName(f)));
             if (System.IO.File.Exists(f))

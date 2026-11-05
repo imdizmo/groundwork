@@ -51,13 +51,13 @@ public static partial class Sculpt
     }
 
     /// <summary>
-    /// The Hole brush: the point's fourth paint channel (0 ground, 1 a hole: Unreal's landscape visibility) towards a
-    /// hole, or back to ground (fill), by k.
+    /// The Hole brush: the point's hole channel (0 ground, 1 a hole: Unreal's landscape visibility) towards a hole, or
+    /// back to ground (fill), by k.
     /// </summary>
     internal static void HolePoint(Ground g, int p, float k, bool fill)
     {
         g.StartPaint(p);
-        g.Paint[(p * 4) + 3] += ((fill ? 0 : 1) - g.Paint[(p * 4) + 3]) * k;
+        g.Paint[(p * g.C) + Ground.HoleChannel] += ((fill ? 0 : 1) - g.Paint[(p * g.C) + Ground.HoleChannel]) * k;
     }
 
     /// <summary>Restore: backs the point's edits and lift down towards the ground as the world generated it.</summary>
@@ -85,9 +85,12 @@ public static partial class Sculpt
     internal static void PaintPoint(Ground g, int p, float[] colour, float k)
     {
         g.StartPaint(p);
-        for (int c = 0; c < 3; c++)
+        for (int c = 0; c < g.C; c++)
         {
-            g.Paint[p * 4 + c] += (colour[c] - g.Paint[p * 4 + c]) * k;
+            if (c != Ground.HoleChannel)
+            {
+                g.Paint[(p * g.C) + c] += (colour.ElementAtOrDefault(c) - g.Paint[(p * g.C) + c]) * k;
+            }
         }
     }
 }

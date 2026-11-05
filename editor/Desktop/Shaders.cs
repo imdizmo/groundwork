@@ -15,9 +15,10 @@ public static class Shaders
 		layout(location = 2) in vec3 aCol;
 		layout(location = 7) in float aCut;
 		layout(location = 8) in vec3 aW;
+		layout(location = 9) in vec4 aW2;
 		uniform mat4 uViewProj;
-		out vec3 vNor; out vec3 vCol; out float vY; out float vCut; out vec2 vView; out vec3 vW;
-		void main() { vNor = aNor; vCol = aCol; vY = aPos.y; vCut = aCut; vView = aPos.xz; vW = aW; gl_Position = uViewProj * vec4(aPos, 1.0); }
+		out vec3 vNor; out vec3 vCol; out float vY; out float vCut; out vec2 vView; out vec3 vW; out vec4 vW2;
+		void main() { vNor = aNor; vCol = aCol; vY = aPos.y; vCut = aCut; vView = aPos.xz; vW = aW; vW2 = aW2; gl_Position = uViewProj * vec4(aPos, 1.0); }
 		""";
 
     /// <summary>
@@ -25,14 +26,17 @@ public static class Shaders
     /// extension cuts the ground (GroundCuts) or its layers stand in for a ground cell (SceneLayers).
     /// </summary>
     public const string TerrainFs = """
-		in vec3 vNor; in vec3 vCol; in float vY; in float vCut; in vec2 vView; in vec3 vW;
+		in vec3 vNor; in vec3 vCol; in float vY; in float vCut; in vec2 vView; in vec3 vW; in vec4 vW2;
 		uniform vec3 uSun;
-		// the layers' pictures (uTexOn: any; uHas: which layers have one; uSize: metres each repeats over), their colours
+		// the layers' pictures (uTexOn: any; uHas, uHas2: which of the eight layers have one; uSize, uSize2: metres each
+		// repeats over), their colours; vW and vW2 the second to eighth layers' weights
 		uniform float uTexOn;
-		uniform vec4 uHas;
-		uniform vec4 uSize;
+		uniform vec4 uHas; uniform vec4 uHas2;
+		uniform vec4 uSize; uniform vec4 uSize2;
 		uniform vec3 uCol0; uniform vec3 uCol1; uniform vec3 uCol2; uniform vec3 uCol3;
+		uniform vec3 uCol4; uniform vec3 uCol5; uniform vec3 uCol6; uniform vec3 uCol7;
 		uniform sampler2D uTex0; uniform sampler2D uTex1; uniform sampler2D uTex2; uniform sampler2D uTex3;
+		uniform sampler2D uTex4; uniform sampler2D uTex5; uniform sampler2D uTex6; uniform sampler2D uTex7;
 		uniform float uSteep;
 		uniform float uHolesOn;
 		uniform sampler2D uHoles;
@@ -53,6 +57,13 @@ public static class Shaders
 				vec3 l2 = uHas.z > 0.5 ? texture(uTex2, vView / uSize.z).rgb : uCol2;
 				vec3 l3 = uHas.w > 0.5 ? texture(uTex3, vView / uSize.w).rgb : uCol3;
 				col = mix(mix(mix(l0, l1, vW.x), l2, vW.y), l3, vW.z);
+				if (dot(vW2, vec4(1.0)) > 0.0) {
+					vec3 l4 = uHas2.x > 0.5 ? texture(uTex4, vView / uSize2.x).rgb : uCol4;
+					vec3 l5 = uHas2.y > 0.5 ? texture(uTex5, vView / uSize2.y).rgb : uCol5;
+					vec3 l6 = uHas2.z > 0.5 ? texture(uTex6, vView / uSize2.z).rgb : uCol6;
+					vec3 l7 = uHas2.w > 0.5 ? texture(uTex7, vView / uSize2.w).rgb : uCol7;
+					col = mix(mix(mix(mix(col, l4, vW2.x), l5, vW2.y), l6, vW2.z), l7, vW2.w);
+				}
 			}
 			col = uSteep > 0.0 && normalize(vNor).y < uSteep ? mix(col, vec3(0.75, 0.04, 0.02), 0.65) : col;
 			frag = vec4(pow(col * l, vec3(1.0 / 2.2)), 1.0);

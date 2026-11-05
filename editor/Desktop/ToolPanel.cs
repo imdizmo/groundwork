@@ -59,6 +59,10 @@ public sealed partial class ToolPanel
     /// <summary>The paint buttons' names again (a map names the paints its ground colours).</summary>
     internal void RelabelPaints()
     {
+        if (!Offered(_lastPaint))
+        {
+            _lastPaint = BrushTool.PaintLayer2;   // a layer the map before had and this one has not
+        }
         foreach (var (t, b) in _buttons.Where(kv => IsPaint(kv.Key)))
         {
             if (Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(b).OfType<TextBlock>().FirstOrDefault(x => x.Text?.Length > 1) is { } name)
@@ -78,11 +82,15 @@ public sealed partial class ToolPanel
     public static readonly (BrushTool Tool, string Key)[] Keys =
     [
         (BrushTool.Raise, "1"), (BrushTool.Lower, "2"), (BrushTool.Flatten, "3"), (BrushTool.Smooth, "4"), (BrushTool.Natural, "0"), (BrushTool.Erode, "O"), (BrushTool.Terrace, "T"), (BrushTool.Hole, ""), (BrushTool.Restore, "5"),
-        (BrushTool.PaintLayer2, "6"), (BrushTool.PaintLayer3, "7"), (BrushTool.PaintLayer4, "8"), (BrushTool.PaintLayer1, "9"),
+        (BrushTool.PaintLayer2, "6"), (BrushTool.PaintLayer3, "7"), (BrushTool.PaintLayer4, "8"),
+        (BrushTool.PaintLayer5, ""), (BrushTool.PaintLayer6, ""), (BrushTool.PaintLayer7, ""), (BrushTool.PaintLayer8, ""), (BrushTool.PaintLayer1, "9"),
     ];
 
     /// <summary>A paint brush (the rail's Paint section), not a sculpt one.</summary>
-    internal static bool IsPaint(BrushTool t) => t is BrushTool.PaintLayer2 or BrushTool.PaintLayer3 or BrushTool.PaintLayer4 or BrushTool.PaintLayer1;
+    internal static bool IsPaint(BrushTool t) => Brush.LayerOf(t) >= 0;
+
+    /// <summary>Whether a brush is offered: the paints of the fifth layer on only for an open map that has it.</summary>
+    internal static bool Offered(BrushTool t) => Brush.LayerOf(t) < 4 || (Brush.MapOpen && Brush.LayerOf(t) < (MapProject.Current?.Layers.Count ?? 0));
 
     /// <summary>The rail's short names (the web editor's).</summary>
     private static string RailLabel(BrushTool t) => t switch

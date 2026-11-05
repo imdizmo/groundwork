@@ -24,11 +24,13 @@ internal sealed partial class MaskJudge
     private readonly int _w;
     /// <summary>The ground's height in points.</summary>
     private readonly int _h;
+    /// <summary>The ground's paint channels a point (Ground.C).</summary>
+    private readonly int _c;
     /// <summary>Each ground point's height, copied; null when no height or slope limit is set.</summary>
     private readonly float[]? _heights;
     /// <summary>Each ground point's paint flag, copied; null when paint does not matter.</summary>
     private readonly byte[]? _paintFlags;
-    /// <summary>Each ground point's paint colour (four floats), copied; null when paint does not matter.</summary>
+    /// <summary>Each ground point's paint (Ground.C floats), copied; null when paint does not matter.</summary>
     private readonly float[]? _colours;
 
     /// <summary>Copies the mask's settings and the ground's heights and paint, as they are now.</summary>
@@ -46,6 +48,7 @@ internal sealed partial class MaskJudge
         _paint = mask.Paint;
         _w = g.W;
         _h = g.H;
+        _c = g.C;
         if (_heightMin != null || _heightMax != null || _slopeMin != null || _slopeMax != null)
         {
             _heights = new float[_w * _h];

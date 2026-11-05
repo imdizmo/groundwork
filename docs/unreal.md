@@ -21,7 +21,7 @@ plugin speak a numbered protocol: **Live** refuses a plugin of another version a
   pixel (0, 0) sits at its `origin` in Unreal metres, one pixel a landscape vertex.
 - **Layers**: each layer's weights in the changed rectangle. With `unreal.layersTexture` set, a layer goes into its
   `channel` of that texture (the one texture the landscape material reads whose name starts so: when several do,
-  nothing is written); without it, into the
+  nothing is written; the layers of a second or third layers file go by name); without it, into the
   landscape's paint layer of the same name. Layers the level does not have are named on the status bar.
 - **Objects**: added and taken away, as instances of the mesh the models folder's `names.json` names for the asset
   (a new mesh is placed as an actor in the `Groundwork/Objects` folder). A marker becomes an actor of its catalog
