@@ -31,11 +31,17 @@ savanna, tundra coast, marsh coast, highlands; each fills in every slider and br
 ### Over a heightmap from another tool
 
 **Ground → From a heightmap…** makes the map over ground you made elsewhere: export a heightmap from your terrain
-tool as a 16-bit PNG, a raw `.r16` / `.raw` (16-bit, little-endian) or a raw `.r32` (32-bit float), square. The file
-holds no metres, so give them: **Across** (the world's size in your tool; a metre a pixel to start with, rounded to
-Unreal's 63 m squares), and the heights its black and its white stand for (**Black is**, **White is**: your tool's
-height range; under 0 is under the sea: to put your tool's water level at the sea, take it off both). Pictures start
-at their north edge; for a raw file written from the south, tick **Its first row is the south edge**.
+tool as a 16-bit PNG, a raw `.r16` / `.raw` (16-bit, little-endian) or a raw `.r32` (32-bit float), of any width and
+height. The file holds no metres, so give them: **Across** (the world's size west to east in your tool; a metre a
+sample to start with), and the heights its black and its white stand for (**Black is**, **White is**: your tool's
+height range; under 0 is under the sea: to put your tool's water level at the sea, take it off both). A raw file holds
+no width either: when it is not square, give its **Samples across**. Pictures start at their north edge; for a raw
+file written from the south, tick **Its first row is the south edge**.
+
+The map keeps the heightmap's own scale: north to south follows from **Across**, and each side is rounded up to
+Unreal's 63 m squares (the last strip carries on the heightmap's edge). It holds up to 128 squares a side (about 8 km,
+Unreal's biggest landscape) and 6400 squares in all (a 5 km square's worth), so a long, narrow world fits as well as a
+square one.
 
 The generator then measures the ground (its lowest and highest ground, how far apart its hills are) and lays the zone
 over it like a sheet: paint by height and slope, woods, plants and trees, snow, follow your shape, and nothing changes

@@ -7,9 +7,9 @@ using Xunit;
 namespace Groundwork.Desktop.Tests;
 
 /// <summary>
-/// A heightmap from another tool (a terrain tool) read from its 16-bit PNG, .r16 and .r32, put in metres on the
-/// map's grid; the generator's numbers measured from it, and the zone laid over it without moving the ground; a map made
-/// over it keeps it and is made again over it.
+/// A heightmap from another tool (a terrain tool) read from its 16-bit PNG, .r16 and .r32 at any width and height,
+/// put in metres on the map's grid at its own scale; the generator's numbers measured from it, and the zone laid over it
+/// without moving the ground; a map made over it, two squares by one, keeps it and is made again over it.
 /// </summary>
 [Collection("DataDir")]
 public sealed class HeightmapImportTests : IDisposable
@@ -28,52 +28,63 @@ public sealed class HeightmapImportTests : IDisposable
     /// <summary>A bowl with a ridge across it, 0 to 1.</summary>
     private static float Value(int c, int r) => Math.Clamp((0.3f * ((((c - 32) * (c - 32)) + ((r - 32) * (r - 32))) / 2048f)) + (0.6f * MathF.Exp(-((c - 20) * (c - 20)) / 40f)), 0, 1);
 
+    /// <summary>The bowl and ridge as a heightmap so many samples wide and high.</summary>
+    private static HeightmapImport.Heightmap Map(int cols = Side, int rows = Side) =>
+        new([.. Enumerable.Range(0, cols * rows).Select(i => Value(i % cols, i / cols))], cols, rows);
+
     [Fact]
-    public void ItsPngR16AndR32AreReadAlike()
+    public void ItsPngR16AndR32AreReadAlikeAtAnyWidthAndHeight()
     {
-        ushort[] u = new ushort[Side * Side];
+        const int W = 65, H = 33;
+        ushort[] u = new ushort[W * H];
         byte[] r16 = new byte[u.Length * 2], r32 = new byte[u.Length * 4];
         for (int i = 0; i < u.Length; i++)
         {
-            float v = Value(i % Side, i / Side);
+            float v = Value(i % W, i / W);
             u[i] = (ushort)MathF.Round(v * 65535);
             BinaryPrimitives.WriteUInt16LittleEndian(r16.AsSpan(i * 2), u[i]);
             BinaryPrimitives.WriteSingleLittleEndian(r32.AsSpan(i * 4), v);
         }
-        File.WriteAllBytes(Path.Combine(_dir, "h.png"), Png.WriteGray16(Side, Side, u));
+        File.WriteAllBytes(Path.Combine(_dir, "h.png"), Png.WriteGray16(W, H, u));
         File.WriteAllBytes(Path.Combine(_dir, "h.r16"), r16);
         File.WriteAllBytes(Path.Combine(_dir, "h.r32"), r32);
-        File.WriteAllBytes(Path.Combine(_dir, "odd.r16"), new byte[(Side * Side * 2) + 2]);
+        File.WriteAllBytes(Path.Combine(_dir, "square.r16"), new byte[Side * Side * 2]);
 
         foreach (string f in new[] { "h.png", "h.r16", "h.r32" })
         {
-            var (values, side) = HeightmapImport.Read(Path.Combine(_dir, f));
-            Assert.Equal(Side, side);
-            Assert.Equal(Value(20, 40), values[(40 * Side) + 20], 3);
+            var hm = HeightmapImport.Read(Path.Combine(_dir, f), cols: f.EndsWith(".png", StringComparison.Ordinal) ? null : W);
+            Assert.Equal((W, H), (hm.Cols, hm.Rows));
+            Assert.Equal(Value(20, 30), hm.Values[(30 * W) + 20], 3);
         }
-        Assert.Throws<InvalidDataException>(() => HeightmapImport.Read(Path.Combine(_dir, "odd.r16")));
+        Assert.Equal((Side, Side), (HeightmapImport.Read(Path.Combine(_dir, "square.r16")).Cols, HeightmapImport.Read(Path.Combine(_dir, "square.r16")).Rows));
+        Assert.Throws<InvalidDataException>(() => HeightmapImport.Read(Path.Combine(_dir, "h.r16")));   // a raw file not square: its width is needed
+        Assert.Throws<InvalidDataException>(() => HeightmapImport.Read(Path.Combine(_dir, "h.r16"), cols: 64));
     }
 
     [Fact]
-    public void ItsValuesBecomeMetresOnTheMapsGrid()
+    public void ItsValuesBecomeMetresOnTheMapsGridAtItsOwnScale()
     {
-        float[] v = [.. Enumerable.Range(0, Side * Side).Select(i => Value(i % Side, i / Side))];
+        var hm = Map();
 
-        float[] h = HeightmapImport.Metres(v, Side, 129, -10, 90);   // stretched twice over
+        float[] h = HeightmapImport.Metres(hm, 2, 129, 129, -10, 90);   // two metres a sample: stretched twice over
 
-        Assert.Equal(-10 + (100 * v[0]), h[0], 3);
-        Assert.Equal(-10 + (100 * v[^1]), h[^1], 3);
-        Assert.Equal(-10 + (100 * v[(40 * Side) + 20]), h[(80 * 129) + 40], 3);
-        Assert.Equal(16, HeightmapImport.ChunksFor(1024));
-        float[] flipped = HeightmapImport.Flipped(v, Side);   // a file written from its south edge
-        Assert.Equal((v[(Side - 1) * Side], v[3]), (flipped[0], flipped[((Side - 1) * Side) + 3]));
+        Assert.Equal(-10 + (100 * hm.Values[0]), h[0], 3);
+        Assert.Equal(-10 + (100 * hm.Values[^1]), h[^1], 3);
+        Assert.Equal(-10 + (100 * hm.Values[(40 * Side) + 20]), h[(80 * 129) + 40], 3);
+        float[] past = HeightmapImport.Metres(hm, 1, 100, 70, 0, 1);   // the map bigger than the heightmap: its edge carried on
+        Assert.Equal(hm.Values[(10 * Side) + Side - 1], past[(10 * 100) + 99], 3);
+        Assert.Equal((17, 17), HeightmapImport.SquaresFor(new(new float[1025 * 1025], 1025, 1025), 1));   // each side rounded up
+        Assert.Equal((81, 61), HeightmapImport.SquaresFor(new(new float[1337 * 1001], 1337, 1001), 3.81f));
+        Assert.Throws<InvalidDataException>(() => HeightmapImport.SquaresFor(new(new float[2049 * 2049], 2049, 2049), 4));
+        var flipped = HeightmapImport.Flipped(hm);   // a file written from its south edge
+        Assert.Equal((hm.Values[(Side - 1) * Side], hm.Values[3]), (flipped.Values[0], flipped.Values[((Side - 1) * Side) + 3]));
     }
 
     [Fact]
     public void TheZoneLiesOnTheGroundWithoutMovingIt()
     {
         const int N = 127;
-        float[] ground = HeightmapImport.Metres([.. Enumerable.Range(0, Side * Side).Select(i => Value(i % Side, i / Side))], Side, N, 2, 60);
+        float[] ground = HeightmapImport.Metres(Map(), (Side - 1f) / (N - 1), N, N, 2, 60);
 
         var spec = ZoneGenerator.Measured(ZoneGenerator.Styles[0].Spec with { RimHeight = 200, Coast = 300, Terraces = 10, LakeHectares = [2] }, ground, N, N);
         var zone = ZoneGenerator.Generate(spec, N, N, -63, -63, new([], [], [], []), ground);
@@ -95,11 +106,12 @@ public sealed class HeightmapImportTests : IDisposable
     [AvaloniaFact]
     public void AMapMadeOverItKeepsItAndIsMadeAgainOverIt()
     {
-        const int N = 64;   // one chunk: 63 m squares and one
-        float[] ground = HeightmapImport.Metres([.. Enumerable.Range(0, Side * Side).Select(i => Value(i % Side, i / Side))], Side, N, 5, 25);
-        var spec = ZoneGenerator.Measured(ZoneGenerator.Styles[0].Spec, ground, N, N);
+        const int Cols = 127, Rows = 64;   // two 63 m squares across, one north to south
+        var hm = Map(Side, 33);
+        float[] ground = HeightmapImport.Metres(hm, 2, Cols, Rows, 5, 25);
+        var spec = ZoneGenerator.Measured(ZoneGenerator.Styles[0].Spec, ground, Cols, Rows);
 
-        var made = MapProject.CreateZone("Over", 1, spec, new([], [], [], []), _dir, null, ground);
+        var made = MapProject.CreateZone("Over", 2, spec, new([], [], [], []), _dir, null, ground, chunksZ: 1);
         var again = MapProject.Open(made.Folder);
         again.Generate(spec with { Woods = 0 }, new([], [], [], []));
 
@@ -107,7 +119,7 @@ public sealed class HeightmapImportTests : IDisposable
         Assert.Equal(ground, again.ReadBase());
         var opened = MapProject.Open(made.Folder);
         var (heights, cols, rows) = opened.HeightsNow(opened.Read());
-        Assert.Equal((N, N), (cols, rows));
-        Assert.All(Enumerable.Range(0, N * N), p => Assert.Equal(ground[p], heights[p], 2));
+        Assert.Equal((Cols, Rows), (cols, rows));
+        Assert.All(Enumerable.Range(0, Cols * Rows), p => Assert.Equal(ground[p], heights[p], 2));
     }
 }

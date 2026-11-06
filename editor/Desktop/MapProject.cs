@@ -303,21 +303,22 @@ public sealed partial class MapProject
     /// <param name="under">The folder it goes in.</param>
     /// <param name="like">The map whose models it shares and whose catalog it copies.</param>
     /// <param name="ground">
-    /// The ground to make it over (a heightmap made elsewhere, metres, the map's size squared; null: the generator's own
+    /// The ground to make it over (a heightmap made elsewhere, metres, rows of the map's width; null: the generator's own
     /// hills), kept beside it as base.npy so that it can be made again over it.
     /// </param>
-    public static MapProject CreateZone(string name, int chunks, ZoneGenerator.Spec spec, ZoneGenerator.Planting planting, string under, MapProject? like = null, float[]? ground = null)
+    /// <param name="chunksZ">How many 63 m chunks north to south (null: as many as across).</param>
+    public static MapProject CreateZone(string name, int chunks, ZoneGenerator.Spec spec, ZoneGenerator.Planting planting, string under, MapProject? like = null, float[]? ground = null, int? chunksZ = null)
     {
-        var m = Create(name, chunks, generated: false, spec.Low, spec.Seed, under, like);
+        var m = Create(name, chunks, generated: false, spec.Low, spec.Seed, under, like, chunksZ);
         if (ground != null)
         {
-            int n = (chunks * 63) + 1;
-            if (ground.Length != n * n)
+            var r = m.ReadRaster();
+            if (ground.Length != r.Cols * r.Rows)
             {
-                throw new InvalidDataException($"The ground given is {ground.Length} points, not the map's {n} x {n}.");
+                throw new InvalidDataException($"The ground given is {ground.Length} points, not the map's {r.Cols} x {r.Rows}.");
             }
             m.BaseFile = m.Inside("base.npy");
-            Write(m.BaseFile, ground, n, n);
+            Write(m.BaseFile, ground, r.Rows, r.Cols);
         }
         m.Generate(spec, planting);
         return m;
@@ -325,8 +326,9 @@ public sealed partial class MapProject
 
     /// <summary>
     /// A new map in a folder of its own under <paramref name="under"/>: chunks x chunks of 63 m (Unreal's landscape
-    /// components) plus one, centred on the origin, flat at a height or rolling ground, the first layer below 1.5 m;
-    /// no objects. It shares <paramref name="like"/>'s models and starts with a copy of its catalog (no Unreal level).
+    /// components) plus one (or chunks across by chunksZ north to south), centred on the origin, flat at a height or
+    /// rolling ground, the first layer below 1.5 m; no objects. It shares <paramref name="like"/>'s models and starts with
+    /// a copy of its catalog (no Unreal level).
     /// </summary>
     /// <param name="name">Its name (its folder's, letters and digits kept).</param>
     /// <param name="chunks">How many 63 m chunks across.</param>
@@ -335,8 +337,15 @@ public sealed partial class MapProject
     /// <param name="seed">The rolling ground's seed.</param>
     /// <param name="under">The folder it goes in.</param>
     /// <param name="like">The map whose models it shares and whose catalog it copies.</param>
-    public static MapProject Create(string name, int chunks, bool generated, float height, int seed, string under, MapProject? like = null)
+    /// <param name="chunksZ">How many 63 m chunks north to south (null: as many as across).</param>
+    /// <exception cref="InvalidDataException">More 63 m squares than a map holds (HeightmapImport.MaxSquares).</exception>
+    public static MapProject Create(string name, int chunks, bool generated, float height, int seed, string under, MapProject? like = null, int? chunksZ = null)
     {
+        int squaresX = Math.Clamp(chunks, 1, HeightmapImport.MaxSquaresASide), squaresZ = Math.Clamp(chunksZ ?? chunks, 1, HeightmapImport.MaxSquaresASide);
+        if (squaresX * squaresZ > HeightmapImport.MaxSquares)
+        {
+            throw new InvalidDataException($"{squaresX} x {squaresZ} squares of 63 m is more than a map holds ({HeightmapImport.MaxSquares} in all).");
+        }
         string safe = string.Concat(name.Select(c => char.IsLetterOrDigit(c) || c is '-' or '_' ? c : '_')).Trim('_');
         string folder = Path.Combine(under, safe.Length > 0 ? safe : "Map");
         if (Directory.Exists(folder))
@@ -344,29 +353,29 @@ public sealed partial class MapProject
             throw new IOException($"There is already a map called {Path.GetFileName(folder)}.");
         }
         _ = Directory.CreateDirectory(folder);
-        int n = (Math.Clamp(chunks, 1, 64) * 63) + 1, x0 = -(n / 2);
+        int n = (squaresX * 63) + 1, rows = (squaresZ * 63) + 1, x0 = -(n / 2), y0 = -(rows / 2);
         // like's models where they are: its own setting, else the models folder in its folder
-        var m = new MapProject(folder) { Name = name, X0 = x0, Y0 = x0, Models = like == null ? null : like.Models ?? Path.Combine(like.Folder, "models") };
+        var m = new MapProject(folder) { Name = name, X0 = x0, Y0 = y0, Models = like == null ? null : like.Models ?? Path.Combine(like.Folder, "models") };
         if (like?.Catalog is { } catalog && System.IO.File.Exists(catalog))   // a copy: what a map writes stays in its folder
         {
             m.Catalog = m.Abs("catalog.json");
             System.IO.File.Copy(catalog, m.Catalog);
         }
         (m.HeightsFile, m.LayersFile, m.ObjectsFile, m.WaterFile, m.AreasFile, m.HolesFile) = (m.Abs("height.npy"), m.Abs("layers.png"), m.Abs("objects.json"), m.Abs("water.json"), m.Abs("areas.json"), m.Abs("holes.png"));
-        var raster = new Raster(n, n, x0, x0);
-        float[] heights = new float[n * n];
-        byte[] mask = new byte[n * n * 4];
+        var raster = new Raster(n, rows, x0, y0);
+        float[] heights = new float[n * rows];
+        byte[] mask = new byte[n * rows * 4];
         var noise = new Relief(seed);
-        for (int row = 0; row < n; row++)
+        for (int row = 0; row < rows; row++)
         {
             for (int col = 0; col < n; col++)
             {
-                float h = generated ? height + noise.At(col + x0, row + x0) : height;
+                float h = generated ? height + noise.At(col + x0, row + y0) : height;
                 heights[(row * n) + col] = h;
                 mask[((row * n) + col) * 4] = (byte)(h < 1.5f ? 255 : 0);
             }
         }
-        Write(m.HeightsFile, heights, n, n);
+        Write(m.HeightsFile, heights, rows, n);
         WriteMask(m.LayersFile, mask, raster);
         System.IO.File.WriteAllText(m.ObjectsFile, "[]");
         System.IO.File.WriteAllText(m.WaterFile, "{\"rivers\": [], \"lakes\": []}");

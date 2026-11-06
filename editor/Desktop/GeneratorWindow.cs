@@ -19,9 +19,10 @@ public sealed partial class GeneratorWindow : Window
 {
     /// <summary>
     /// A new map asked for: its name and size, and its numbers (null: no zone, flat or gently rolling ground with the
-    /// seed); the ground it is made over (a heightmap's metres, its size squared; null: the generator's own hills).
+    /// seed); the ground it is made over (a heightmap's metres, rows of its width; null: the generator's own hills) and its
+    /// chunks north to south (null: as many as across).
     /// </summary>
-    public sealed record NewMapAsked(string Name, int Chunks, Spec? Spec, bool Rolling, int Seed, float[]? Ground = null);
+    public sealed record NewMapAsked(string Name, int Chunks, Spec? Spec, bool Rolling, int Seed, float[]? Ground = null, int? ChunksZ = null);
 
     private static readonly ZoneGenerator.Planting Nothing = new([], [], [], []);
     private readonly IReadOnlyList<MapProject.Layer> _layers;
@@ -32,8 +33,10 @@ public sealed partial class GeneratorWindow : Window
     private readonly DispatcherTimer _later = new() { Interval = TimeSpan.FromMilliseconds(300) };
     private Spec _spec;
     private int _chunks, _style;
+    /// <summary>The map's chunks north to south when not as many as across (a heightmap's), or null.</summary>
+    private int? _chunksZ;
     private bool _setting, _busy, _again;
-    /// <summary>The ground the zone is made over (a heightmap's metres, Metres squared), or null: its own hills.</summary>
+    /// <summary>The ground the zone is made over (a heightmap's metres, Metres by MetresZ), or null: its own hills.</summary>
     private float[]? _ground;
     /// <summary>The Hills apart row: the heightmap's hills are its own.</summary>
     private Control? _hillsRow;
@@ -44,6 +47,8 @@ public sealed partial class GeneratorWindow : Window
     private bool Zone => _style < StyleCount;
 
     private int Metres => (_chunks * 63) + 1;
+
+    private int MetresZ => ((_chunksZ ?? _chunks) * 63) + 1;
 
     private GeneratorWindow(bool isNew, Spec spec, int chunks, IReadOnlyList<MapProject.Layer> layers, string? name)
     {
@@ -67,9 +72,15 @@ public sealed partial class GeneratorWindow : Window
         var make = new Button { Content = "Make the map", IsDefault = true }.Classed("primary");
         make.Click += (_, _) =>
         {
+            if (w._heightmap != null && w._ground == null)
+            {
+                w._status.Text = "The heightmap is more than a map holds: give it fewer metres across, or choose None.";
+                return;
+            }
             if (name.Text is { Length: > 0 } n)
             {
-                result = new NewMapAsked(n.Trim(), w._chunks, w.Zone ? w.Asked() : null, w._style == StyleCount + 1, w._spec.Seed, w.Zone ? w._ground : null);
+                bool over = w.Zone && w._ground != null;
+                result = new NewMapAsked(n.Trim(), w._chunks, w.Zone ? w.Asked() : null, w._style == StyleCount + 1, w._spec.Seed, over ? w._ground : null, over ? w._chunksZ : null);
                 w.Close();
             }
         };
@@ -81,7 +92,8 @@ public sealed partial class GeneratorWindow : Window
     /// <summary>Asks for new numbers to make a generated map again with (null: cancelled).</summary>
     public static async Task<Spec?> Again(Window owner, MapProject m, Spec spec)
     {
-        var w = new GeneratorWindow(false, spec, (m.ReadRaster().Cols - 1) / 63, m.Layers, m.Name) { _style = -1, _ground = m.ReadBase() };
+        var raster = m.ReadRaster();
+        var w = new GeneratorWindow(false, spec, (raster.Cols - 1) / 63, m.Layers, m.Name) { _style = -1, _ground = m.ReadBase(), _chunksZ = (raster.Rows - 1) / 63 };
         Spec? result = null;
         var make = new Button { Content = "Make it again", IsDefault = true }.Classed("primary");
         make.Click += (_, _) => { result = w.Asked(); w.Close(); };
@@ -125,7 +137,7 @@ public sealed partial class GeneratorWindow : Window
             if (Zone)
             {
                 _spec = Styled(_style, _chunks, _spec.Seed);
-                _spec = _ground != null ? ZoneGenerator.Measured(_spec, _ground, Metres, Metres) : _spec;
+                _spec = _ground != null ? ZoneGenerator.Measured(_spec, _ground, Metres, MetresZ) : _spec;
             }
             else
             {
@@ -294,11 +306,11 @@ public sealed partial class GeneratorWindow : Window
         do
         {
             _again = false;
-            var (spec, metres, style, seed, ground) = (Zone ? Asked() : null, Metres, _style, _spec.Seed, _ground);
+            var (spec, metres, rows, style, seed, ground) = (Zone ? Asked() : null, Metres, MetresZ, _style, _spec.Seed, _ground);
             _status.Text = "Making the preview…";
             try
             {
-                var mesh = await Task.Run(() => Make(spec, metres, style == StyleCount + 1, seed, _layers, ground));
+                var mesh = await Task.Run(() => Make(spec, metres, style == StyleCount + 1, seed, _layers, ground, rows));
                 if (!_again)
                 {
                     _preview.Show(mesh);
@@ -315,15 +327,16 @@ public sealed partial class GeneratorWindow : Window
     }
 
     /// <summary>
-    /// The preview of the ground the numbers make on a map so many metres across, over the ground given (null: its own
-    /// hills; no numbers: flat or gently rolling ground).
+    /// The preview of the ground the numbers make on a map so many metres across (and <paramref name="rows"/> north to
+    /// south: null, as many), over the ground given (null: its own hills; no numbers: flat or gently rolling ground).
     /// </summary>
-    internal static TerrainPreview.Mesh Make(Spec? spec, int metres, bool rolling, int seed, IReadOnlyList<MapProject.Layer> layers, float[]? ground = null)
+    internal static TerrainPreview.Mesh Make(Spec? spec, int metres, bool rolling, int seed, IReadOnlyList<MapProject.Layer> layers, float[]? ground = null, int? rows = null)
     {
         int x0 = -(metres / 2);
         if (spec != null)
         {
-            return TerrainPreview.Of(ZoneGenerator.Generate(spec, metres, metres, x0, x0, Nothing, ground?.Length == metres * metres ? ground : null), metres, metres, x0, x0, layers, spec.CoastDry);
+            int n = rows ?? metres, y0 = -(n / 2);
+            return TerrainPreview.Of(ZoneGenerator.Generate(spec, metres, n, x0, y0, Nothing, ground?.Length == metres * n ? ground : null), metres, n, x0, y0, layers, spec.CoastDry);
         }
         float[] h = new float[metres * metres];
         byte[] mask = new byte[h.Length * 4];
