@@ -142,7 +142,7 @@ public partial class MainWindow
         try
         {
             made = asked.Spec is { } spec
-                ? MapProject.CreateZone(asked.Name, asked.Chunks, spec, ZoneGenerator.Planting.From(MapTools.Catalog().Kinds), NewMapsFolder(), MapProject.Current)
+                ? MapProject.CreateZone(asked.Name, asked.Chunks, spec, ZoneGenerator.Planting.From(MapTools.Catalog().Kinds), NewMapsFolder(), MapProject.Current, asked.Ground)
                 : MapProject.Create(asked.Name, asked.Chunks, asked.Rolling, asked.Rolling ? 3f : 1f, asked.Seed, NewMapsFolder(), MapProject.Current);
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)

@@ -394,14 +394,15 @@ public static partial class ZoneGenerator
     private static bool[] Wet(Spec spec, float[] h, int cols, int rows, float x0, float y0, List<River> rivers)
     {
         bool[] wet = new bool[cols * rows];
-        if ((spec.Coast > 0 && !spec.CoastDry) || spec.Marsh > 0)
+        if (!spec.CoastDry)
         {
+            // under the sea (a coast's, a marsh's pools, or ground given that goes below it): nothing grows there
             for (int p = 0; p < wet.Length; p++)
             {
                 wet[p] = h[p] < 0.3f;
             }
         }
-        else if (spec.CoastDry)
+        else
         {
             for (int p = 0; p < wet.Length; p++)
             {

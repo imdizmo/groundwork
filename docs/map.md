@@ -28,6 +28,23 @@ savanna, tundra coast, marsh coast, highlands; each fills in every slider and br
 | Camps & roads | How many camps, buildings each, roads between them. |
 | Extras | Floating islands. |
 
+### Over a heightmap from another tool
+
+**Ground → From a heightmap…** makes the map over ground you made elsewhere: export a heightmap from your terrain
+tool as a 16-bit PNG, a raw `.r16` / `.raw` (16-bit, little-endian) or a raw `.r32` (32-bit float), square. The file
+holds no metres, so give them: **Across** (the world's size in your tool; a metre a pixel to start with, rounded to
+Unreal's 63 m squares), and the heights its black and its white stand for (**Black is**, **White is**: your tool's
+height range; under 0 is under the sea: to put your tool's water level at the sea, take it off both). Pictures start
+at their north edge; for a raw file written from the south, tick **Its first row is the south edge**.
+
+The generator then measures the ground (its lowest and highest ground, how far apart its hills are) and lays the zone
+over it like a sheet: paint by height and slope, woods, plants and trees, snow, follow your shape, and nothing changes
+the ground itself. The sliders that would (the rim, the coast, terraces, canyons, roughness, marsh, cliffs, lakes,
+rivers and camps) start at none; turn any of them up to have it worked into your ground. **Lowest ground** and
+**Highest ground** stretch it between new heights; **Hills apart** is your ground's own and does not change. The
+heightmap is kept beside the map as `base.npy` (`generator.base` in map.json), so **Make it again** lays the new
+numbers over the same ground.
+
 A generated map keeps its numbers (`generator` in map.json). Until it is worked on by hand and saved, **⋯ → Make it
 again with other numbers…** opens the generator on them and makes the whole map again; **Undo make it again** goes back
 to the numbers before. Once you change the map yourself it is yours, and the generator no longer offers to remake it.

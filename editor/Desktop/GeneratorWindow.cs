@@ -12,13 +12,16 @@ namespace Groundwork.Desktop;
 
 /// <summary>
 /// The generator's window: a style and its numbers as sliders on the left, the ground they make in 3D on the right (made
-/// again a moment after a slider stops). For a new map (its name and size too, or flat or gently rolling ground), or for
-/// a generated map not yet worked on, made again.
+/// again a moment after a slider stops). For a new map (its name and size too, or flat or gently rolling ground, or made
+/// over a heightmap from another tool), or for a generated map not yet worked on, made again.
 /// </summary>
 public sealed partial class GeneratorWindow : Window
 {
-    /// <summary>A new map asked for: its name and size, and its numbers (null: no zone, flat or gently rolling ground with the seed).</summary>
-    public sealed record NewMapAsked(string Name, int Chunks, Spec? Spec, bool Rolling, int Seed);
+    /// <summary>
+    /// A new map asked for: its name and size, and its numbers (null: no zone, flat or gently rolling ground with the
+    /// seed); the ground it is made over (a heightmap's metres, its size squared; null: the generator's own hills).
+    /// </summary>
+    public sealed record NewMapAsked(string Name, int Chunks, Spec? Spec, bool Rolling, int Seed, float[]? Ground = null);
 
     private static readonly ZoneGenerator.Planting Nothing = new([], [], [], []);
     private readonly IReadOnlyList<MapProject.Layer> _layers;
@@ -30,6 +33,10 @@ public sealed partial class GeneratorWindow : Window
     private Spec _spec;
     private int _chunks, _style;
     private bool _setting, _busy, _again;
+    /// <summary>The ground the zone is made over (a heightmap's metres, Metres squared), or null: its own hills.</summary>
+    private float[]? _ground;
+    /// <summary>The Hills apart row: the heightmap's hills are its own.</summary>
+    private Control? _hillsRow;
 
     /// <summary>The styles offered, then (new maps only) flat and gently rolling ground.</summary>
     private static int StyleCount => ZoneGenerator.Styles.Count;
@@ -62,11 +69,11 @@ public sealed partial class GeneratorWindow : Window
         {
             if (name.Text is { Length: > 0 } n)
             {
-                result = new NewMapAsked(n.Trim(), w._chunks, w.Zone ? w.Asked() : null, w._style == StyleCount + 1, w._spec.Seed);
+                result = new NewMapAsked(n.Trim(), w._chunks, w.Zone ? w.Asked() : null, w._style == StyleCount + 1, w._spec.Seed, w.Zone ? w._ground : null);
                 w.Close();
             }
         };
-        w.Build([Ui.Row("Name", name, null, "110,*"), Ui.Row("Size", sizeSlider, size, "110,*,64")], make, ["Flat ground", "Gently rolling ground"]);
+        w.Build([Ui.Row("Name", name, null, "110,*"), Ui.Row("Size", sizeSlider, size, "110,*,64"), w.HeightmapRows(sizeSlider)], make, ["Flat ground", "Gently rolling ground"]);
         await w.ShowDialog(owner);
         return result;
     }
@@ -74,7 +81,7 @@ public sealed partial class GeneratorWindow : Window
     /// <summary>Asks for new numbers to make a generated map again with (null: cancelled).</summary>
     public static async Task<Spec?> Again(Window owner, MapProject m, Spec spec)
     {
-        var w = new GeneratorWindow(false, spec, (m.ReadRaster().Cols - 1) / 63, m.Layers, m.Name) { _style = -1 };
+        var w = new GeneratorWindow(false, spec, (m.ReadRaster().Cols - 1) / 63, m.Layers, m.Name) { _style = -1, _ground = m.ReadBase() };
         Spec? result = null;
         var make = new Button { Content = "Make it again", IsDefault = true }.Classed("primary");
         make.Click += (_, _) => { result = w.Asked(); w.Close(); };
@@ -109,6 +116,7 @@ public sealed partial class GeneratorWindow : Window
             HorizontalAlignment = HorizontalAlignment.Stretch,
             FontSize = 13,
         };
+        _styles = styles;
         var about = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 12, Foreground = Ui.Muted, Text = _style >= 0 ? ZoneGenerator.Styles[_style].About : "" };
         styles.SelectionChanged += (_, _) =>
         {
@@ -117,6 +125,11 @@ public sealed partial class GeneratorWindow : Window
             if (Zone)
             {
                 _spec = Styled(_style, _chunks, _spec.Seed);
+                _spec = _ground != null ? ZoneGenerator.Measured(_spec, _ground, Metres, Metres) : _spec;
+            }
+            else
+            {
+                _dropped?.Invoke();   // flat or rolling ground: no heightmap under it
             }
             _knobs.IsEnabled = Zone;
             Shown();
@@ -165,6 +178,10 @@ public sealed partial class GeneratorWindow : Window
                 }
             }
             AddKnob(k);
+            if (k.Label == "Hills apart")
+            {
+                _hillsRow = _knobs.Children[^1];
+            }
             if (k.Label == "Sea depth")
             {
                 var side = new ComboBox { ItemsSource = new[] { "west", "east", "north", "south" }, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -254,6 +271,7 @@ public sealed partial class GeneratorWindow : Window
         {
             show();
         }
+        _hillsRow?.IsEnabled = _ground == null;
         _setting = false;
     }
 
@@ -276,11 +294,11 @@ public sealed partial class GeneratorWindow : Window
         do
         {
             _again = false;
-            var (spec, metres, style, seed) = (Zone ? Asked() : null, Metres, _style, _spec.Seed);
+            var (spec, metres, style, seed, ground) = (Zone ? Asked() : null, Metres, _style, _spec.Seed, _ground);
             _status.Text = "Making the preview…";
             try
             {
-                var mesh = await Task.Run(() => Make(spec, metres, style == StyleCount + 1, seed, _layers));
+                var mesh = await Task.Run(() => Make(spec, metres, style == StyleCount + 1, seed, _layers, ground));
                 if (!_again)
                 {
                     _preview.Show(mesh);
@@ -296,13 +314,16 @@ public sealed partial class GeneratorWindow : Window
         _busy = false;
     }
 
-    /// <summary>The preview of the ground the numbers make on a map so many metres across (no numbers: flat or gently rolling ground).</summary>
-    internal static TerrainPreview.Mesh Make(Spec? spec, int metres, bool rolling, int seed, IReadOnlyList<MapProject.Layer> layers)
+    /// <summary>
+    /// The preview of the ground the numbers make on a map so many metres across, over the ground given (null: its own
+    /// hills; no numbers: flat or gently rolling ground).
+    /// </summary>
+    internal static TerrainPreview.Mesh Make(Spec? spec, int metres, bool rolling, int seed, IReadOnlyList<MapProject.Layer> layers, float[]? ground = null)
     {
         int x0 = -(metres / 2);
         if (spec != null)
         {
-            return TerrainPreview.Of(ZoneGenerator.Generate(spec, metres, metres, x0, x0, Nothing), metres, metres, x0, x0, layers, spec.CoastDry);
+            return TerrainPreview.Of(ZoneGenerator.Generate(spec, metres, metres, x0, x0, Nothing, ground?.Length == metres * metres ? ground : null), metres, metres, x0, x0, layers, spec.CoastDry);
         }
         float[] h = new float[metres * metres];
         byte[] mask = new byte[h.Length * 4];

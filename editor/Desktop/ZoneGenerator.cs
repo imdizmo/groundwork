@@ -75,8 +75,13 @@ public static partial class ZoneGenerator
         }
     }
 
-    /// <summary>Generates a zone (the layers' channels: Sand r, Dirt g, Rock b, as a new map's).</summary>
-    public static Zone Generate(Spec spec, int cols, int rows, float x0, float y0, Planting planting)
+    /// <summary>
+    /// Generates a zone (the layers' channels: Sand r, Dirt g, Rock b, as a new map's). Given its ground
+    /// (<paramref name="given"/>: a heightmap made elsewhere, cols by rows metres), it is made over that ground instead
+    /// of its own hills, like a sheet laid on it: Low and High stretch it (as <see cref="Measured"/> leaves them, not at
+    /// all), the rest of the numbers as ever.
+    /// </summary>
+    public static Zone Generate(Spec spec, int cols, int rows, float x0, float y0, Planting planting, float[]? given = null)
     {
         var rng = new Random(spec.Seed);
         float[] h = new float[cols * rows];
@@ -94,22 +99,34 @@ public static partial class ZoneGenerator
         }
         // the rolling ground: noise of the hills' size and smaller, stretched so that it reaches from Low to High (its
         // lowest and highest hundredth), more low ground than high (each pixel on its own: the rows in parallel)
-        Parallel.For(0, rows, r =>
+        if (given == null)
         {
-            for (int c = 0; c < cols; c++)
+            Parallel.For(0, rows, r =>
             {
-                h[(r * cols) + c] = Fbm((c + x0) / spec.HillSize, (r + y0) / spec.HillSize, spec.Seed, 5);
-            }
-        });
-        float[] sample = [.. h.Where((_, i) => i % 97 == 0).Order()];
-        float lo = sample[sample.Length / 100], hi = sample[sample.Length * 99 / 100];
+                for (int c = 0; c < cols; c++)
+                {
+                    h[(r * cols) + c] = Fbm((c + x0) / spec.HillSize, (r + y0) / spec.HillSize, spec.Seed, 5);
+                }
+            });
+        }
+        var (lo, hi) = Spread(given ?? h);
         Parallel.For(0, rows, r =>
         {
             for (int c = 0; c < cols; c++)
             {
                 float x = c + x0, y = r + y0;
-                float t = Math.Clamp((h[(r * cols) + c] - lo) / MathF.Max(1e-4f, hi - lo), 0, 1);
-                float ground = Shaped(spec, spec.Low + ((spec.High - spec.Low) * MathF.Pow(t, 1.3f)), x, y);
+                float under;
+                if (given != null)
+                {
+                    // the ground given, its lowest and highest hundredth moved to Low and High (as measured: where they are)
+                    under = hi - lo < 1e-3f ? given[(r * cols) + c] + (spec.Low - lo) : spec.Low + ((given[(r * cols) + c] - lo) * (spec.High - spec.Low) / (hi - lo));
+                }
+                else
+                {
+                    float t = Math.Clamp((h[(r * cols) + c] - lo) / MathF.Max(1e-4f, hi - lo), 0, 1);
+                    under = spec.Low + ((spec.High - spec.Low) * MathF.Pow(t, 1.3f));
+                }
+                float ground = Shaped(spec, under, x, y);
                 // the rim: a wall of ridged mountains round the edge, its foot wandering in and out
                 float rim = 0;
                 float d = RimAt(c, r);
@@ -144,6 +161,54 @@ public static partial class ZoneGenerator
         Furnish(spec, h, cols, rows, x0, y0, camps, planting, rng, objects);
         Float(spec, h, cols, rows, x0, y0, planting, rng, objects);
         return new Zone(h, mask, objects, lakes, wooded) { Rivers = rivers, Roads = roads };
+    }
+
+    /// <summary>The lowest and highest hundredth of some heights (sampled).</summary>
+    private static (float Lo, float Hi) Spread(float[] h)
+    {
+        float[] sample = [.. h.Where((_, i) => i % 97 == 0).Order()];
+        return (sample[sample.Length / 100], sample[sample.Length * 99 / 100]);
+    }
+
+    /// <summary>
+    /// A style's numbers for ground made elsewhere (cols by rows metres): its lowest and highest ground and how far apart
+    /// its hills are, measured; and nothing that would change its shape (no rim, coast, terraces, canyons, roughness,
+    /// marsh, cliffs, lakes, rivers or camps: each can be asked for again), so the zone lies on it as it is.
+    /// </summary>
+    public static Spec Measured(Spec style, float[] ground, int cols, int rows)
+    {
+        var (lo, hi) = Spread(ground);
+        // a wave's height spread over its steepness is about a quarter of its length (√2 × 4 × its spread over its slope)
+        double sum = 0, sumSq = 0, slope = 0;
+        int n = 0;
+        for (int r = 0; r < rows - 1; r += 3)
+        {
+            for (int c = 0; c < cols - 1; c += 3)
+            {
+                float v = ground[(r * cols) + c];
+                (sum, sumSq, n) = (sum + v, sumSq + ((double)v * v), n + 1);
+                slope += MathF.Abs(ground[(r * cols) + c + 1] - v) + MathF.Abs(ground[((r + 1) * cols) + c] - v);
+            }
+        }
+        double spread = n > 0 ? Math.Sqrt(Math.Max(0, (sumSq / n) - ((sum / n) * (sum / n)))) : 0, steep = n > 0 ? slope / (2 * n) : 0;
+        float hills = steep > 1e-4 ? (float)Math.Clamp(4 * Math.Sqrt(2) * spread / steep, 50, 2000) : 2000;
+        return style with
+        {
+            Low = lo,
+            High = hi,
+            HillSize = MathF.Round(hills / 25) * 25,
+            RimHeight = 0,
+            Coast = 0,
+            CoastDry = false,
+            Terraces = 0,
+            Canyons = 0,
+            Rough = 0,
+            Marsh = 0,
+            CliffSlope = 0,
+            LakeHectares = [],
+            Rivers = 0,
+            Camps = 0,
+        };
     }
 
     /// <summary>The lakes: each in the lowest open ground found away from the rim and the others, its bed carved.</summary>
@@ -519,7 +584,7 @@ public static partial class ZoneGenerator
                 float patches = Smooth(open - 0.04f, open + 0.04f, Fbm(x / 45, y / 45, spec.Seed + 41, 3));
                 float dirt = MathF.Max(wooded[p] * 0.4f, patches * 0.9f) * (1 - rock);   // a forest floor, grass showing through
                 // the first painted layer on the shores of the sea and the rivers (with a shore), snow above the snow line
-                float sand = spec.Shore > 0 && (wet[p] || (spec.Coast > 0 && !spec.CoastDry && h[p] < 2.5f)) ? 1 : 0;
+                float sand = spec.Shore > 0 && (wet[p] || (!spec.CoastDry && h[p] < 2.5f)) ? 1 : 0;
                 float snow = spec.SnowLine > 0 ? Smooth(spec.SnowLine - 12, spec.SnowLine + 12, h[p] + (15 * Fbm(x / 60, y / 60, spec.Seed + 61, 3))) * (1 - (0.5f * rock)) : 0;
                 // a band along the lakes' shores, out to Shore metres and a little way into the water
                 float d = -lakeIn[p];

@@ -168,6 +168,7 @@ public sealed partial class MapProject
         m.UnrealLayersTexture = S(j["unreal"]?["layersTexture"]);
         m.UnrealWaterPrefix = S(j["unreal"]?["waterPrefix"]) ?? m.UnrealWaterPrefix;
         m.Generated = ReadGenerated(j["generator"]);
+        m.BaseFile = S(j["generator"]?["base"]) is string gb ? m.Inside(gb) : null;
         return m;
     }
 
@@ -301,9 +302,23 @@ public sealed partial class MapProject
     /// <param name="planting">The kinds it is planted with.</param>
     /// <param name="under">The folder it goes in.</param>
     /// <param name="like">The map whose models it shares and whose catalog it copies.</param>
-    public static MapProject CreateZone(string name, int chunks, ZoneGenerator.Spec spec, ZoneGenerator.Planting planting, string under, MapProject? like = null)
+    /// <param name="ground">
+    /// The ground to make it over (a heightmap made elsewhere, metres, the map's size squared; null: the generator's own
+    /// hills), kept beside it as base.npy so that it can be made again over it.
+    /// </param>
+    public static MapProject CreateZone(string name, int chunks, ZoneGenerator.Spec spec, ZoneGenerator.Planting planting, string under, MapProject? like = null, float[]? ground = null)
     {
         var m = Create(name, chunks, generated: false, spec.Low, spec.Seed, under, like);
+        if (ground != null)
+        {
+            int n = (chunks * 63) + 1;
+            if (ground.Length != n * n)
+            {
+                throw new InvalidDataException($"The ground given is {ground.Length} points, not the map's {n} x {n}.");
+            }
+            m.BaseFile = m.Inside("base.npy");
+            Write(m.BaseFile, ground, n, n);
+        }
         m.Generate(spec, planting);
         return m;
     }

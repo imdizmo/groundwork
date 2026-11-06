@@ -12,6 +12,15 @@ public sealed partial class MapProject
     /// <summary>The numbers it was generated from and its files' fingerprint then; null: not generated (or made before it kept them).</summary>
     public (ZoneGenerator.Spec Spec, string Print)? Generated { get; private set; }
 
+    /// <summary>
+    /// The ground it was generated over (a heightmap made elsewhere, in metres: map.json's generator.base), or null: the
+    /// generator's own hills.
+    /// </summary>
+    public string? BaseFile { get; private set; }
+
+    /// <summary>The ground it was generated over, as the map's heights are (null: none).</summary>
+    public float[]? ReadBase() => BaseFile != null && System.IO.File.Exists(BaseFile) ? Read(BaseFile, out _, out _) : null;
+
     /// <summary>Generated, and its files as they were made: nothing worked on by hand and saved.</summary>
     public bool Untouched => Generated is { } g && Print() == g.Print;
 
@@ -32,7 +41,7 @@ public sealed partial class MapProject
             // its own cliff pieces, of its own rock
             planting = planting with { Cliffs = CliffPiece.WriteFor(this) };
         }
-        var zone = ZoneGenerator.Generate(spec, map.Cols, map.Rows, map.X0, map.Y0, planting);
+        var zone = ZoneGenerator.Generate(spec, map.Cols, map.Rows, map.X0, map.Y0, planting, ReadBase());
         Write(HeightsFile, zone.Heights, map.Rows, map.Cols);
         WriteMask(LayersFile, zone.Mask, map);
         foreach (string f in LayersFiles.Skip(1))
@@ -111,8 +120,8 @@ public sealed partial class MapProject
         }
     }
 
-    private static JsonObject WriteGenerated((ZoneGenerator.Spec Spec, string Print) g) =>
-        new() { ["spec"] = JsonSerializer.SerializeToNode(g.Spec, SpecJson.Default.Spec), ["print"] = g.Print };
+    private JsonObject WriteGenerated((ZoneGenerator.Spec Spec, string Print) g) =>
+        new() { ["spec"] = JsonSerializer.SerializeToNode(g.Spec, SpecJson.Default.Spec), ["print"] = g.Print, ["base"] = BaseFile == null ? null : Rel(BaseFile) };
 }
 
 /// <summary>The generator's numbers as JSON (map.json's generator.spec).</summary>
