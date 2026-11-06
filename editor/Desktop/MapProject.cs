@@ -437,8 +437,10 @@ public sealed partial class MapProject
             C = ground.C,
             LayerColours = [.. Layers.Select(l => l.Colour)],
             LayerTextures = [.. Layers.Select(l => (l.Texture, l.Size))],
-            Cx = 0,
-            Cz = 0,
+            // the grid's middle, where the 3D view puts it (not 0: a map padded more on one side, a grown one or one of 64
+            // squares, had its ground drawn tens of metres off its objects)
+            Cx = ground.OriginX + ((w - 1) / 2f),
+            Cz = ground.OriginZ + ((h - 1) / 2f),
             Water = SeaLevel,
             LoadInfo = $"{HeightsFile} · {map.Cols} x {map.Rows} m",
             IsMap = true,
