@@ -16,10 +16,17 @@ editor for any map.
   with its ground layer; save groups as stamps.
 - **Select, move, turn, copy and delete** objects, whole buildings included; land them on floors, rocks or the ground.
 - **Draw rivers and lakes** and carve their beds.
+- **Lay paths, roads and ramps**, mark [areas](docs/areas.md) that become volumes in Unreal, cut holes through the
+  ground and step it into terraces.
+- **Start from a generated map**: New map takes a zone's shape as sliders with a 3D preview (terraces, canyons, a
+  coast or a dry edge, rivers and lakes, floating islands, camps with roads between them, cliffs along steep ground).
 - **Edit live**: with the map's Unreal project open and the [Groundwork Bridge](https://github.com/imdizmo/groundwork-bridge)
   plugin in it, every change goes to the level at once, and changes made in Unreal come back.
+- **Send the whole map to Unreal**: make the landscape from the map, paint its layers, cut its holes, make its water
+  and bring its models in; **Play here** starts the game where you are looking. See [docs/unreal.md](docs/unreal.md).
 - **Extend it** with plugins: tools on the rail, meshes and shapes drawn from objects' data, cuts in the ground.
-- **Let Claude help** through its MCP connection, every change a step you can see and undo.
+- **Let Claude help** through its MCP connection, every change a step you can see and undo; pin notes on the map to
+  point it at things.
 
 ## A map project
 
