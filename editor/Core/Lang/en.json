@@ -556,5 +556,13 @@
   "tip.kind.Markers": "Markers: spawn points, triggers and other placeholders (the catalog's Markers).",
   "tip.kind.Other": "Every object whose asset the map's catalog puts in no kind above.",
   "view.label.models": "Models",
-  "tip.view.models": "Draw objects with their models. Off: boxes, faster."
+  "tip.view.models": "Draw objects with their models. Off: boxes, faster.",
+  "splash.starting": "Starting",
+  "splash.models": "Opening the models of {0}",
+  "splash.window": "Building the window",
+  "map.read.start": "Opening {0}…",
+  "map.read.ground": "Reading the ground",
+  "map.read.paint": "Reading the paint",
+  "map.read.objects": "Placing {0} objects",
+  "map.read.water": "Reading the water"
 }

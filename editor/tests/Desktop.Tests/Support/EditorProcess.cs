@@ -92,8 +92,10 @@ public partial class EditorProcess : IDisposable
             _p.StandardInput.Flush();
             if (!_p.WaitForExit(QuitWait))
             {
-                // Ended before its data folder is deleted, which it may still be writing.
-                _p.Kill(entireProcessTree: true);
+                // Ended before its data folder is deleted, which it may still be writing. The editor itself, at once: a
+                // kill of its whole tree first lists every process, slower than the editor's own quit (its one child,
+                // a map's apply script, never runs under the tests).
+                _p.Kill();
                 Assert.True(_p.WaitForExit(15000), "the editor did not end within 15 s of being killed");
             }
         }

@@ -405,13 +405,18 @@ public sealed partial class MapProject
     }
 
     /// <summary>The map as a scene: its ground (outside the heightmap: its nearest edge), objects and water.</summary>
-    public WorldScene Read()
+    /// <param name="step">Told each step as it starts (the ground, the paint, the objects, the water); null for none.</param>
+    /// <param name="extras">Whether the water, areas and notes are loaded too (their Changed events reach the window: on a
+    /// worker, leave them for <see cref="LoadExtras"/> on the window's thread).</param>
+    public WorldScene Read(IProgress<string>? step = null, bool extras = true)
     {
         // Read as the current map: its catalog and model folder sort its objects, not the last map's
         Current = this;
         MapTools.ForgetGroups();
         var map = ReadRaster();
+        step?.Report(Lang.T("map.read.ground"));
         float[] heights = Read(HeightsFile, out _, out _);
+        step?.Report(Lang.T("map.read.paint"));
         byte[][] masks = ReadLayers(map);
         byte[]? holes = File.Exists(HolesFile) ? ReadMask(HolesFile, map) : null;
         // Zones of 64 m (centred on multiples of 64) round the map, editor x = X, z = -Y.
@@ -465,6 +470,7 @@ public sealed partial class MapProject
         // The objects as editor objects (Select moves, turns and deletes them; Place and the tools add more), loaded as
         // one step that is then forgotten: undoing it would empty the map.
         var placed = ModelStore.ReadPlacements(ObjectsFile);
+        step?.Report(Lang.T("map.read.objects", placed.Count));
         _ = scene.Session.Commit("Map objects", null, [], [.. placed.Select(p => (new NewObject(0, AssetIds.Of(p.Name), p.Position, p.Rotation, MathF.Abs(p.Scale - 1) < 1e-3f ? 0 : p.Scale, p.Data),
             ObjectKinds.Of(p.Name) == ObjectKind.Buildings))]);
         scene.Session.ForgetHistory();
@@ -472,10 +478,20 @@ public sealed partial class MapProject
         {
             scene.Session.SetLifted(ReadBeds(BedsFile));
         }
+        if (extras)
+        {
+            step?.Report(Lang.T("map.read.water"));
+            LoadExtras();
+        }
+        return scene;
+    }
+
+    /// <summary>The map's water, areas and notes loaded (each tells its listeners: the window's thread).</summary>
+    public void LoadExtras()
+    {
         MapWater.Load(WaterFile);
         MapAreas.Load(AreasFile);
         MapNotes.Load(Path.Combine(Folder, "notes"));
-        return scene;
     }
 
     /// <summary>The map's heights as they are now (its file's, with the open ground's over them): rows of cols.</summary>

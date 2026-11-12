@@ -1,5 +1,9 @@
 # The window
 
+Groundwork starts with a small loading window that says what it is doing, opening the last map's models and building
+the window, and gives way to the start page. Opening a map keeps the window drawing: a veil says what is read (the
+ground, the paint, the objects, the water), and the models stream in after.
+
 The top bar holds **Start** (back to your maps), the map's name and size, undo and redo, **Live**, **Save**, and the
 panels: **Layers**, **Checks**, **Objects**, **History**, **View** and **?**. The rail on the left holds the tools; the objects
 drawer runs along the bottom; the minimap sits in the corner.

@@ -89,7 +89,15 @@ public partial class MainWindow
         try
         {
             map = chosen ?? MapProject.Current ?? throw new IOException("no map chosen");
-            scene = map.Read();
+            // Read on a worker, the window drawing meanwhile: each step under the veil and in the status bar.
+            _busyText.Text = Lang.T("map.read.start", map.Name);
+            _busy.IsVisible = true;
+            var step = new Progress<string>(said => { _busyText.Text = said; Msg(Said.Raw(said)); });
+            var clock = Stopwatch.StartNew();
+            scene = await Task.Run(() => map.Read(step, extras: false));
+            _busyText.Text = Lang.T("map.read.water");
+            map.LoadExtras();
+            Options.Say($"{map.Name} read in {clock.ElapsedMilliseconds} ms");
             var raster = map.ReadRaster();
             _mapSize = $"{raster.Cols - 1} × {raster.Rows - 1} m";
         }
@@ -98,6 +106,10 @@ public partial class MainWindow
             MapProject.Current = was;
             await Tell("The map could not be read: " + ex.Message);
             return;
+        }
+        finally
+        {
+            _busy.IsVisible = false;
         }
         MapProject.Current = map;
         RememberMap(map.Folder);
@@ -279,7 +291,7 @@ public partial class MainWindow
         d.Card.SizeChanged += (_, _) => AboveDrawer();
         d.Card.PropertyChanged += (_, e) =>
         {
-            if (e.Property == Avalonia.Visual.IsVisibleProperty)
+            if (e.Property == IsVisibleProperty)
             {
                 AboveDrawer();
             }
@@ -1005,9 +1017,12 @@ public partial class MainWindow
     }
 
     /// <summary>The last map opened that is still there (Settings' maps), or null.</summary>
-    internal MapProject? LastMap()
+    internal MapProject? LastMap() => LastMapOf(Settings.Maps);
+
+    /// <summary>The first of the maps opened before that still opens (the list has the last first), or null.</summary>
+    internal static MapProject? LastMapOf(IEnumerable<string> maps)
     {
-        foreach (string f in Settings.Maps.Where(MapProject.IsMap))
+        foreach (string f in maps.Where(MapProject.IsMap))
         {
             try
             {

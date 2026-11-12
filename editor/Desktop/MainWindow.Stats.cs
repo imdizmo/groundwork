@@ -3,6 +3,19 @@ namespace Groundwork.Desktop;
 public sealed partial class MainWindow
 {
     /// <summary>
+    /// What the loading window started before the window was built (App): the last map, and its models being opened.
+    /// </summary>
+    internal void Preloaded(MapProject? last, Task<ModelStore?>? models)
+    {
+        MapProject.Current ??= last;
+        if (models != null)
+        {
+            _modelsFolder = ModelStore.MapModels;
+            _modelsLoading = models;
+        }
+    }
+
+    /// <summary>
     /// The window is open: with <paramref name="load"/>, Claude's connection applied and the models read; then the
     /// start page shows, and the test driver starts when asked.
     /// </summary>
@@ -18,7 +31,7 @@ public sealed partial class MainWindow
         await ClaudeServer.Apply(Settings, this);
         // The last map's models are opened while the start page shows (most often it is opened again).
         MapProject.Current ??= LastMap();
-        if (!Options.Driver && MapProject.Current != null)
+        if (!Options.Driver && MapProject.Current != null && _modelsLoading == null)
         {
             _modelsFolder = ModelStore.MapModels;
             _modelsLoading = Task.Run(ModelStore.Open);
