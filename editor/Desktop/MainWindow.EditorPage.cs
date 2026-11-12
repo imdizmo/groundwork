@@ -36,6 +36,15 @@ public sealed partial class MainWindow
         View.Tape.Clear();
         LoadedInfo.Text = scene.LoadInfo + (_models == null ? "\n" + Lang.T("world.msg.noModels") : "");
         View.Show(scene, _models);
+        if (scene.Session is { } beds)
+        {
+            var models = _models;
+            beds.MeshesOf = models == null ? null : prefab => ModelStore.ModelName(prefab) is { } name && models.LoadModel(name) is { } model
+                ? (model.Parts.Select(p => (Mesh: models.LoadMesh(p.Mesh), Part: p)).Where(x => x.Mesh != null && x.Part.Sub < x.Mesh!.Submeshes.Length)
+                    .Select(x => (x.Mesh!.Vertices, x.Mesh.Submeshes[x.Part.Sub], x.Part.Matrix)).ToList(), model.RootScale)
+                : null;
+            beds.BedAll();
+        }
         // The last area's (or the plot's) point under the pointer is no point of this one: read again on the next move.
         ShowCursor(null);
         // The map's tools (and the running extensions').

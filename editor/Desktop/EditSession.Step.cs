@@ -46,6 +46,18 @@ public sealed partial class EditSession
                 Touch((x0 - 1, z0 - 1, x1 + 1, z1 + 1));
             }
             SetGone(c.Things.Select(t => (t.Index, after ? t.After : t.Before)));
+            foreach (var (p, before, afterwards) in c.Lifted)
+            {
+                float kept = after ? afterwards : before;
+                if (float.IsNaN(kept))
+                {
+                    _lifted.Remove(p);
+                }
+                else
+                {
+                    _lifted[p] = kept;
+                }
+            }
             c.RevertOf?.Removed = after;
         }
         if (c.Things.Length > 0)

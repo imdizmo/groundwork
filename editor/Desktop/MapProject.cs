@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json.Nodes;
-using SkiaSharp;
 using Groundwork.App;
+using SkiaSharp;
 
 namespace Groundwork.Desktop;
 
@@ -58,6 +58,9 @@ public sealed partial class MapProject
     public string AreasFile { get; private set; } = "";
     /// <summary>The holes: a grey picture the heightmap's size, white where the ground is taken away (written once there are any).</summary>
     public string HolesFile { get; private set; } = "";
+
+    /// <summary>The ground kept under the beds (EditSession.Beds): grid index and height pairs; written once there is a bed.</summary>
+    public string BedsFile { get; private set; } = "";
     /// <summary>
     /// The ground's layers: the first is the ground everywhere, the others (up to seven) are painted over it, each from a
     /// channel of the layers files (r, g and b of each: an image editor paints them as they are).
@@ -123,18 +126,18 @@ public sealed partial class MapProject
     public bool HasUnrealLevel => UnrealProject != null;
 
     /// <summary>Whether a folder holds a map.</summary>
-    public static bool IsMap(string folder) => System.IO.File.Exists(Path.Combine(folder, FileName));
+    public static bool IsMap(string folder) => File.Exists(Path.Combine(folder, FileName));
 
     /// <summary>The map in a folder (its map.json).</summary>
     public static MapProject Open(string folder)
     {
         var m = new MapProject(folder);
         string json = Path.Combine(m.Folder, FileName);
-        if (!System.IO.File.Exists(json))
+        if (!File.Exists(json))
         {
             throw new FileNotFoundException($"{m.Folder}: no {FileName}");
         }
-        var j = JsonNode.Parse(System.IO.File.ReadAllText(json)) as JsonObject ?? throw new InvalidDataException($"{json}: not a JSON object");
+        var j = JsonNode.Parse(File.ReadAllText(json)) as JsonObject ?? throw new InvalidDataException($"{json}: not a JSON object");
         static string? S(JsonNode? n) => n?.GetValue<string>() is { Length: > 0 } v ? v : null;
         m.Name = S(j["name"]) ?? Path.GetFileName(m.Folder);
         (m.X0, m.Y0) = (j["origin"]?[0]?.GetValue<int>() ?? 0, j["origin"]?[1]?.GetValue<int>() ?? 0);
@@ -149,6 +152,7 @@ public sealed partial class MapProject
         m.WaterFile = m.Inside(S(f?["water"]) ?? "water.json");
         m.AreasFile = m.Inside(S(f?["areas"]) ?? "areas.json");
         m.HolesFile = m.Inside(S(f?["holes"]) ?? "holes.png");
+        m.BedsFile = m.Inside(S(f?["beds"]) ?? "beds.bin");
         m.Catalog = S(j["catalog"]) is string c ? m.Inside(c) : null;
         m.Models = S(j["models"]) is string mo ? m.Abs(mo) : null;
         m.Stamps = S(j["stamps"]) is string st ? m.Inside(st) : null;
@@ -180,7 +184,7 @@ public sealed partial class MapProject
             ["name"] = Name,
             ["origin"] = new JsonArray(X0, Y0),
             ["seaLevel"] = SeaLevel,
-            ["files"] = new JsonObject { ["heights"] = Rel(HeightsFile), ["layers"] = LayersFiles.Count == 1 ? Rel(LayersFile) : new JsonArray([.. LayersFiles.Select(l => (JsonNode)Rel(l))]), ["objects"] = Rel(ObjectsFile), ["water"] = Rel(WaterFile), ["areas"] = Rel(AreasFile), ["holes"] = Rel(HolesFile) },
+            ["files"] = new JsonObject { ["heights"] = Rel(HeightsFile), ["layers"] = LayersFiles.Count == 1 ? Rel(LayersFile) : new JsonArray([.. LayersFiles.Select(l => (JsonNode)Rel(l))]), ["objects"] = Rel(ObjectsFile), ["water"] = Rel(WaterFile), ["areas"] = Rel(AreasFile), ["holes"] = Rel(HolesFile), ["beds"] = Rel(BedsFile) },
         };
         j["layers"] = new JsonArray([.. Layers.Select(l => (JsonNode)new JsonObject
         {
@@ -220,7 +224,7 @@ public sealed partial class MapProject
             j["generator"] = WriteGenerated(g);
         }
         NoLinks(Path.Combine(Folder, FileName));
-        System.IO.File.WriteAllText(Path.Combine(Folder, FileName), j.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(Path.Combine(Folder, FileName), j.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
     }
 
     /// <summary>A layers channel from its name in map.json ("r", "g", "b", "r2" ... "b3"), or -1.</summary>
@@ -232,7 +236,7 @@ public sealed partial class MapProject
 
     /// <summary>The paint files' pixels, RGBA a file (a file not made yet: nothing painted).</summary>
     private byte[][] ReadLayers(Raster map) =>
-        [.. LayersFiles.Select((f, i) => i > 0 && !System.IO.File.Exists(f) ? Blank(map.Cols * map.Rows) : ReadMask(f, map))];
+        [.. LayersFiles.Select((f, i) => i > 0 && !File.Exists(f) ? Blank(map.Cols * map.Rows) : ReadMask(f, map))];
 
     /// <summary>A paint file's pixels with nothing painted, opaque.</summary>
     private static byte[] Blank(int pixels)
@@ -284,9 +288,9 @@ public sealed partial class MapProject
     {
         NoLinks(f);
         NoLinks(f + ".bak");
-        if (System.IO.File.Exists(f))
+        if (File.Exists(f))
         {
-            System.IO.File.Copy(f, f + ".bak", true);
+            File.Copy(f, f + ".bak", true);
         }
     }
 
@@ -356,12 +360,12 @@ public sealed partial class MapProject
         int n = (squaresX * 63) + 1, rows = (squaresZ * 63) + 1, x0 = -(n / 2), y0 = -(rows / 2);
         // like's models where they are: its own setting, else the models folder in its folder
         var m = new MapProject(folder) { Name = name, X0 = x0, Y0 = y0, Models = like == null ? null : like.Models ?? Path.Combine(like.Folder, "models") };
-        if (like?.Catalog is { } catalog && System.IO.File.Exists(catalog))   // a copy: what a map writes stays in its folder
+        if (like?.Catalog is { } catalog && File.Exists(catalog))   // a copy: what a map writes stays in its folder
         {
             m.Catalog = m.Abs("catalog.json");
-            System.IO.File.Copy(catalog, m.Catalog);
+            File.Copy(catalog, m.Catalog);
         }
-        (m.HeightsFile, m.LayersFile, m.ObjectsFile, m.WaterFile, m.AreasFile, m.HolesFile) = (m.Abs("height.npy"), m.Abs("layers.png"), m.Abs("objects.json"), m.Abs("water.json"), m.Abs("areas.json"), m.Abs("holes.png"));
+        (m.HeightsFile, m.LayersFile, m.ObjectsFile, m.WaterFile, m.AreasFile, m.HolesFile, m.BedsFile) = (m.Abs("height.npy"), m.Abs("layers.png"), m.Abs("objects.json"), m.Abs("water.json"), m.Abs("areas.json"), m.Abs("holes.png"), m.Abs("beds.bin"));
         var raster = new Raster(n, rows, x0, y0);
         float[] heights = new float[n * rows];
         byte[] mask = new byte[n * rows * 4];
@@ -377,8 +381,8 @@ public sealed partial class MapProject
         }
         Write(m.HeightsFile, heights, rows, n);
         WriteMask(m.LayersFile, mask, raster);
-        System.IO.File.WriteAllText(m.ObjectsFile, "[]");
-        System.IO.File.WriteAllText(m.WaterFile, "{\"rivers\": [], \"lakes\": []}");
+        File.WriteAllText(m.ObjectsFile, "[]");
+        File.WriteAllText(m.WaterFile, "{\"rivers\": [], \"lakes\": []}");
         m.WriteJson();
         return m;
     }
@@ -409,7 +413,7 @@ public sealed partial class MapProject
         var map = ReadRaster();
         float[] heights = Read(HeightsFile, out _, out _);
         byte[][] masks = ReadLayers(map);
-        byte[]? holes = System.IO.File.Exists(HolesFile) ? ReadMask(HolesFile, map) : null;
+        byte[]? holes = File.Exists(HolesFile) ? ReadMask(HolesFile, map) : null;
         // Zones of 64 m (centred on multiples of 64) round the map, editor x = X, z = -Y.
         int zx0 = (int)MathF.Floor((map.X0 + 32f) / 64f), zx1 = (int)MathF.Floor((map.X0 + map.Cols - 1 + 32f) / 64f);
         int zz0 = (int)MathF.Floor((-(map.Y0 + map.Rows - 1) + 32f) / 64f), zz1 = (int)MathF.Floor((-map.Y0 + 32f) / 64f);
@@ -464,9 +468,13 @@ public sealed partial class MapProject
         _ = scene.Session.Commit("Map objects", null, [], [.. placed.Select(p => (new NewObject(0, AssetIds.Of(p.Name), p.Position, p.Rotation, MathF.Abs(p.Scale - 1) < 1e-3f ? 0 : p.Scale, p.Data),
             ObjectKinds.Of(p.Name) == ObjectKind.Buildings))]);
         scene.Session.ForgetHistory();
+        if (File.Exists(BedsFile))
+        {
+            scene.Session.SetLifted(ReadBeds(BedsFile));
+        }
         MapWater.Load(WaterFile);
         MapAreas.Load(AreasFile);
-        MapNotes.Load(System.IO.Path.Combine(Folder, "notes"));
+        MapNotes.Load(Path.Combine(Folder, "notes"));
         return scene;
     }
 
@@ -526,6 +534,31 @@ public sealed partial class MapProject
         return (weights, map.Cols, map.Rows);
     }
 
+    /// <summary>The ground kept under the beds: a count, then grid index (int32) and height (float32) pairs, little-endian.</summary>
+    private static void WriteBeds(string file, IReadOnlyDictionary<int, float> lifted)
+    {
+        using var w = new BinaryWriter(File.Create(file));
+        w.Write(lifted.Count);
+        foreach (var (p, h) in lifted.OrderBy(kv => kv.Key))
+        {
+            w.Write(p);
+            w.Write(h);
+        }
+    }
+
+    /// <summary>The ground kept under the beds, read back (a short or odd file: what it holds).</summary>
+    private static List<(int Point, float Height)> ReadBeds(string file)
+    {
+        var lifted = new List<(int, float)>();
+        using var r = new BinaryReader(File.OpenRead(file));
+        int n = Math.Clamp(r.ReadInt32(), 0, 1 << 26);
+        for (int i = 0; i < n && r.BaseStream.Position + 8 <= r.BaseStream.Length; i++)
+        {
+            lifted.Add((r.ReadInt32(), r.ReadSingle()));
+        }
+        return lifted;
+    }
+
     /// <summary>The ground, its colours, the objects and the water as they are now back into the map's files.</summary>
     /// <returns>How many objects were written.</returns>
     public int Save(WorldScene s)
@@ -534,8 +567,8 @@ public sealed partial class MapProject
         var map = ReadRaster();
         float[] heights = Read(HeightsFile, out _, out _);
         byte[][] masks = ReadLayers(map);
-        byte[] holes = System.IO.File.Exists(HolesFile) ? ReadMask(HolesFile, map) : new byte[map.Cols * map.Rows * 4];
-        bool anyHole = System.IO.File.Exists(HolesFile);
+        byte[] holes = File.Exists(HolesFile) ? ReadMask(HolesFile, map) : new byte[map.Cols * map.Rows * 4];
+        bool anyHole = File.Exists(HolesFile);
         for (int gz = 0; gz < g.H; gz++)
         {
             for (int gx = 0; gx < g.W; gx++)
@@ -577,6 +610,17 @@ public sealed partial class MapProject
             KeepOld(f);
         }
         Write(HeightsFile, heights, map.Rows, map.Cols);
+        var lifted = s.Session.Lifted;
+        if (lifted.Count > 0)
+        {
+            KeepOld(BedsFile);
+            WriteBeds(BedsFile, lifted);
+        }
+        else if (File.Exists(BedsFile))
+        {
+            KeepOld(BedsFile);
+            File.Delete(BedsFile);
+        }
         for (int i = 0; i < layersFiles.Count; i++)
         {
             WriteMask(layersFiles[i], masks[i], map);
@@ -586,7 +630,7 @@ public sealed partial class MapProject
             KeepOld(HolesFile);
             WriteMask(HolesFile, holes, map);
         }
-        System.IO.File.WriteAllText(ObjectsFile, objects.ToJsonString());
+        File.WriteAllText(ObjectsFile, objects.ToJsonString());
         MapWater.Save(WaterFile);
         MapAreas.Save(AreasFile);
         WriteJson();
@@ -657,7 +701,7 @@ public sealed partial class MapProject
         {
             WriteMask(layersFiles[i], masks[i], grown);
         }
-        if (System.IO.File.Exists(HolesFile))
+        if (File.Exists(HolesFile))
         {
             byte[] oldHoles = ReadMask(HolesFile, map), holes = new byte[heights.Length * 4];
             for (int px = 0; px < heights.Length; px++)
@@ -749,7 +793,7 @@ public sealed partial class MapProject
             {
                 using var pixmap = new SKPixmap(info, (IntPtr)p);
                 using var data = pixmap.Encode(SKEncodedImageFormat.Png, 100) ?? throw new IOException($"{path}: could not be encoded");
-                using var f = System.IO.File.Create(path);
+                using var f = File.Create(path);
                 data.SaveTo(f);
             }
         }
@@ -758,7 +802,7 @@ public sealed partial class MapProject
     /// <summary>A 2-D little-endian float32 .npy (C order); headerOnly reads only its shape.</summary>
     private static float[] Read(string path, out int rows, out int cols, bool headerOnly = false)
     {
-        byte[] b = headerOnly ? ReadHead(path) : System.IO.File.ReadAllBytes(path);
+        byte[] b = headerOnly ? ReadHead(path) : File.ReadAllBytes(path);
         int hl = b[6] == 1 ? BitConverter.ToUInt16(b, 8) : BitConverter.ToInt32(b, 8), at = b[6] == 1 ? 10 + hl : 12 + hl;
         string head = Encoding.ASCII.GetString(b, b[6] == 1 ? 10 : 12, hl);
         if (!head.Contains("'<f4'") || head.Contains("'fortran_order': True"))
@@ -780,7 +824,7 @@ public sealed partial class MapProject
 
     private static byte[] ReadHead(string path)
     {
-        using var f = System.IO.File.OpenRead(path);
+        using var f = File.OpenRead(path);
         byte[] b = new byte[Math.Min(4096, f.Length)];
         f.ReadExactly(b);
         return b;
@@ -790,7 +834,7 @@ public sealed partial class MapProject
     {
         string head = $"{{'descr': '<f4', 'fortran_order': False, 'shape': ({rows}, {cols}), }}";
         head = head.PadRight(((head.Length + 11) / 64 * 64) + 63 - 10) + "\n";   // 10-byte prefix + header: a multiple of 64
-        using var f = System.IO.File.Create(path);
+        using var f = File.Create(path);
         f.Write([0x93, (byte)'N', (byte)'U', (byte)'M', (byte)'P', (byte)'Y', 1, 0]);
         f.Write(BitConverter.GetBytes((ushort)head.Length));
         f.Write(Encoding.ASCII.GetBytes(head));

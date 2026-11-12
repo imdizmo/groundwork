@@ -22,6 +22,11 @@ public sealed partial class EditSession
         /// </summary>
         public (int Index, bool Before, bool After)[] Things { get; init; } = [];
         /// <summary>
+        /// The ground kept under beds (EditSession.Beds) that it changed: the point, and the height kept before and after
+        /// the step (NaN: none kept).
+        /// </summary>
+        public (int Point, float Before, float After)[] Lifted { get; init; } = [];
+        /// <summary>
         /// When it was made (local time).
         /// </summary>
         public DateTime Time { get; init; } = DateTime.Now;
@@ -44,7 +49,7 @@ public sealed partial class EditSession
         /// About how much memory it holds: 24 bytes a ground point (its index, its heights and flags before and after) and
         /// 8 a paint channel (4 before, 4 after), a few for each thing (<see cref="KeepBytes"/>).
         /// </summary>
-        public long Bytes => (24L * Points.Length) + (8L * Before.Paint.Length) + (8L * Things.Length);
+        public long Bytes => (24L * Points.Length) + (8L * Before.Paint.Length) + (8L * Things.Length) + (12L * Lifted.Length);
 
         /// <summary>
         /// Whether it is this very change: a change is itself, not its values, since Removed is set after it is made.

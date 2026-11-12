@@ -53,3 +53,7 @@ To place an object exactly, select it and type its position and turn on the Sele
 
 The map's `catalog.json` lists the kinds (their model, label, category and size range), the groups' density and
 spacing, the biomes and the markers. The categories are the View panel's kinds.
+
+A kind with `"bed": true` lies in the ground: wherever one of its objects is put, the ground rises to meet the model's
+underside (a great root sunk to its widest) with a slope falling away round it, and the ground under the bed is kept
+(`beds.bin`) so that moving or removing the object brings it back. Undo carries the bed with the move.

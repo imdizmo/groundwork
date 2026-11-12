@@ -16,7 +16,7 @@ public static partial class MapTools
     internal const string Own = "Groundwork";
 
     /// <summary>A kind of object: its model, name, group, size range and picture.</summary>
-    public sealed record Kind(string Model, string Label, string Category, float MinScale, float MaxScale, string? Icon);
+    public sealed record Kind(string Model, string Label, string Category, float MinScale, float MaxScale, string? Icon, bool Bed = false);
 
     /// <summary>A group of kinds (Trees, Plants...): the Brush's base density (per 100 m²) and spacing (m) for it.</summary>
     public sealed record Group(float Density, float Spacing);
@@ -42,7 +42,7 @@ public static partial class MapTools
     {
         static float F(JsonNode? n, float d) => n?.GetValue<float>() ?? d;
         var kinds = (o["kinds"]?.AsArray() ?? []).Select(k => new Kind(k!["model"]!.GetValue<string>(), k["label"]?.GetValue<string>() ?? "", k["category"]?.GetValue<string>() ?? "Other",
-            F(k["scale"]?[0], 1), F(k["scale"]?[1], 1), k["icon"] is { } i ? Path.Combine(ModelStore.MapModels, i.GetValue<string>()) : null)).ToList();
+            F(k["scale"]?[0], 1), F(k["scale"]?[1], 1), k["icon"] is { } i ? Path.Combine(ModelStore.MapModels, i.GetValue<string>()) : null, k["bed"]?.GetValue<bool>() ?? false)).ToList();
         var groups = (o["categories"]?.AsObject() ?? []).ToDictionary(kv => kv.Key, kv => new Group(F(kv.Value?["density"], 2), F(kv.Value?["spacing"], 2)));
         var biomes = (o["biomes"]?.AsObject() ?? []).Select(kv => new Biome(kv.Key, kv.Value?["paint"]?.GetValue<string>() ?? "grass", F(kv.Value?["density"], 1),
             (kv.Value?["kinds"]?.AsObject() ?? []).ToDictionary(k => k.Key, k => F(k.Value, 1)))).ToList();

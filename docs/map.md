@@ -81,7 +81,7 @@ third on steep ground.
   "name": "Coast",
   "origin": [-252, -252],
   "seaLevel": 0,
-  "files": { "heights": "height.npy", "layers": "layers.png", "objects": "objects.json", "water": "water.json", "areas": "areas.json", "holes": "holes.png" },
+  "files": { "heights": "height.npy", "layers": "layers.png", "objects": "objects.json", "water": "water.json", "areas": "areas.json", "holes": "holes.png", "beds": "beds.bin" },
   "layers": [
     { "name": "Grass", "colour": "#6b9945" },
     { "name": "Sand", "colour": "#ccbd85", "channel": "r", "texture": "textures/sand.png", "size": 4 }
@@ -103,6 +103,7 @@ third on steep ground.
 | `files.water` | The rivers and lakes ([Rivers and lakes](water.md)). |
 | `files.areas` | The areas ([Areas](areas.md)). |
 | `files.holes` | The holes: a grey `.png` the size of the heightmap, white where the ground is taken away; written once there is a hole. |
+| `files.beds` | The ground kept under the beds of bedded objects (the catalog's `bed` kinds, [Objects](objects.md#the-catalog)): a count, then grid index and height pairs (int32, float32, little-endian); written once there is a bed. |
 | `layers` | Up to eight: the first is the ground everywhere, the others are painted over it from a channel: `r`, `g`, `b` of the first layers file, `r2`, `g2`, `b2` of the second, `r3` of the third (in that order when not given). A layer's `texture` (a picture in the map's folder) is drawn instead of its colour, repeated every `size` metres (4 by default). |
 | `catalog` | The kinds the object tools offer and the categories the View panel sorts by. |
 | `models` | The model folder the 3D view draws objects with (it may be anywhere; see [Objects](objects.md#models)). |

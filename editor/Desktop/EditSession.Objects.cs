@@ -18,10 +18,7 @@ public sealed partial class EditSession
         {
             return;
         }
-        SetGone(live.Select(i => (i, true)));
-        AddChange(new Change(Lang.T("history.undo.deleted", live.Length), [], NoPoints, NoPoints) { Things = [.. live.Select(i => (i, false, true))] });
-        Notify(live);
-        Edited();
+        _ = Commit(Lang.T("history.undo.deleted", live.Length), null, live, []);
     }
 
     /// <summary>
@@ -96,6 +93,6 @@ public sealed partial class EditSession
     }
 
     /// <summary>A thing as extensions see it: its asset's name, its place, the data it holds, its id.</summary>
-    internal Groundwork.App.ObjectView ViewOf(WorldScene.Thing t) =>
-        new(Groundwork.App.AssetIds.NameOf(t.Prefab) ?? "", t.Position, t.Rotation, Edits.FindAdded(t.Id)?.Data, t.Scale) { Id = t.Id };
+    internal ObjectView ViewOf(WorldScene.Thing t) =>
+        new(AssetIds.NameOf(t.Prefab) ?? "", t.Position, t.Rotation, Edits.FindAdded(t.Id)?.Data, t.Scale) { Id = t.Id };
 }

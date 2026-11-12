@@ -20,7 +20,8 @@ public sealed partial class EditSession
     public List<int> Commit(string label, Func<Ground, (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect)>? ground,
         IReadOnlyCollection<int> remove, IReadOnlyList<(NewObject Object, bool Piece)> add)
     {
-        var (points, before, after) = ChangeGround(ground);
+        var lifted = new List<(int Point, float Before, float After)>();
+        var (points, before, after) = ChangeGround(WithBeds(ground, remove, add, lifted));
         var (indices, changes, added) = ChangeThings(remove, add);
         if (added.Count > 0)
         {
@@ -31,7 +32,7 @@ public sealed partial class EditSession
         {
             return indices;
         }
-        AddChange(new Change(label, points, before, after) { Things = [.. changes] });
+        AddChange(new Change(label, points, before, after) { Things = [.. changes], Lifted = LiftedOf(lifted) });
         if (changes.Count > 0)
         {
             Notify(changes.Select(c => c.Item1));
