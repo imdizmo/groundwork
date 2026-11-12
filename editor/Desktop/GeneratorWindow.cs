@@ -62,7 +62,9 @@ public sealed partial class GeneratorWindow : Window
     }
 
     /// <summary>Asks for a new map (null: cancelled).</summary>
-    public static async Task<NewMapAsked?> NewMap(Window owner)
+    /// <param name="owner">The window it is asked over.</param>
+    /// <param name="heightmap">A heightmap file to start over (dropped on the start page), or null.</param>
+    public static async Task<NewMapAsked?> NewMap(Window owner, string? heightmap = null)
     {
         var w = new GeneratorWindow(true, Styled(0, 8, Random.Shared.Next(1, 10000)), 8, MapProject.NewLayers, null);
         var name = new TextBox { Text = "Map", FontSize = 13 };
@@ -85,6 +87,11 @@ public sealed partial class GeneratorWindow : Window
             }
         };
         w.Build([Ui.Row("Name", name, null, "110,*"), Ui.Row("Size", sizeSlider, size, "110,*,64"), w.HeightmapRows(sizeSlider)], make, ["Flat ground", "Gently rolling ground"]);
+        if (heightmap != null)
+        {
+            name.Text = Path.GetFileNameWithoutExtension(heightmap);
+            w.Opened += (_, _) => _ = w._readHeightmap?.Invoke(heightmap);
+        }
         await w.ShowDialog(owner);
         return result;
     }

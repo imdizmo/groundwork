@@ -1,7 +1,12 @@
 # Map projects
 
-A map is a folder: a `map.json` and the files it names beside it. The start page lists the maps you opened; **Open
-map folder…** adds one, **New map…** makes one.
+A map is a folder: a `map.json` and the files it names beside it. The start page shows the maps you opened as cards
+(a picture of the ground, the size, how many objects, when it was last saved, whether it has an Unreal project), grouped
+by the folder they are in, the last opened first; with more than a few, a search box narrows them by name. **Open map
+folder…** adds one, **New map…** makes one; a map folder or a heightmap dropped on the page opens it or starts New map
+over it, and Enter opens the first card, Ctrl+N and Ctrl+O the two buttons. A card's right-click menu opens the map,
+shows its folder in the file manager, duplicates it beside itself ("Name copy") or takes it off the list (the folder
+stays). A map whose folder is gone stays on the list, greyed, until taken off.
 
 ## A new map
 

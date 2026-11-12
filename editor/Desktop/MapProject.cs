@@ -819,6 +819,20 @@ public sealed partial class MapProject
     private static float[] Read(string path, out int rows, out int cols, bool headerOnly = false)
     {
         byte[] b = headerOnly ? ReadHead(path) : File.ReadAllBytes(path);
+        (rows, cols, int at) = NpyShape(path, b);
+        if (headerOnly)
+        {
+            return [];
+        }
+        float[] a = new float[rows * cols];
+        Buffer.BlockCopy(b, at, a, 0, a.Length * 4);
+        return a;
+    }
+
+    /// <summary>A 2-D float32 .npy's shape, and where its values start in the file (its header read, or given).</summary>
+    internal static (int Rows, int Cols, int DataAt) NpyShape(string path, byte[]? bytes = null)
+    {
+        byte[] b = bytes ?? ReadHead(path);
         int hl = b[6] == 1 ? BitConverter.ToUInt16(b, 8) : BitConverter.ToInt32(b, 8), at = b[6] == 1 ? 10 + hl : 12 + hl;
         string head = Encoding.ASCII.GetString(b, b[6] == 1 ? 10 : 12, hl);
         if (!head.Contains("'<f4'") || head.Contains("'fortran_order': True"))
@@ -827,15 +841,7 @@ public sealed partial class MapProject
         }
 
         string[] dims = head[(head.IndexOf('(') + 1)..head.IndexOf(')')].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        rows = int.Parse(dims[0]);
-        cols = int.Parse(dims[1]);
-        if (headerOnly)
-        {
-            return [];
-        }
-        float[] a = new float[rows * cols];
-        Buffer.BlockCopy(b, at, a, 0, a.Length * 4);
-        return a;
+        return (int.Parse(dims[0]), int.Parse(dims[1]), at);
     }
 
     private static byte[] ReadHead(string path)

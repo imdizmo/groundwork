@@ -21,6 +21,14 @@ public sealed partial class MainWindow
                 }
             };
             StartPage.NewMapRequested += async () => await NewMap();
+            StartPage.HeightmapDropped += async path => await NewMap(path);
+            StartPage.RemoveRequested += folder =>
+            {
+                _ = Settings.Maps.Remove(folder);
+                SaveSettings(Settings);
+                StartPage.ShowMaps();
+            };
+            StartPage.DuplicateRequested += async folder => await DuplicateMap(folder);
             StartPage.OpenUrl = Launcher.LaunchUriAsync;
             StartPage.SettingsRequested += async () =>
             {
@@ -33,6 +41,57 @@ public sealed partial class MainWindow
         }
         Title = $"Groundwork {BuildInfo.Version}";
         _pages.Content = StartPage.View;
+    }
+
+    /// <summary>
+    /// A copy of a map beside it ("Name copy"), listed after it: the folder copied whole (symbolic links left out, as
+    /// a map's files never follow them), the copy's name said in its map.json.
+    /// </summary>
+    private async Task DuplicateMap(string folder)
+    {
+        string parent = Path.GetDirectoryName(folder) ?? folder, leaf = Path.GetFileName(folder);
+        string copy = Path.Combine(parent, leaf + " copy");
+        for (int n = 2; Directory.Exists(copy) || File.Exists(copy); n++)
+        {
+            copy = Path.Combine(parent, $"{leaf} copy {n}");
+        }
+        _busyText.Text = Groundwork.App.Lang.T("start.duplicating", leaf);
+        _busy.IsVisible = true;
+        try
+        {
+            await Task.Run(() =>
+            {
+                CopyTree(new DirectoryInfo(folder), new DirectoryInfo(copy));
+                var m = MapProject.Open(copy);
+                m.Name += " copy";
+                m.WriteJson();
+            });
+            int after = Settings.Maps.IndexOf(folder);
+            Settings.Maps.Insert(after < 0 ? 0 : after + 1, copy);
+            SaveSettings(Settings);
+            StartPage?.ShowMaps();
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        {
+            ShowError(ex);
+        }
+        finally
+        {
+            _busy.IsVisible = false;
+        }
+    }
+
+    private static void CopyTree(DirectoryInfo from, DirectoryInfo to)
+    {
+        to.Create();
+        foreach (var f in from.EnumerateFiles().Where(f => f.LinkTarget == null))
+        {
+            _ = f.CopyTo(Path.Combine(to.FullName, f.Name));
+        }
+        foreach (var d in from.EnumerateDirectories().Where(d => d.LinkTarget == null))
+        {
+            CopyTree(d, new DirectoryInfo(Path.Combine(to.FullName, d.Name)));
+        }
     }
 
     /// <summary>Whether the busy veil is up.</summary>

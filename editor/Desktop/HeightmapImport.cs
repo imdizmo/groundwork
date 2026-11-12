@@ -25,6 +25,9 @@ public static class HeightmapImport
     /// <summary>A heightmap read: its values (0 to 1, row by row from its first row) and its size in samples.</summary>
     public sealed record Heightmap(float[] Values, int Cols, int Rows);
 
+    /// <summary>Whether a file's name is one of a heightmap this reads (16-bit PNG, .r16, .raw, .r32).</summary>
+    public static bool IsHeightmap(string file) => Path.GetExtension(file).ToLowerInvariant() is ".png" or ".r16" or ".raw" or ".r32";
+
     /// <summary>
     /// A heightmap read from its file. A raw file holds no width: give it (<paramref name="cols"/>), or it is taken as
     /// square.

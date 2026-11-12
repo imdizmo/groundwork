@@ -26,6 +26,9 @@ public sealed partial class GeneratorWindow
     /// <summary>Flat or rolling ground was picked: the heightmap is let go.</summary>
     private Action? _dropped;
 
+    /// <summary>Reads a heightmap given from outside (dropped on the start page) as if picked.</summary>
+    private Func<string, Task>? _readHeightmap;
+
     /// <summary>The rows that pick a heightmap and say what its numbers are.</summary>
     private StackPanel HeightmapRows(Slider size)
     {
@@ -154,6 +157,12 @@ public sealed partial class GeneratorWindow
             await ReadIt(first: true);
         };
         clear.Click += (_, _) => Drop();
+        _readHeightmap = picked =>
+        {
+            (path, rawCols) = (picked, null);
+            width.Box.Text = "";
+            return ReadIt(first: true);
+        };
         var row = Ui.Row("Ground", file, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { pick, clear } }, "110,*,Auto");
         return new StackPanel { Spacing = 8, Children = { row, widthRow, numbers } };
     }

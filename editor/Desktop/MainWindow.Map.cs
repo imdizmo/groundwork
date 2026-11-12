@@ -144,9 +144,9 @@ public partial class MainWindow
     }
 
     /// <summary>New map: its name, size and ground in the generator's window, made in the maps folder (Settings) and opened.</summary>
-    private async Task NewMap()
+    private async Task NewMap(string? heightmap = null)
     {
-        if (await GeneratorWindow.NewMap(this) is not { } asked)
+        if (await GeneratorWindow.NewMap(this, heightmap) is not { } asked)
         {
             return;
         }
