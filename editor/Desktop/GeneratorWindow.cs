@@ -56,7 +56,7 @@ public sealed partial class GeneratorWindow : Window
         Title = isNew ? "New map" : $"Make {name} again";
         (Width, Height, MinWidth, MinHeight) = (1180, 800, 820, 560);
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = new SolidColorBrush(Color.FromRgb(24, 28, 34));
+        Background = Ui.Panel2;
         _later.Tick += (_, _) => { _later.Stop(); _ = Preview(); };
         Closed += (_, _) => _later.Stop();
     }

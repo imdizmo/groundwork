@@ -89,7 +89,7 @@ public sealed partial class HistoryPanel
             {
                 CornerRadius = new CornerRadius(999),
                 BorderThickness = new Thickness(1),
-                BorderBrush = new SolidColorBrush(Color.Parse("#7a5a2a")),
+                BorderBrush = new SolidColorBrush(Color.Parse("#7a4410")),
                 Padding = new Thickness(5, 0),
                 VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock { Text = Lang.T("settings.claude"), FontSize = 10, Foreground = Ui.Accent },

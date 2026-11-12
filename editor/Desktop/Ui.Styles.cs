@@ -11,6 +11,9 @@ namespace Groundwork.Desktop;
 
 public static partial class Ui
 {
+    /// <summary>The design's typeface, Space Grotesk (SIL Open Font License), shipped in Assets/Fonts.</summary>
+    public static readonly FontFamily Font = new("avares://Groundwork/Assets/Fonts#Space Grotesk");
+
     /// <summary>
     /// Applies the look to the application, once at start: Fluent's colour resources set to the palette, and the
     /// styles for windows, buttons and their classes, lists, number boxes and switches.
@@ -20,18 +23,18 @@ public static partial class Ui
         var r = app.Resources;
         // Fluent's own colours, the web editor's.
         r["SystemAccentColor"] = AccentColor;
-        r["SystemAccentColorLight1"] = Color.Parse("#eab565");
-        r["SystemAccentColorLight2"] = Color.Parse("#f0c47f");
-        r["SystemAccentColorLight3"] = Color.Parse("#f5d5a0");
-        r["SystemAccentColorDark1"] = Color.Parse("#c98f37");
-        r["SystemAccentColorDark2"] = Color.Parse("#a87428");
-        r["SystemAccentColorDark3"] = Color.Parse("#7a5a2a");
+        r["SystemAccentColorLight1"] = Color.Parse("#f0953a");
+        r["SystemAccentColorLight2"] = Color.Parse("#f4a85c");
+        r["SystemAccentColorLight3"] = Color.Parse("#f8c08a");
+        r["SystemAccentColorDark1"] = Color.Parse("#d27214");
+        r["SystemAccentColorDark2"] = Color.Parse("#b05f10");
+        r["SystemAccentColorDark3"] = Color.Parse("#7a4410");
         r["ControlCornerRadius"] = new CornerRadius(6);
         r["OverlayCornerRadius"] = new CornerRadius(8);
         // Buttons.
         r["ButtonBackground"] = Panel2;
         r["ButtonBackgroundPointerOver"] = Hover;
-        r["ButtonBackgroundPressed"] = new SolidColorBrush(Color.Parse("#2a313c"));
+        r["ButtonBackgroundPressed"] = new SolidColorBrush(Color.Parse("#26262c"));
         r["ButtonBackgroundDisabled"] = Panel2;
         r["ButtonForeground"] = Text;
         r["ButtonForegroundPointerOver"] = Text;
@@ -49,7 +52,7 @@ public static partial class Ui
         r["ToggleButtonBorderBrushPointerOver"] = Line2;
         r["ToggleButtonForeground"] = Text;
         r["ToggleButtonForegroundPointerOver"] = Text;
-        var chosenBg = new SolidColorBrush(Color.Parse("#2c2416"));
+        var chosenBg = new SolidColorBrush(Color.Parse("#2e1d10"));
         foreach (string? state in new[] { "", "PointerOver", "Pressed" })
         {
             r[$"ToggleButtonBackgroundChecked{state}"] = chosenBg;
@@ -77,11 +80,11 @@ public static partial class Ui
         r["ComboBoxBorderBrushPressed"] = Accent;
         r["ComboBoxDropDownBackground"] = Panel2;
         r["ComboBoxDropDownBorderBrush"] = Line2;
-        r["ComboBoxItemBackgroundSelected"] = new SolidColorBrush(Color.Parse("#3a2f1c"));
-        r["ComboBoxItemBackgroundSelectedPointerOver"] = new SolidColorBrush(Color.Parse("#4a3b22"));
+        r["ComboBoxItemBackgroundSelected"] = new SolidColorBrush(Color.Parse("#3a2616"));
+        r["ComboBoxItemBackgroundSelectedPointerOver"] = new SolidColorBrush(Color.Parse("#4a301a"));
         r["ComboBoxItemBackgroundPointerOver"] = Hover;
-        r["ListBoxItemBackgroundSelected"] = new SolidColorBrush(Color.Parse("#3a2f1c"));
-        r["ListBoxItemBackgroundSelectedPointerOver"] = new SolidColorBrush(Color.Parse("#4a3b22"));
+        r["ListBoxItemBackgroundSelected"] = new SolidColorBrush(Color.Parse("#3a2616"));
+        r["ListBoxItemBackgroundSelectedPointerOver"] = new SolidColorBrush(Color.Parse("#4a301a"));
         r["ListBoxItemBackgroundPointerOver"] = Hover;
         // Scroll bars: thin, a quiet thumb on no track.
         r["ScrollBarSize"] = 10.0;
@@ -90,7 +93,7 @@ public static partial class Ui
         r["ScrollBarTrackStroke"] = Brushes.Transparent;
         r["ScrollBarTrackStrokePointerOver"] = Brushes.Transparent;
         r["ScrollBarThumbFill"] = Line2;
-        r["ScrollBarThumbFillPointerOver"] = new SolidColorBrush(Color.Parse("#566173"));
+        r["ScrollBarThumbFillPointerOver"] = new SolidColorBrush(Color.Parse("#4e4e56"));
         r["ScrollBarThumbFillPressed"] = Muted;
         r["ScrollBarButtonArrowForeground"] = Brushes.Transparent;
         r["ScrollBarButtonArrowForegroundPointerOver"] = Muted;
@@ -100,11 +103,11 @@ public static partial class Ui
         r["ScrollBarThumbBackgroundColor"] = Line2Color;
         r["CheckBoxMinHeight"] = 26.0;
         // Chosen list rows: a quiet amber, not the full accent.
-        r["SystemControlHighlightListAccentLowBrush"] = new SolidColorBrush(Color.Parse("#3a2f1c"));
-        r["SystemControlHighlightListAccentMediumBrush"] = new SolidColorBrush(Color.Parse("#4a3b22"));
-        r["SystemControlHighlightListAccentHighBrush"] = new SolidColorBrush(Color.Parse("#574427"));
+        r["SystemControlHighlightListAccentLowBrush"] = new SolidColorBrush(Color.Parse("#3a2616"));
+        r["SystemControlHighlightListAccentMediumBrush"] = new SolidColorBrush(Color.Parse("#4a301a"));
+        r["SystemControlHighlightListAccentHighBrush"] = new SolidColorBrush(Color.Parse("#58381e"));
         r["SystemControlHighlightListLowBrush"] = Hover;
-        r["SystemControlHighlightListMediumBrush"] = new SolidColorBrush(Color.Parse("#2a313c"));
+        r["SystemControlHighlightListMediumBrush"] = new SolidColorBrush(Color.Parse("#26262c"));
         r["ToolTipBackground"] = Panel2;
         r["ToolTipBorderBrush"] = Line2;
         r["ToolTipForeground"] = Text;
@@ -126,7 +129,7 @@ public static partial class Ui
         r["ExpanderMinHeight"] = 32.0;
 
         var s = app.Styles;
-        s.Add(new Style(x => x.OfType<Window>()) { Setters = { new Setter(TemplatedControl.BackgroundProperty, Bg), new Setter(TemplatedControl.FontSizeProperty, 13.0) } });
+        s.Add(new Style(x => x.OfType<Window>()) { Setters = { new Setter(TemplatedControl.BackgroundProperty, Bg), new Setter(TemplatedControl.FontSizeProperty, 13.0), new Setter(TemplatedControl.FontFamilyProperty, Font) } });
         s.Add(new Style(x => x.OfType<Button>()) { Setters = { new Setter(TemplatedControl.CornerRadiusProperty, new CornerRadius(7)), new Setter(TemplatedControl.PaddingProperty, new Thickness(10, 5)) } });
         // Scroll bars beside the content when they show (not drawn over it), and only then.
         s.Add(new Style(x => x.OfType<ScrollViewer>()) { Setters = { new Setter(ScrollViewer.AllowAutoHideProperty, false), new Setter(ScrollViewer.VerticalScrollBarVisibilityProperty, ScrollBarVisibility.Auto) } });
@@ -157,10 +160,10 @@ public static partial class Ui
         Setter Fore(IBrush b) => new(ContentPresenter.ForegroundProperty, b);
 
         // Primary: the amber button (Save).
-        var hoverAmber = new SolidColorBrush(Color.Parse("#eab565"));
+        var hoverOrange = new SolidColorBrush(Color.Parse("#f0953a"));
         s.Add(new Style(x => x.OfType<Button>().Class("primary")) { Setters = { new Setter(TemplatedControl.FontWeightProperty, FontWeight.SemiBold) } });
         s.Add(Presenter(x => x.OfType<Button>().Class("primary"), Bgs(Accent), Border(Accent), Fore(AccentInk)));
-        s.Add(Presenter(x => x.OfType<Button>().Class("primary").Class(":pointerover"), Bgs(hoverAmber), Border(hoverAmber), Fore(AccentInk)));
+        s.Add(Presenter(x => x.OfType<Button>().Class("primary").Class(":pointerover"), Bgs(hoverOrange), Border(hoverOrange), Fore(AccentInk)));
         s.Add(Presenter(x => x.OfType<Button>().Class("primary").Class(":pressed"), Bgs(Accent), Border(Accent), Fore(AccentInk)));
         s.Add(Presenter(x => x.OfType<Button>().Class("primary").Class(":disabled"), Bgs(Accent), Border(Accent), Fore(AccentInk)));
         s.Add(new Style(x => x.OfType<Button>().Class("primary").Class(":disabled")) { Setters = { new Setter(Visual.OpacityProperty, 0.4) } });
@@ -175,7 +178,7 @@ public static partial class Ui
         s.Add(Presenter(x => x.OfType<Button>().Class("rail"), Bgs(Brushes.Transparent), Border(Brushes.Transparent)));
         s.Add(Presenter(x => x.OfType<Button>().Class("rail").Class(":pointerover"), Bgs(Panel2), Border(Brushes.Transparent)));
         s.Add(Presenter(x => x.OfType<Button>().Class("rail").Class("on"), Bgs(Accent), Border(Accent), Fore(AccentInk)));
-        s.Add(Presenter(x => x.OfType<Button>().Class("rail").Class("on").Class(":pointerover"), Bgs(hoverAmber), Border(hoverAmber), Fore(AccentInk)));
+        s.Add(Presenter(x => x.OfType<Button>().Class("rail").Class("on").Class(":pointerover"), Bgs(hoverOrange), Border(hoverOrange), Fore(AccentInk)));
         s.Add(new Style(x => x.OfType<Button>().Class("rail").Class("on")) { Setters = { new Setter(TemplatedControl.FontWeightProperty, FontWeight.SemiBold) } });
 
         // Switches (the web's View panel toggles): a CheckBox drawn as a small track and knob.
@@ -195,8 +198,8 @@ public static partial class Ui
         void Sync()
         {
             bool on = cb.IsChecked == true;
-            track.Background = on ? Accent : new SolidColorBrush(Color.Parse("#3a414c"));
-            knob.Background = on ? Brushes.White : new SolidColorBrush(Color.Parse("#cfd5de"));
+            track.Background = on ? Accent : new SolidColorBrush(Color.Parse("#3a3a42"));
+            knob.Background = on ? Brushes.White : new SolidColorBrush(Color.Parse("#d4d4d8"));
             knob.HorizontalAlignment = on ? HorizontalAlignment.Right : HorizontalAlignment.Left;
         }
         cb.PropertyChanged += (_, e) => { if (e.Property == ToggleButton.IsCheckedProperty) { Sync(); } };

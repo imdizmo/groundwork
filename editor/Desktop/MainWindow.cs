@@ -56,7 +56,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// What is selected, in the status bar.
     /// </summary>
-    private readonly TextBlock _selection = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(224, 166, 75)), TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _selection = new() { FontSize = 12, Foreground = Ui.Accent, TextWrapping = TextWrapping.Wrap };
     /// <summary>
     /// The game's models once opened; null before, or without the game.
     /// </summary>

@@ -17,6 +17,11 @@ Groundwork holds no data from Valheim or any other game.
 `samples/Meadow/models` holds a few models of Quaternius's Stylized Nature MegaKit (https://quaternius.com), CC0 1.0
 (public domain): no credit is required, but it is given.
 
+## Typeface
+
+The editor's typeface is [Space Grotesk](https://github.com/floriankarsten/space-grotesk) by Florian Karsten, under the
+SIL Open Font License 1.1 (`editor/Desktop/Assets/Fonts/OFL.txt`).
+
 ## Third-party code
 
 Libraries Groundwork is built with, each under its own license: [Avalonia](https://github.com/AvaloniaUI/Avalonia)

@@ -12,16 +12,16 @@ namespace Groundwork.Desktop;
 /// </summary>
 public static partial class Ui
 {
-    /// <summary>The palette's colours, editor.html's :root variables (background, panels, lines, text, accent...).</summary>
-    public static readonly Color BgColor = Color.Parse("#14171c"), Panel2Color = Color.Parse("#1e232b"), LineColor = Color.Parse("#2e353f"), Line2Color = Color.Parse("#3c4552"),
-        TextColor = Color.Parse("#e6e9ee"), MutedColor = Color.Parse("#8e97a6"), AccentColor = Color.Parse("#e0a64b"), AccentInkColor = Color.Parse("#1b1508"),
-        WarnColor = Color.Parse("#e0604b"), OkColor = Color.Parse("#7bc47f"), HoverColor = Color.Parse("#252b35");
+    /// <summary>The palette's colours, the Jatify design's (background, panels, lines, text, accent...).</summary>
+    public static readonly Color BgColor = Color.Parse("#0f0f10"), Panel2Color = Color.Parse("#1a1a1e"), LineColor = Color.Parse("#2a2a30"), Line2Color = Color.Parse("#3a3a42"),
+        TextColor = Color.Parse("#ffffff"), MutedColor = Color.Parse("#a7a7ad"), AccentColor = Color.Parse("#ec8219"), AccentInkColor = Color.Parse("#1a0e03"),
+        WarnColor = Color.Parse("#e0604b"), OkColor = Color.Parse("#7bc47f"), HoverColor = Color.Parse("#232328");
 
     /// <summary>
     /// Brushes of the palette's colours; Panel is the cards' slightly see-through background, Live the green tag of
     /// changes already sent to the running game.
     /// </summary>
-    public static readonly IBrush Bg = new SolidColorBrush(BgColor), Panel = new SolidColorBrush(Color.FromArgb(242, 24, 28, 34)), Panel2 = new SolidColorBrush(Panel2Color),
+    public static readonly IBrush Bg = new SolidColorBrush(BgColor), Panel = new SolidColorBrush(Color.FromArgb(242, 26, 26, 30)), Panel2 = new SolidColorBrush(Panel2Color),
         Line = new SolidColorBrush(LineColor), Line2 = new SolidColorBrush(Line2Color), Text = new SolidColorBrush(TextColor), Muted = new SolidColorBrush(MutedColor),
         Accent = new SolidColorBrush(AccentColor), AccentInk = new SolidColorBrush(AccentInkColor), Warn = new SolidColorBrush(WarnColor), Ok = new SolidColorBrush(OkColor),
         Hover = new SolidColorBrush(HoverColor), Live = new SolidColorBrush(Color.Parse("#8ff0b4"));

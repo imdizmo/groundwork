@@ -13,7 +13,7 @@ namespace Groundwork.Desktop.Tests;
 public class MainWindowTopBarFitTests
 {
     [AvaloniaTheory]
-    [InlineData(600, true)]
+    [InlineData(450, true)]
     [InlineData(1600, false)]
     public void TheButtonsStayInsideTheWindow(int width, bool compact)
     {

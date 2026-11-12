@@ -3,11 +3,11 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Groundwork.App;
 using Markdig.Extensions.Alerts;
 using Markdig.Extensions.Tables;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
-using Groundwork.App;
 
 namespace Groundwork.Desktop;
 
@@ -204,7 +204,7 @@ public sealed partial class HelpView
     /// <summary>A code block: its lines as written, in a fixed-width font, scrolled sideways when wider than the page.</summary>
     private static Border Code(CodeBlock code) => new()
     {
-        Background = new SolidColorBrush(Color.Parse("#0f1216")),
+        Background = new SolidColorBrush(Color.Parse("#0f0f10")),
         BorderBrush = Ui.Line,
         BorderThickness = new Thickness(1),
         CornerRadius = new CornerRadius(6),

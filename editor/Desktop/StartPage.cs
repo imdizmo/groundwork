@@ -38,7 +38,7 @@ public sealed class StartPage
         DockPanel.SetDock(footer, Dock.Bottom);
         var side = new Border
         {
-            Background = new SolidColorBrush(Color.FromRgb(24, 27, 33)),
+            Background = Ui.Panel2,
             BorderBrush = Ui.Line,
             BorderThickness = new Thickness(0, 0, 1, 0),
             Padding = new Thickness(14, 26, 14, 18),
