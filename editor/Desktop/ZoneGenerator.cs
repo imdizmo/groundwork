@@ -27,13 +27,16 @@ public static partial class ZoneGenerator
     /// by Roads (levelled strips painted with the second layer, or RoadChannel's: 0 the first, 1 the second) when asked;
     /// Giants: the share of the trees that are giants, about GiantScale times their kind's size (one here and there, not
     /// whole groves: a game's few great trees make much of its canopy); cliffs: ground steeper than CliffSlope degrees faced
-    /// with the catalog's Cliffs (0: none), pieces of rock wall overlapping along it.
+    /// with the catalog's Cliffs (0: none), pieces of rock wall overlapping along it; fjords: inlets cut from the coast into
+    /// the high ground, Fjords metres under the sea at its mouth, FjordWidth wide, about FjordSpacing apart (0: none); crags:
+    /// the faces steeper than RockSlope carved Crags metres deep with crags, buttresses and gullies, ribs and chutes running down them (0: smooth).
     /// </summary>
     public sealed record Spec(float Low = 20, float High = 70, float HillSize = 300, float RimHeight = 200, float RimWidth = 220,
         float[]? LakeHectares = null, float Woods = 0.35f, float WoodDensity = 17, float OpenTrees = 0.3f, float Small = 20, float TreeScale = 1, float Shore = 6, int Seed = 1,
         float Terraces = 0, float TerraceShare = 1, float Canyons = 0, float CanyonWidth = 40, float CanyonSpacing = 500,
         float Coast = 0, string CoastSide = "west", float CoastDepth = 15, bool CoastDry = false, int Rivers = 0, float RiverWidth = 8,
-        int Floaters = 0, float SnowLine = 0, float OpenDirt = 0.12f, int SnowChannel = 0, float RockSlope = 30, float Marsh = 0, float MarshShare = 0.3f, float Rough = 0, int Camps = 0, int CampSize = 5, bool Roads = false, int RoadChannel = 1, float Giants = 0, float GiantScale = 2.5f, float CliffSlope = 0);
+        int Floaters = 0, float SnowLine = 0, float OpenDirt = 0.12f, int SnowChannel = 0, float RockSlope = 30, float Marsh = 0, float MarshShare = 0.3f, float Rough = 0, int Camps = 0, int CampSize = 5, bool Roads = false, int RoadChannel = 1, float Giants = 0, float GiantScale = 2.5f, float CliffSlope = 0,
+        float Fjords = 0, float FjordWidth = 300, float FjordSpacing = 1400, float Crags = 0);
 
     /// <summary>A lake made: its middle and outline (Unreal X, Y metres), its surface height and depth.</summary>
     public sealed record Lake(Vector2 Middle, Vector2[] Outline, float Level, float Depth);
@@ -138,9 +141,10 @@ public static partial class ZoneGenerator
                     float ridges = 0.6f + (0.4f * Ridged(x / 110, y / 110, spec.Seed + 11, 4));
                     rim = spec.RimHeight * tall * rise * ridges;
                 }
-                h[(r * cols) + c] = Marshed(spec, Coasted(spec, ground + rim, c, r, cols, rows, x, y), x, y);
+                h[(r * cols) + c] = Marshed(spec, Fjorded(spec, Coasted(spec, ground + rim, c, r, cols, rows, x, y), c, r, cols, rows, x, y), x, y);
             }
         });
+        Cragged(spec, h, cols, rows, x0, y0);
         var lakes = PlaceLakes(spec, h, cols, rows, x0, y0, rng);
         var rivers = MakeRivers(spec, h, cols, rows, x0, y0, lakes, rng);
         bool[] wet = Wet(spec, h, cols, rows, x0, y0, rivers);
@@ -172,8 +176,8 @@ public static partial class ZoneGenerator
 
     /// <summary>
     /// A style's numbers for ground made elsewhere (cols by rows metres): its lowest and highest ground and how far apart
-    /// its hills are, measured; and nothing that would change its shape (no rim, coast, terraces, canyons, roughness,
-    /// marsh, cliffs, lakes, rivers or camps: each can be asked for again), so the zone lies on it as it is.
+    /// its hills are, measured; and nothing that would change its shape (no rim, coast, terraces, canyons, fjords,
+    /// crags, roughness, marsh, cliffs, lakes, rivers or camps: each can be asked for again), so the zone lies on it as it is.
     /// </summary>
     public static Spec Measured(Spec style, float[] ground, int cols, int rows)
     {
@@ -205,6 +209,8 @@ public static partial class ZoneGenerator
             Rough = 0,
             Marsh = 0,
             CliffSlope = 0,
+            Fjords = 0,
+            Crags = 0,
             LakeHectares = [],
             Rivers = 0,
             Camps = 0,

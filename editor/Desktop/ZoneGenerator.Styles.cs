@@ -32,5 +32,9 @@ public static partial class ZoneGenerator
         ("Highlands", "Stepped grassy highland with crags, lakes and a river, falling to the sea on one side.",
             new Spec(Low: 25, High: 130, HillSize: 250, RimHeight: 230, RimWidth: 250, Woods: 0.05f, WoodDensity: 18, OpenTrees: 0.5f, Small: 60, Shore: 0,
                 Terraces: 40, TerraceShare: 0.45f, Coast: 150, CoastSide: "east", CoastDepth: 30, Rivers: 1, OpenDirt: 0.5f, RockSlope: 36, Rough: 5, Camps: 8, CampSize: 4, Roads: true, Giants: 0.25f, GiantScale: 3)),
+        ("Fjords", "High flat fells cut by deep inlets of the sea between broken walls of rock, snow on the tops, a few dark woods.",
+            new Spec(Low: 120, High: 350, HillSize: 1250, RimHeight: 0, LakeHectares: [], Woods: 0.12f, WoodDensity: 22, OpenTrees: 0.3f, Small: 30, Shore: 0,
+                Coast: 600, CoastSide: "west", CoastDepth: 600, Fjords: 600, FjordWidth: 350, FjordSpacing: 1000, Rivers: 2, SnowLine: 300,
+                RockSlope: 35, Rough: 1, Camps: 3, CampSize: 4, Roads: true)),
     ];
 }

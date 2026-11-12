@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace Groundwork.Desktop;
 
-/// <summary>The shapes some zones have beyond rolling hills: shelves, canyons, a coast or the world's edge, rivers, rocks in the air, snow.</summary>
+/// <summary>The shapes some zones have beyond rolling hills: shelves, canyons, fjords, a coast or the world's edge, rivers, rocks in the air, snow.</summary>
 public static partial class ZoneGenerator
 {
     /// <summary>The rolling ground stepped into shelves (where the terraces reach) and cut by canyons.</summary>
@@ -105,6 +105,62 @@ public static partial class ZoneGenerator
         // a beach: the ground eases down to the water, then the sea floor drops away
         float down = Smooth(spec.Coast, 0, d);
         return ground + ((-spec.CoastDepth - ground) * MathF.Pow(down, 0.8f));
+    }
+
+    /// <summary>
+    /// Fjords: winding, branching inlets cut into the high ground from the coast (or every edge, with none): broken walls
+    /// of rock (ribs and chutes running down the faces, crags, buttresses and gullies) down to a flat floor Fjords metres under
+    /// the sea at the mouth, rising inland (up to the highest ground at the far side, so each ends where its floor meets
+    /// the ground) as it narrows to half its width.
+    /// </summary>
+    private static float Fjorded(Spec spec, float ground, int c, int r, int cols, int rows, float x, float y)
+    {
+        if (spec.Fjords <= 0)
+        {
+            return ground;
+        }
+        float t = spec.Coast > 0
+            ? Math.Clamp(FromCoast(spec, c, r, cols, rows, x, y) / (spec.CoastSide is "north" or "south" ? rows : cols), 0, 1)
+            : Math.Clamp(MathF.Min(MathF.Min(c, cols - 1 - c), MathF.Min(r, rows - 1 - r)) * 2 / MathF.Min(cols, rows), 0, 1);
+        float floor = -spec.Fjords + ((spec.Fjords + spec.High) * t * t);
+        float half = spec.FjordWidth / spec.FjordSpacing * 0.22f * (1 - (0.5f * t));
+        // where the noise crosses zero, as the canyons; its edge pushed in and out a hundred metres or so: buttresses and
+        // gullies along the walls, which reach out five times the floor's half-width beyond it
+        float Across(float px, float py) => MathF.Abs(Fbm(px / spec.FjordSpacing, py / spec.FjordSpacing, spec.Seed + 113, 3)) + (half * 1.4f * Fbm(px / 90, py / 90, spec.Seed + 117, 3));
+        float n = Across(x, y);
+        // the wall above the sea (its share of the drop) over the outer three fifths of its width, a sharp lip at the top;
+        // the rest straight down under the water, where it is not seen. In places it eases out at its foot onto a strip of
+        // shore a couple of metres above the sea; elsewhere it goes on steeply into the water
+        float shore = Smooth(-0.05f, 0.1f, Fbm(x / 500, y / 500, spec.Seed + 127, 2)), lift = 2.5f * shore;
+        float drop = MathF.Max(0, ground - floor), above = drop > 0 ? Math.Clamp((ground - lift) / drop, 0, 1) : 0;
+        float u = Math.Clamp(((half * 6) - n) / (half * 5), 0, 1), w = MathF.Min(1, u / 0.6f);
+        float shaped = (w * (1.5f - (0.5f * w))) + (shore * w * (0.5f - (0.5f * w)));
+        float cut = u < 0.6f ? above * shaped : above + ((1 - above) * (u - 0.6f) / 0.4f);
+        float wall = ground - (drop * cut);
+        if (cut is <= 0 or >= 1)
+        {
+            return wall;
+        }
+        // the face's grain: crags every way (a few metres, 20 m or so across), and ribs and chutes running down it, a few
+        // tens of metres apart, cut into it, never standing out of it (ridged noise stretched four times down the fall
+        // line, which is across the noise's lines: of eight set ways, the two nearest blended)
+        float ny = Across(x, y + 2) - n, nx = Across(x + 2, y) - n;
+        float theta = MathF.Atan2(ny, nx), k = ((theta * 8 / MathF.PI % 8) + 8) % 8;
+        // only on the steep faces (the wall's own slope, from how fast the cut changes across it): none on its gentle foot
+        float steep = drop * (u < 0.6f ? above * (1.5f - w + (shore * (0.5f - w))) / 0.6f : (1 - above) / 0.4f) / (5 * half) * MathF.Sqrt((nx * nx) + (ny * ny)) / 2;
+        int k0 = (int)k;
+        float Grooves(int o)
+        {
+            float a = o % 8 * MathF.PI / 8, gw = 25, stretch = 4;
+            var (cs, sn) = (MathF.Cos(a), MathF.Sin(a));
+            return Ridged(((-x * sn) + (y * cs)) / gw, ((x * cs) + (y * sn)) / (gw * stretch), spec.Seed + 125 + (o % 8 * 7), 2);
+        }
+        float grooves = Grooves(k0) + ((Grooves(k0 + 1) - Grooves(k0)) * (k - k0));
+        float face = Smooth(0.6f, 1.2f, steep) * Smooth(1, 0.94f, cut);
+        float carved = wall + (face * ((7 * Fbm(x / 18, y / 18, spec.Seed + 123, 3) / 0.4f) + (40 * (grooves - 1))));
+        // no chute cut below the shore or the sea's edge (no trench between the wall and the land at its foot), and
+        // nothing raised out of the water under it
+        return wall >= lift ? MathF.Max(carved, MathF.Min(wall, lift + 0.5f)) : MathF.Min(carved, wall);
     }
 
     /// <summary>Low ground (under Marsh metres) flattened towards wet flats, pools of it dipping under the sea's level (0).</summary>

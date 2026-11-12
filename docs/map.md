@@ -13,15 +13,16 @@ folder (**Settings**; `Documents/Groundwork` unless you choose another), centred
 model folder and starts with a copy of its catalog.
 
 The styles: rolling woods, grassland with plateaus, sky islands, broken badland at the world's edge, mesas and canyons,
-savanna, tundra coast, marsh coast, highlands; each fills in every slider and brings its own shapes. **Flat ground** and
-**Gently rolling ground** at the end of the list make a map with nothing on it. Every slider's number can be typed too
-(past the slider's ends as well), and **Another** seed makes other ground from the same numbers. The sliders, by group:
+savanna, tundra coast, marsh coast, highlands, fjords; each fills in every slider and brings its own shapes. **Flat
+ground** and **Gently rolling ground** at the end of the list make a map with nothing on it. Every slider's number can
+be typed too (past the slider's ends as well), and **Another** seed makes other ground from the same numbers. The
+sliders, by group:
 
 | Group | Sliders |
 |---|---|
-| Ground | The lowest and highest ground; how far apart the hills are; roughness (small bumps so no ground is quite flat); terrace steps and how much of the ground is terraced; canyons' depth, width and spacing; cliffs from (ground steeper than this faced with walls of rock: the map's own cliff pieces, overlapping along it, the ground stepped behind them so the grass runs to the edge; 0: none). |
+| Ground | The lowest and highest ground; how far apart the hills are; roughness (small bumps so no ground is quite flat); terrace steps and how much of the ground is terraced; canyons' depth, width and spacing; fjords' depth (under the sea at their mouths), width and spacing; cliffs from (ground steeper than this faced with walls of rock: the map's own cliff pieces, overlapping along it, the ground stepped behind them so the grass runs to the edge; 0: none); crags (the rock faces' grain, so deep: crags, buttresses and gullies, ribs and chutes running down them; 0: smooth). |
 | Mountain rim | A rim of ridged mountains round the edge, high in places and lower in others (0: none), and its width. |
-| Coast | How far in from one side the ground goes under the sea (0: none), how deep, which side, or a drop into nothing instead. |
+| Coast | How far in from one side the ground goes under the sea (0: none), how deep (up to 800 m), which side, or a drop into nothing instead. |
 | Water | How many lakes and the biggest one's size (each next about half the last), set in the low ground with banks sloping to the water; rivers and their width; the sand along shores; marsh flats under a height, and the share of them that pools. |
 | Woods & plants | The share of the ground under woods, trees per hectare in the woods and in the open, the trees' size (a game's trees are often several times a real tree's), giant trees and their size, bushes and plants per hectare. |
 | Paint | The slope rock is painted from, the share of open ground patched with dirt, the height snow lies from. |
@@ -45,11 +46,11 @@ square one.
 
 The generator then measures the ground (its lowest and highest ground, how far apart its hills are) and lays the zone
 over it like a sheet: paint by height and slope, woods, plants and trees, snow, follow your shape, and nothing changes
-the ground itself. The sliders that would (the rim, the coast, terraces, canyons, roughness, marsh, cliffs, lakes,
-rivers and camps) start at none; turn any of them up to have it worked into your ground. **Lowest ground** and
+the ground itself. The sliders that would (the rim, the coast, terraces, canyons, fjords, crags, roughness, marsh, cliffs,
+lakes, rivers and camps) start at none; turn any of them up to have it worked into your ground. **Lowest ground** and
 **Highest ground** stretch it between new heights; **Hills apart** is your ground's own and does not change. The
-heightmap is kept beside the map as `base.npy` (`generator.base` in map.json), so **Make it again** lays the new
-numbers over the same ground.
+heightmap is kept beside the map as `base.npy` (`generator.base` in map.json), so **Make it again** lays the new numbers
+over the same ground.
 
 A generated map keeps its numbers (`generator` in map.json). Until it is worked on by hand and saved, **⋯ → Make it
 again with other numbers…** opens the generator on them and makes the whole map again; **Undo make it again** goes back
@@ -59,17 +60,19 @@ The ground is painted by rule: rock on steep ground (less under trees), dirt und
 elsewhere. The zone is planted with the open map's Trees, Bushes, Rocks and Plants.
 
 The styles' shapes, beyond rolling hills: flat shelves with steep risers (plateaus, mesas), canyons cut down into the
-ground, a coast on one side going under the sea or a cliff dropping into nothing, rivers running downhill into a lake
-or the sea the way water would, round the hills on the ground's surface (a shallow bed, a pond where a hollow would hold
-the water), floating islands (lumps of the map's own ground hanging in the air, rounded earth below, trees and rocks on
-top; models written into its models folder as Islands kinds, so Unreal gets them like any
-other), snow above a height, marsh flats with pools along
-the sea, small bumps over everything so no ground is quite flat, and camps: buildings (the catalog's Buildings) in a ring
-round levelled ground with props (its Props) among them, joined one to the next by levelled roads painted with the
-second layer, and giant trees: a share of the trees, here and there rather than in whole groves, several times
-their kind's size (a game's few great trees make much of its canopy). The first layer is painted on shores and snow
-(or the second, for a coast with beaches and snow), the second in patches over the open ground, the third on steep
-ground.
+ground, fjords (winding, branching inlets of the sea cut from the coast into high ground, or from every edge without a
+coast: broken walls of rock, ribs and chutes running down the faces, buttresses and gullies, down to a flat floor,
+deepest at the mouth, rising and narrowing inland until each ends; the walls are the ground itself, painted rock), a
+coast on one side going under the sea or a cliff dropping into nothing, rivers running downhill into a lake or the sea
+the way water would, round the hills on the ground's surface (a shallow bed, a pond where a hollow would hold the
+water), floating islands (lumps of the map's own ground hanging in the air, rounded earth below, trees and rocks on top;
+models written into its models folder as Islands kinds, so Unreal gets them like any other), snow above a height, marsh
+flats with pools along the sea, small bumps over everything so no ground is quite flat, and camps: buildings (the
+catalog's Buildings) in a ring round levelled ground with props (its Props) among them, joined one to the next by
+levelled roads painted with the second layer, and giant trees: a share of the trees, here and there rather than in whole
+groves, several times their kind's size (a game's few great trees make much of its canopy). The first layer is painted
+on shores and snow (or the second, for a coast with beaches and snow), the second in patches over the open ground, the
+third on steep ground.
 
 ## map.json
 

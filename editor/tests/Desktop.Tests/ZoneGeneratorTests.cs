@@ -90,6 +90,70 @@ public class ZoneGeneratorTests
     }
 
     [Fact]
+    public void FjordsCutDeepSheerInletsFromTheCoastThatEndInland()
+    {
+        const int N = 1200;
+        var spec = new ZoneGenerator.Spec(Low: 250, High: 300, HillSize: 1200, RimHeight: 0, LakeHectares: [], Woods: 0, Small: 0, Shore: 0, Coast: 150, CoastDepth: 300, Fjords: 300, FjordWidth: 150, FjordSpacing: 400);
+        var cut = ZoneGenerator.Generate(spec, N, N, -600, -600, Kinds);
+        var plain = ZoneGenerator.Generate(spec with { Fjords = 0 }, N, N, -600, -600, Kinds);
+        float Under(ZoneGenerator.Zone z, int c0, int c1) => Enumerable.Range(0, N * N).Count(p => p % N >= c0 && p % N < c1 && z.Heights[p] < -100) / (float)(N * (c1 - c0));
+        Assert.True(Under(cut, 300, 500) > 0.05f, $"{Under(cut, 300, 500)}");   // deep water well in from the coast
+        Assert.Equal(0, Under(plain, 300, 500));
+        Assert.True(Under(cut, 1000, N) < Under(cut, 300, 500) / 4, "shallower and narrower inland");
+        // sheer walls inland of the coast's own drop: the ground over 45° many times what the plain fells have
+        int Sheer(ZoneGenerator.Zone z) => Enumerable.Range(0, N * N).Count(p => p % 3 == 0 && p % N >= 300 && z.Heights[p] > 0 && ZoneGenerator.Slope(z.Heights, N, N, p % N, p / N) > 45);
+        Assert.True(Sheer(cut) > 5 * Math.Max(1, Sheer(plain)), $"{Sheer(cut)} against {Sheer(plain)}");
+        Assert.DoesNotContain(cut.Objects, o => o.At.Y < 0.3f);
+        // no water trapped at the walls' feet (trenches between a wall and the shore below it): each pool under the sea
+        // that the open sea (from the map's edge) does not reach, small ones counted (a big one is a loch, its line a loop)
+        int[] pool = new int[N * N];
+        var sizes = new List<int> { 0 };
+        for (int p0 = 0; p0 < N * N; p0++)
+        {
+            if (cut.Heights[p0] >= 0 || pool[p0] != 0)
+            {
+                continue;
+            }
+            var queue = new Queue<int>([p0]);
+            (pool[p0], bool edge, int size) = (sizes.Count, false, 0);
+            while (queue.TryDequeue(out int p))
+            {
+                size++;
+                edge |= p % N == 0 || p % N == N - 1 || p / N == 0 || p / N == N - 1;
+                foreach (int q in new[] { p - 1, p + 1, p - N, p + N })
+                {
+                    if (q >= 0 && q < N * N && Math.Abs((q % N) - (p % N)) <= 1 && pool[q] == 0 && cut.Heights[q] < 0)
+                    {
+                        pool[q] = sizes.Count;
+                        queue.Enqueue(q);
+                    }
+                }
+            }
+            sizes.Add(edge ? 0 : size);
+        }
+        int trapped = sizes.Where(n => n < 5000).Sum();
+        Assert.True(trapped < N * N / 2000, $"{trapped} m² of water trapped in small pools: {string.Join(", ", sizes.Where(n => n > 0).OrderDescending().Take(8))}");
+    }
+
+    [Fact]
+    public void CragsGrainTheSteepFacesAndLeaveTheFlatAlone()
+    {
+        const int N = 800;
+        var spec = new ZoneGenerator.Spec(Low: 150, High: 200, HillSize: 800, RimHeight: 0, LakeHectares: [], Woods: 0, Small: 0, Shore: 0, Coast: 150, CoastDepth: 300, Fjords: 200, FjordWidth: 150, FjordSpacing: 400);
+        var plain = ZoneGenerator.Generate(spec, N, N, -400, -400, Kinds);
+        var cragged = ZoneGenerator.Generate(spec with { Crags = 5 }, N, N, -400, -400, Kinds);
+        float Change(int p) => MathF.Abs(cragged.Heights[p] - plain.Heights[p]);
+        bool Flat(int p) => ZoneGenerator.Slope(plain.Heights, N, N, p % N, p / N) < 3;
+        var steep = Enumerable.Range(0, N * N).Where(p => plain.Heights[p] > 2 && ZoneGenerator.Slope(plain.Heights, N, N, p % N, p / N) > 40).ToList();
+        bool FlatAround(int p) => Enumerable.Range(-6, 13).All(dr => Enumerable.Range(-6, 13).All(dc => Flat(p + (dr * N) + dc)));   // flat 6 m each way: no face blurred into it
+        var flat = Enumerable.Range(0, N * N).Where(p => p % 3 == 0 && p % N is >= 6 and < N - 6 && p / N is >= 6 and < N - 6 && plain.Heights[p] > 2 && FlatAround(p)).ToList();
+        Assert.True(steep.Count > 1000 && flat.Count > 1000, $"{steep.Count} steep, {flat.Count} flat");
+        Assert.True(steep.Average(Change) > 1, $"{steep.Average(Change)} m on the faces");   // the faces carved by metres
+        Assert.True(flat.Max(Change) < 0.5f, $"{flat.Max(Change)} m on the flats");   // the flats as they were
+        Assert.DoesNotContain(Enumerable.Range(0, N * N), p => plain.Heights[p] > 1 && cragged.Heights[p] < 1);   // no land cut under the sea
+    }
+
+    [Fact]
     public void ACoastGoesUnderTheSeaOnItsSideOnly()
     {
         var z = Make(new ZoneGenerator.Spec(Low: 20, High: 40, RimHeight: 100, RimWidth: 60, LakeHectares: [], Coast: 120, CoastSide: "west"));
