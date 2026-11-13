@@ -67,7 +67,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.rid }}
-          path: out/Groundwork-*.*
+          path: |
+            out/*.zip
+            out/*.tar.gz
           if-no-files-found: error
 
   release:
