@@ -1,0 +1,91 @@
+name: Release
+
+# A tag v<VERSION> (or a manual run with that tag) builds and tests the editor, publishes it for Linux and Windows
+# (one self-contained program each) and makes the GitHub release, its notes the CHANGELOG's section for the version.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to release (v<VERSION>)
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: The tag matches VERSION
+        run: test "$TAG" = "v$(tr -d '[:space:]' < VERSION)"
+      - name: Core tests
+        run: dotnet test --project editor/tests/Core.Tests/Core.Tests.csproj -c Release
+      - name: Desktop tests
+        run: xvfb-run -a dotnet test --project editor/tests/Desktop.Tests/Desktop.Tests.csproj -c Release
+
+  publish:
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - rid: linux-x64
+            os: ubuntu-latest
+          - rid: win-x64
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Publish
+        shell: bash
+        run: >
+          dotnet publish editor/Desktop/Groundwork.Desktop.csproj -c Release -r ${{ matrix.rid }} --self-contained
+          -p:PublishSingleFile=true -p:DebugType=none -o "out/Groundwork-$TAG-${{ matrix.rid }}"
+      - name: Package
+        shell: bash
+        run: |
+          dir="Groundwork-$TAG-${{ matrix.rid }}"
+          rm -f out/"$dir"/*.xml out/"$dir"/*.pdb
+          cp LICENSE NOTICE.md CHANGELOG.md out/"$dir"/
+          cd out
+          if [ "${{ matrix.rid }}" = win-x64 ]; then 7z a -tzip "$dir.zip" "$dir" > /dev/null; else tar -czf "$dir.tar.gz" "$dir"; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.rid }}
+          path: out/Groundwork-*.*
+          if-no-files-found: error
+
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Release notes from the CHANGELOG
+        run: awk -v v="## $TAG" '$0 == v {on = 1; next} /^## / {on = 0} on' CHANGELOG.md > notes.md
+      - name: Make the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$TAG" dist/* --title "Groundwork ${TAG#v}" --notes-file notes.md --verify-tag
