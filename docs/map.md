@@ -25,12 +25,12 @@ sliders, by group:
 
 | Group | Sliders |
 |---|---|
-| Ground | The lowest and highest ground; how far apart the hills are; roughness (small bumps so no ground is quite flat); terrace steps and how much of the ground is terraced; canyons' depth, width and spacing; fjords' depth (under the sea at their mouths), width and spacing; cliffs from (ground steeper than this faced with walls of rock: the map's own cliff pieces, overlapping along it, the ground stepped behind them so the grass runs to the edge; 0: none); crags (the rock faces' grain, so deep: crags, buttresses and gullies, ribs and chutes running down them; 0: smooth). |
+| Ground | The lowest and highest ground; how far apart the hills are; roughness (small bumps so no ground is quite flat); terrace steps and how much of the ground is terraced; canyons' depth, width and spacing; fjords' depth (under the sea at their mouths), width and spacing; cliffs from (ground steeper than this faced with walls of rock: the map's own cliff pieces, overlapping along it, the ground stepped behind them so the grass runs to the edge; 0: none); crags (the rock faces' grain, so deep: crags, buttresses and gullies, ribs and chutes running down them, on the faces that break from the slope round them and on cliffs, not on every steep hillside; 0: smooth); strata (bands of rock so thick cut back into the steep faces, ledges and risers on a gentle tilt; 0: none); erosion (rain over the whole map cutting valleys and gullies and filling the low ground; 1 is as much as the brush's fill; 0: none); scree angle (ground steeper than this slides down and rests at it, piling at the foot of every face; 0: none); ridges (the share of the hills that are sharp-crested ridges rather than rounded); expand (the high ground broadened so many metres into plateaus, or with a negative number the valleys widened to flat floors; 0: none); valleys (streams gathering off the high ground cut valleys down it, branching up into the hills, and lay what they cut lower down: fans at the feet of slopes, flat valley floors; 0: none). With erosion or scree on, what they laid down is painted earth and the channels they cut rock. |
 | Mountain rim | A rim of ridged mountains round the edge, high in places and lower in others (0: none), and its width. |
 | Coast | How far in from one side the ground goes under the sea (0: none), how deep (up to 800 m), which side, or a drop into nothing instead. |
 | Water | How many lakes and the biggest one's size (each next about half the last), set in the low ground with banks sloping to the water; rivers and their width; the sand along shores; marsh flats under a height, and the share of them that pools. |
 | Woods & plants | The share of the ground under woods, trees per hectare in the woods and in the open, the trees' size (a game's trees are often several times a real tree's), giant trees and their size, bushes and plants per hectare. |
-| Paint | The slope rock is painted from, the share of open ground patched with dirt, the height snow lies from. |
+| Paint | The slope rock is painted from, rock on crests (ridges, knolls and the lips of faces rocked, so strongly; 0: none), streams (earth painted where the water gathers, down every valley, so strongly; 0: none), snow slides off (snow gone from ground steeper than this, settled in the hollows below the snow line; 0: none), the share of open ground patched with dirt, the height snow lies from. |
 | Camps & roads | How many camps, buildings each, roads between them. |
 | Extras | Floating islands. |
 
@@ -51,7 +51,7 @@ square one.
 
 The generator then measures the ground (its lowest and highest ground, how far apart its hills are) and lays the zone
 over it like a sheet: paint by height and slope, woods, plants and trees, snow, follow your shape, and nothing changes
-the ground itself. The sliders that would (the rim, the coast, terraces, canyons, fjords, crags, roughness, marsh, cliffs,
+the ground itself. The sliders that would (the rim, the coast, terraces, canyons, fjords, crags, strata, erosion, scree, expand, valleys, roughness, marsh, cliffs,
 lakes, rivers and camps) start at none; turn any of them up to have it worked into your ground. **Lowest ground** and
 **Highest ground** stretch it between new heights; **Hills apart** is your ground's own and does not change. The
 heightmap is kept beside the map as `base.npy` (`generator.base` in map.json), so **Make it again** lays the new numbers

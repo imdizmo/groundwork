@@ -163,6 +163,43 @@ public static partial class ZoneGenerator
         return wall >= lift ? MathF.Max(carved, MathF.Min(wall, lift + 0.5f)) : MathF.Min(carved, wall);
     }
 
+    /// <summary>
+    /// With fjords, the ground under the sea's level that the open sea (from the map's edge) does not reach raised to a
+    /// damp flat just over it: a winding arm's floor rises inland and can dip again where the arm turns back to the coast,
+    /// and would leave a pool cut off at its head. Not with a marsh, whose pools are meant.
+    /// </summary>
+    private static void Unpooled(Spec spec, float[] h, int cols, int rows)
+    {
+        if (spec.Fjords <= 0 || spec.Marsh > 0)
+        {
+            return;
+        }
+        bool[] open = new bool[h.Length];
+        var stack = new Stack<int>();
+        for (int i = 0; i < h.Length; i++)
+        {
+            int c = i % cols, r = i / cols;
+            if (h[i] < 0 && (c == 0 || r == 0 || c == cols - 1 || r == rows - 1))
+            {
+                open[i] = true;
+                stack.Push(i);
+            }
+        }
+        while (stack.TryPop(out int i))
+        {
+            int c = i % cols;
+            foreach (int j in new[] { c > 0 ? i - 1 : -1, c < cols - 1 ? i + 1 : -1, i - cols, i + cols })
+            {
+                if (j >= 0 && j < h.Length && !open[j] && h[j] < 0)
+                {
+                    open[j] = true;
+                    stack.Push(j);
+                }
+            }
+        }
+        Parallel.For(0, h.Length, i => h[i] = h[i] < 0 && !open[i] ? 0.3f : h[i]);
+    }
+
     /// <summary>Low ground (under Marsh metres) flattened towards wet flats, pools of it dipping under the sea's level (0).</summary>
     private static float Marshed(Spec spec, float ground, float x, float y)
     {

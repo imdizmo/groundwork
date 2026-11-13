@@ -1,10 +1,11 @@
 namespace Groundwork.Desktop;
 
-/// <summary>The rock faces' grain: crags, and ribs and chutes running down them, on every face steeper than the rock.</summary>
+/// <summary>The rock faces' grain: crags, and ribs and chutes running down them, on the faces steeper than the rock.</summary>
 public static partial class ZoneGenerator
 {
     /// <summary>
-    /// Crags: every face steeper than RockSlope (the ground blurred over 7 m: faces, not bumps on them) carved Crags metres
+    /// Crags: every face steeper than RockSlope (the ground blurred over 7 m: faces, not bumps on them) that breaks from the
+    /// slope round it (steeper than the ground's lie over 60 m), or is a cliff whatever its surroundings, carved Crags metres
     /// deep with crags every way (a few metres, 18 m or so across), ribs and chutes running down the fall line (ridged
     /// noise stretched four times down it, which is across the noise's lines: of eight set ways, the two nearest blended),
     /// three times as deep, and gullies between buttresses (60 m or so across) four times as deep, the chutes and gullies
@@ -18,7 +19,7 @@ public static partial class ZoneGenerator
         {
             return;
         }
-        float[] soft = BoxBlur(h, cols, rows, 3), carved = new float[h.Length];
+        float[] soft = BoxBlur(h, cols, rows, 3), broad = BoxBlur(h, cols, rows, 30), carved = new float[h.Length];
         Parallel.For(0, rows, r =>
         {
             for (int c = 0; c < cols; c++)
@@ -28,7 +29,11 @@ public static partial class ZoneGenerator
                 int cl = Math.Max(0, c - 1), cr = Math.Min(cols - 1, c + 1), ru = Math.Max(0, r - 1), rd = Math.Min(rows - 1, r + 1);
                 float gx = (soft[(r * cols) + cr] - soft[(r * cols) + cl]) / Math.Max(1, cr - cl), gy = (soft[(rd * cols) + c] - soft[(ru * cols) + c]) / Math.Max(1, rd - ru);
                 float g = MathF.Sqrt((gx * gx) + (gy * gy));
-                float face = Smooth(spec.RockSlope - 3, spec.RockSlope + 6, MathF.Atan(g) * 180 / MathF.PI);
+                // a face, not a steep hillside: steeper than the rock, and either a break in the slope (well steeper than
+                // the ground's lie over 60 m: a scarp, a wall) or a cliff whatever its surroundings
+                float slope = MathF.Atan(g) * 180 / MathF.PI, lie = Slope(broad, cols, rows, c, r);
+                float face = Smooth(spec.RockSlope - 3, spec.RockSlope + 6, slope)
+                    * MathF.Max(Smooth(4, 12, slope - lie), Smooth(spec.RockSlope + 15, spec.RockSlope + 25, slope));
                 if (face <= 0)
                 {
                     carved[p] = ground;

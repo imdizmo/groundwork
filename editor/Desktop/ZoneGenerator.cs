@@ -29,14 +29,24 @@ public static partial class ZoneGenerator
     /// whole groves: a game's few great trees make much of its canopy); cliffs: ground steeper than CliffSlope degrees faced
     /// with the catalog's Cliffs (0: none), pieces of rock wall overlapping along it; fjords: inlets cut from the coast into
     /// the high ground, Fjords metres under the sea at its mouth, FjordWidth wide, about FjordSpacing apart (0: none); crags:
-    /// the faces steeper than RockSlope carved Crags metres deep with crags, buttresses and gullies, ribs and chutes running down them (0: smooth).
+    /// the faces steeper than RockSlope that break from the slope round them (and cliffs) carved Crags metres deep with
+    /// crags, buttresses and gullies, ribs and chutes running down them (0: smooth);
+    /// strata: bands of rock Strata metres thick cut into the faces (0: none); erosion: rain over the whole map, Erosion times
+    /// the brush's fill (0: none); scree: ground steeper than Talus degrees slid down to rest at it (0: none), what the
+    /// weather laid down painted earth and what it cut rock; Ridges: that share of the hills sharp-crested (0..1); Expand:
+    /// the high ground broadened so many metres into plateaus, or the low ground with a negative one (0: none); Crests:
+    /// rock painted on the ground standing over its surroundings, so strongly (0..1); Valleys: streams cutting valleys
+    /// down from the high ground and laying what they cut lower down, so strongly (0: none); Streams: earth painted
+    /// where the water gathers, so strongly (0..1); SnowSlip: snow sliding off ground steeper than so many degrees and settling in the hollows (0: none).
     /// </summary>
     public sealed record Spec(float Low = 20, float High = 70, float HillSize = 300, float RimHeight = 200, float RimWidth = 220,
         float[]? LakeHectares = null, float Woods = 0.35f, float WoodDensity = 17, float OpenTrees = 0.3f, float Small = 20, float TreeScale = 1, float Shore = 6, int Seed = 1,
         float Terraces = 0, float TerraceShare = 1, float Canyons = 0, float CanyonWidth = 40, float CanyonSpacing = 500,
         float Coast = 0, string CoastSide = "west", float CoastDepth = 15, bool CoastDry = false, int Rivers = 0, float RiverWidth = 8,
         int Floaters = 0, float SnowLine = 0, float OpenDirt = 0.12f, int SnowChannel = 0, float RockSlope = 30, float Marsh = 0, float MarshShare = 0.3f, float Rough = 0, int Camps = 0, int CampSize = 5, bool Roads = false, int RoadChannel = 1, float Giants = 0, float GiantScale = 2.5f, float CliffSlope = 0,
-        float Fjords = 0, float FjordWidth = 300, float FjordSpacing = 1400, float Crags = 0);
+        float Fjords = 0, float FjordWidth = 300, float FjordSpacing = 1400, float Crags = 0,
+        float Strata = 0, float Erosion = 0, float Talus = 0, float Ridges = 0, float Expand = 0, float Crests = 0,
+        float Valleys = 0, float Streams = 0, float SnowSlip = 0);
 
     /// <summary>A lake made: its middle and outline (Unreal X, Y metres), its surface height and depth.</summary>
     public sealed record Lake(Vector2 Middle, Vector2[] Outline, float Level, float Depth);
@@ -104,11 +114,14 @@ public static partial class ZoneGenerator
         // lowest and highest hundredth), more low ground than high (each pixel on its own: the rows in parallel)
         if (given == null)
         {
+            var ridges = new Noise(spec.Seed + 19);
             Parallel.For(0, rows, r =>
             {
                 for (int c = 0; c < cols; c++)
                 {
-                    h[(r * cols) + c] = Fbm((c + x0) / spec.HillSize, (r + y0) / spec.HillSize, spec.Seed, 5);
+                    float x = (c + x0) / spec.HillSize, y = (r + y0) / spec.HillSize, v = Fbm(x, y, spec.Seed, 5);
+                    // Ridges: that share of the hills sharp-crested (both about -1..1)
+                    h[(r * cols) + c] = spec.Ridges > 0 ? v + (spec.Ridges * (RidgedMultifractal(ridges, x, y) - v)) : v;
                 }
             });
         }
@@ -144,6 +157,18 @@ public static partial class ZoneGenerator
                 h[(r * cols) + c] = Marshed(spec, Fjorded(spec, Coasted(spec, ground + rim, c, r, cols, rows, x, y), c, r, cols, rows, x, y), x, y);
             }
         });
+        Unpooled(spec, h, cols, rows);
+        Expanded(spec, h, cols, rows);
+        // what the water and weather move (metres laid down, or cut when below 0) is kept for the paint
+        float[]? worn = spec.Valleys > 0 || spec.Erosion > 0 || spec.Talus > 0 ? (float[])h.Clone() : null;
+        Valleyed(spec, h, cols, rows);
+        Stratified(spec, h, cols, rows, x0, y0);
+        Eroded(spec, h, cols, rows);
+        Weathered(spec, h, cols, rows);
+        if (worn != null)
+        {
+            Parallel.For(0, h.Length, p => worn[p] = h[p] - worn[p]);
+        }
         Cragged(spec, h, cols, rows, x0, y0);
         var lakes = PlaceLakes(spec, h, cols, rows, x0, y0, rng);
         var rivers = MakeRivers(spec, h, cols, rows, x0, y0, lakes, rng);
@@ -158,7 +183,7 @@ public static partial class ZoneGenerator
         var cliffs = new List<(string, Vector3, float, float)>();
         Cliffs(spec, h, cols, rows, x0, y0, planting.Cliffs, rng, cliffs, (c, r) => !busy[(r * cols) + c] && lakeIn[(r * cols) + c] <= -2 && RimAt(c, r) > 0.8f);   // the rim's mountains past its foothills: no steps
         float[] wooded = Woods(spec, h, cols, rows, x0, y0, lakeIn, busy);
-        byte[] mask = Paint(spec, h, cols, rows, x0, y0, lakeIn, wooded, wet);
+        byte[] mask = Paint(spec, h, cols, rows, x0, y0, lakeIn, wooded, wet, worn);
         PaintRoads(mask, road, camps, cols, rows, spec.RoadChannel == 0 ? 0 : 1);
         var objects = Plant(spec, h, cols, rows, x0, y0, lakeIn, wooded, planting, rng, busy);
         objects.AddRange(cliffs);
@@ -177,7 +202,7 @@ public static partial class ZoneGenerator
     /// <summary>
     /// A style's numbers for ground made elsewhere (cols by rows metres): its lowest and highest ground and how far apart
     /// its hills are, measured; and nothing that would change its shape (no rim, coast, terraces, canyons, fjords,
-    /// crags, roughness, marsh, cliffs, lakes, rivers or camps: each can be asked for again), so the zone lies on it as it is.
+    /// crags, strata, erosion, scree, expand, valleys, roughness, marsh, cliffs, lakes, rivers or camps: each can be asked for again), so the zone lies on it as it is.
     /// </summary>
     public static Spec Measured(Spec style, float[] ground, int cols, int rows)
     {
@@ -211,6 +236,11 @@ public static partial class ZoneGenerator
             CliffSlope = 0,
             Fjords = 0,
             Crags = 0,
+            Strata = 0,
+            Erosion = 0,
+            Talus = 0,
+            Expand = 0,
+            Valleys = 0,
             LakeHectares = [],
             Rivers = 0,
             Camps = 0,
@@ -262,7 +292,21 @@ public static partial class ZoneGenerator
     internal static Lake CarveLake(float[] h, int cols, int rows, float x0, float y0, Vector2 middle, Vector2[] outline, float radius)
     {
         // the bed down from the surface, shallow at the edge
-        float level = outline.Min(p => At(h, cols, rows, p.X, p.Y)) - 0.4f, depth = MathF.Min(8, 2 + (radius / 40));
+        // the surface just under the lowest of the shore and the ground a few metres out (at each point of the outline and
+        // between them): on a slope the ground just past a point, or between two, can lie lower than the point
+        float level = float.MaxValue, depth = MathF.Min(8, 2 + (radius / 40));
+        for (int i = 0; i < outline.Length; i++)
+        {
+            foreach (var p in new[] { outline[i], (outline[i] + outline[(i + 1) % outline.Length]) / 2 })
+            {
+                var outward = Vector2.Normalize(p - middle);
+                foreach (float d in new[] { 0f, 3, 6 })
+                {
+                    level = MathF.Min(level, At(h, cols, rows, p.X + (outward.X * d), p.Y + (outward.Y * d)));
+                }
+            }
+        }
+        level -= 0.4f;
         // as far out as the banks may reach (the ground round a lake can stand far above its water)
         float reach = (radius * 1.4f) + MathF.Min(100, radius * 2);
         int c0 = Math.Max(0, (int)(middle.X - reach)), c1 = Math.Min(cols - 1, (int)(middle.X + reach));
@@ -576,10 +620,14 @@ public static partial class ZoneGenerator
         !wet[(r * cols) + c] && Slope(h, cols, rows, c, r) < 45 && lakeIn[(r * cols) + c] <= -4;
 
     /// <summary>The layers: rock on steep ground, dirt under the woods (and a little in the open), sand on the shores.</summary>
-    private static byte[] Paint(Spec spec, float[] h, int cols, int rows, float x0, float y0, float[] lakeIn, float[] wooded, bool[] wet)
+    private static byte[] Paint(Spec spec, float[] h, int cols, int rows, float x0, float y0, float[] lakeIn, float[] wooded, bool[] wet, float[]? worn)
     {
         byte[] mask = new byte[cols * rows * 4];
         float open = Quantile(spec, cols, rows, x0, y0, 1 - spec.OpenDirt);
+        // crests: the ground standing over its surroundings (a few metres' average over 30 m's), hollows under them
+        bool relief = spec.Crests > 0 || spec.SnowSlip > 0;
+        float[]? near = relief ? BoxBlur(h, cols, rows, 2) : null, far = relief ? BoxBlur(h, cols, rows, 15) : null;
+        float[]? streams = spec.Streams > 0 ? Streams(h, cols, rows) : null;
         Parallel.For(0, rows, r =>
         {
             for (int c = 0; c < cols; c++)
@@ -587,11 +635,22 @@ public static partial class ZoneGenerator
                 int p = (r * cols) + c;
                 float slope = Slope(h, cols, rows, c, r), x = c + x0, y = r + y0;
                 float rock = Smooth(spec.RockSlope, spec.RockSlope + 15, slope) * (1 - (0.6f * wooded[p]));   // steep grass too, and wooded slopes mostly earth
+                // what the weather moved: the channels it cut bare rock, what it laid down (fans, valley fill, scree) earth
+                float cut = worn == null ? 0 : Smooth(1.5f, 6, -worn[p]), laid = worn == null ? 0 : Smooth(1, 4, worn[p]);
+                float stand = near == null || far == null ? 0 : near[p] - far[p], crest = spec.Crests * Smooth(0.5f, 3, stand);
+                rock = MathF.Max(rock, MathF.Max(0.7f * cut, crest) * (1 - wooded[p]));
                 float patches = Smooth(open - 0.04f, open + 0.04f, Fbm(x / 45, y / 45, spec.Seed + 41, 3));
-                float dirt = MathF.Max(wooded[p] * 0.4f, patches * 0.9f) * (1 - rock);   // a forest floor, grass showing through
+                float stream = streams == null ? 0 : spec.Streams * streams[p];
+                float dirt = MathF.Max(MathF.Max(MathF.Max(wooded[p] * 0.4f, patches * 0.9f), laid), stream) * (1 - rock);   // a forest floor, grass showing through
                 // the first painted layer on the shores of the sea and the rivers (with a shore), snow above the snow line
                 float sand = spec.Shore > 0 && (wet[p] || (!spec.CoastDry && h[p] < 2.5f)) ? 1 : 0;
                 float snow = spec.SnowLine > 0 ? Smooth(spec.SnowLine - 12, spec.SnowLine + 12, h[p] + (15 * Fbm(x / 60, y / 60, spec.Seed + 61, 3))) * (1 - (0.5f * rock)) : 0;
+                if (spec.SnowSlip > 0 && spec.SnowLine > 0)
+                {
+                    // slid off the steep ground, gathered in the hollows down to 25 m under the line
+                    float hollow = Smooth(0.5f, 3, -stand);
+                    snow = MathF.Max(snow, hollow * Smooth(spec.SnowLine - 37, spec.SnowLine - 13, h[p])) * (1 - Smooth(spec.SnowSlip - 5, spec.SnowSlip + 5, slope));
+                }
                 // a band along the lakes' shores, out to Shore metres and a little way into the water
                 float d = -lakeIn[p];
                 if (spec.Shore > 0 && d > -4 && d < spec.Shore)
@@ -714,6 +773,26 @@ public static partial class ZoneGenerator
         return v / norm;
     }
 
+    /// <summary>
+    /// Musgrave's ridged multifractal over gradient noise, about -1..1: each octave's crest (one less the noise's size,
+    /// squared) weighted by the crest of the octave under it, so finer ridges run along the bigger ones and the valleys
+    /// between stay smooth (Ebert et al., Texturing and Modeling, the ridged multifractal terrain).
+    /// </summary>
+    private static float RidgedMultifractal(Noise noise, float x, float y)
+    {
+        const float Gain = 2;
+        float sum = 0, weight = 1, amp = 1, norm = 0;
+        for (int i = 0; i < 6; i++)
+        {
+            float crest = 1 - MathF.Abs(noise.Noise2(x, y));
+            crest *= crest * weight;
+            weight = Math.Clamp(crest * Gain, 0, 1);
+            (sum, norm) = (sum + (crest * amp), norm + amp);
+            (x, y, amp) = ((x * 2.1f) + 5.3f, (y * 2.1f) - 3.1f, amp * 0.5f);
+        }
+        return (2 * sum / norm) - 1;
+    }
+
     /// <summary>Ridged noise 0..1: sharp crests where the noise crosses zero (mountain ridges).</summary>
     private static float Ridged(float x, float y, int seed, int octaves)
     {
@@ -728,12 +807,28 @@ public static partial class ZoneGenerator
         return v / norm;
     }
 
+    /// <summary>
+    /// Gradient noise (Perlin's: a slope of its own at each lattice point, blended with his quintic fade), scaled to the
+    /// spread and steepness value noise had (about -1.4..1.4, mostly within ±0.45): value noise's lattice showed as squares
+    /// on big hills.
+    /// </summary>
+    /// <summary>Sixteen ways round, as (x, y) pairs: <see cref="Noise"/>'s slopes.</summary>
+    private static readonly float[] Gradients = [.. Enumerable.Range(0, 32).Select(i => i % 2 == 0 ? MathF.Cos(i / 2 * MathF.PI / 8) : MathF.Sin(i / 2 * MathF.PI / 8))];
+
     private static float Noise(float x, float y, int seed)
     {
+        (x, y) = (x * 0.58f, y * 0.58f);   // as steep on average as value noise was: the same hills at the same HillSize
         int xi = (int)MathF.Floor(x), yi = (int)MathF.Floor(y);
-        float fx = x - xi, fy = y - yi, ux = fx * fx * (3 - (2 * fx)), uy = fy * fy * (3 - (2 * fy));
-        float a = Hash(xi, yi, seed), b = Hash(xi + 1, yi, seed), c = Hash(xi, yi + 1, seed), d = Hash(xi + 1, yi + 1, seed);
-        return a + ((b - a) * ux) + ((c - a) * uy) + ((a - b - c + d) * ux * uy);
+        float fx = x - xi, fy = y - yi;
+        float Corner(int cx, int cy, float dx, float dy)
+        {
+            int g = (int)((Hash(cx, cy, seed) + 1) * 8) & 15;
+            return (Gradients[g * 2] * dx) + (Gradients[(g * 2) + 1] * dy);
+        }
+        static float Fade(float t) => t * t * t * ((t * ((t * 6) - 15)) + 10);
+        float ux = Fade(fx), uy = Fade(fy), a = Corner(xi, yi, fx, fy), b = Corner(xi + 1, yi, fx - 1, fy);
+        float c = Corner(xi, yi + 1, fx, fy - 1), d = Corner(xi + 1, yi + 1, fx - 1, fy - 1);
+        return 2 * (a + ((b - a) * ux) + ((c - a) * uy) + ((a - b - c + d) * ux * uy));
     }
 
     private static float Hash(int x, int y, int seed)
