@@ -37,7 +37,7 @@ public sealed class MainWindowLangTests
         w.Msg("settings.notSaved", "/x");
         Assert.Equal("⟦The settings could not be saved: /x⟧", w.MessageText.Text);
         Assert.Equal("The settings could not be saved: /x", w.LastMessageEn);
-        Assert.Equal("The settings could not be saved: /x", System.Text.Json.JsonDocument.Parse(await tools.EditorState()).RootElement.GetProperty("message").GetString());
+        Assert.Equal("The settings could not be saved: /x", System.Text.Json.JsonElement.Parse(await tools.EditorState()).GetProperty("message").GetString());
 
         w.Msg(w.LastSaid + Said.Of("common.save"));
         Assert.Equal("⟦The settings could not be saved: /x⟧ ⟦Save⟧", w.MessageText.Text);

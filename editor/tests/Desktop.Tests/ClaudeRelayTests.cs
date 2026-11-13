@@ -25,7 +25,7 @@ public class ClaudeRelayTests
     {
         var output = new StringWriter();
         await ClaudeRelay.RunAsync(new StringReader(input), output, () => On, answer == null ? null : new Answer(answer));
-        return [.. output.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(l => JsonDocument.Parse(l).RootElement)];
+        return [.. output.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(l => JsonElement.Parse(l))];
     }
 
     [Fact]

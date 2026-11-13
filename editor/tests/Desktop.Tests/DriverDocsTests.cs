@@ -19,7 +19,7 @@ public class DriverDocsTests
             {
                 string answer = await Driver.Run(w, cmd);
                 Dispatcher.UIThread.RunJobs();
-                return JsonDocument.Parse(answer).RootElement.Clone();
+                return JsonElement.Parse(answer);
             }
             var opened = await Send("docs map.md#shortcuts");
             Assert.Equal("map.md", opened.GetProperty("page").GetString());

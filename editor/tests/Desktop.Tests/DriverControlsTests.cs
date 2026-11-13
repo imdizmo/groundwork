@@ -62,7 +62,7 @@ public class DriverControlsTests
     {
         string answer = await Driver.Run(w, cmd);
         Dispatcher.UIThread.RunJobs();
-        return JsonDocument.Parse(answer).RootElement.Clone();
+        return JsonElement.Parse(answer);
     }
 
     [AvaloniaFact]

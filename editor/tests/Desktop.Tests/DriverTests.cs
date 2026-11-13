@@ -61,7 +61,7 @@ public class DriverTests
             Assert.Equal("@@ ready", answers[0]);
             // The empty line is skipped: state, the error, quit.
             Assert.StartsWith("@@ ok {", answers[1]);
-            Assert.Equal("start", JsonDocument.Parse(answers[1]["@@ ok ".Length..]).RootElement.GetProperty("page").GetString());
+            Assert.Equal("start", JsonElement.Parse(answers[1]["@@ ok ".Length..]).GetProperty("page").GetString());
             Assert.Equal("@@ error unknown command fly", answers[2]);
             Assert.StartsWith("@@ ok {", answers[3]);
             Assert.Equal(4, answers.Count);

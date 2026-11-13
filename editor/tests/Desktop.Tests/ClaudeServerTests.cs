@@ -74,7 +74,7 @@ public class ClaudeServerTests
     [Fact]
     public void TheDesktopConfigurationRunsTheEditorAsARelay()
     {
-        var config = System.Text.Json.JsonDocument.Parse(ClaudeServer.DesktopConfig("/opt/groundwork/Groundwork")).RootElement;
+        var config = System.Text.Json.JsonElement.Parse(ClaudeServer.DesktopConfig("/opt/groundwork/Groundwork"));
         var server = config.GetProperty("mcpServers").GetProperty("groundwork");
         Assert.Equal("/opt/groundwork/Groundwork", server.GetProperty("command").GetString());
         Assert.Equal("--mcp-stdio", server.GetProperty("args")[0].GetString());

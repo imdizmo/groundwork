@@ -43,7 +43,7 @@ public partial class EditorProcess
     {
         string answer = Answer(command);
         Assert.True(answer.StartsWith("@@ ok ", StringComparison.Ordinal), $"{command}: {answer}");
-        return JsonDocument.Parse(answer["@@ ok ".Length..]).RootElement.Clone();
+        return JsonElement.Parse(answer["@@ ok ".Length..]);
     }
 
     /// <summary>

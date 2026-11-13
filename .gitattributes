@@ -1,0 +1,13 @@
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ttf binary
+*.ico binary
+*.icns binary
+*.glb binary
+*.r16 binary
+*.r32 binary
+*.raw binary
+*.bin binary
+*.npy binary
+editor/Desktop/Assets/Fonts/OFL.txt -text
