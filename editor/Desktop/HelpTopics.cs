@@ -30,6 +30,9 @@ public static class HelpTopics
     /// <summary>Live and Send to Unreal.</summary>
     public static HelpTarget Live { get; } = new("unreal.md");
 
+    /// <summary>Tunnels and caves.</summary>
+    public static HelpTarget Caves { get; } = new("caves.md");
+
     /// <summary>Settings.</summary>
     public static HelpTarget Settings { get; } = new("editor-basics.md", "settings");
 
@@ -49,6 +52,6 @@ public static class HelpTopics
 
     /// <summary>Every place above, each tool's included (HelpTopicsTests).</summary>
     public static IEnumerable<HelpTarget> All =>
-        [StartPage, Map, Editor, History, ViewPanel, Controls, Mask, Live, Settings,
+        [StartPage, Map, Editor, History, ViewPanel, Controls, Mask, Live, Settings, Caves,
             .. Enum.GetValues<ToolMode>().Select(m => Tool(m)), .. Enum.GetValues<BrushTool>().Select(b => Tool(ToolMode.Brush, b))];
 }

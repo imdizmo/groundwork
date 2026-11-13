@@ -8,8 +8,21 @@ namespace Groundwork.App;
 /// </summary>
 public static partial class ModExtensions
 {
-    /// <summary>Whether a running extension draws areas at all.</summary>
-    public static bool AnyScenes => _state.Hooks.Any(l => l.Scenes.Count > 0);
+    /// <summary>The editor's own scene providers (its tunnels), drawn like an extension's.</summary>
+    private static readonly List<ISceneProvider> BuiltInScenes = [];
+
+    /// <summary>Adds one of the editor's own scene providers (once, at start).</summary>
+    /// <param name="provider">The provider; it may give null for nothing to draw.</param>
+    public static void AddBuiltInScene(ISceneProvider provider)
+    {
+        lock (BuiltInScenes)
+        {
+            BuiltInScenes.Add(provider);
+        }
+    }
+
+    /// <summary>Whether a running extension (or the editor itself) draws areas at all.</summary>
+    public static bool AnyScenes => BuiltInScenes.Count > 0 || _state.Hooks.Any(l => l.Scenes.Count > 0);
 
     /// <summary>
     /// What the running extensions draw in an area, each layer checked: meshes whose triangles name corners they lack,
@@ -20,6 +33,26 @@ public static partial class ModExtensions
     public static List<SceneLayer> ScenesOf(IAreaView area)
     {
         var layers = new List<SceneLayer>();
+        ISceneProvider[] own;
+        lock (BuiltInScenes)
+        {
+            own = [.. BuiltInScenes];
+        }
+        foreach (var p in own)
+        {
+            // The editor's own: a fault is logged, not turned off.
+            try
+            {
+                if (p.Build(area) is { } layer)
+                {
+                    layers.Add(Checked(layer));
+                }
+            }
+            catch (Exception e) when (e is InvalidOperationException or ArgumentException or IndexOutOfRangeException or NullReferenceException)
+            {
+                Log.Caught(e, "drawing the editor's own scene layer");
+            }
+        }
         foreach (var l in _state.Hooks)
         {
             foreach (var p in l.Scenes)

@@ -59,11 +59,11 @@ public partial class MainWindow
     private Avalonia.Threading.DispatcherTimer? _pullTimer;
 
     /// <summary>The map changed since it was last saved.</summary>
-    internal bool MapDirty => InMap && Session != null && (UnsavedSteps > 0 || MapWater.Snapshot() != _savedWater || MapAreas.Snapshot() != _savedAreas);
+    internal bool MapDirty => InMap && Session != null && (UnsavedSteps > 0 || MapWater.Snapshot() != _savedWater || MapAreas.Snapshot() != _savedAreas || MapCaves.Snapshot() != _savedCaves);
 
     /// <summary>The history's top step and length at the last save (or open), and the water and areas then.</summary>
     private (EditSession.Change? Top, int Count) _saved;
-    private string _savedWater = "", _savedAreas = "";
+    private string _savedWater = "", _savedAreas = "", _savedCaves = "";
 
     /// <summary>How many steps the history is from the saved state (undoing back to it: none).</summary>
     private int UnsavedSteps => Session is { } s ? EditSession.UnsavedSteps(s.UndoList, _saved.Top, _saved.Count) : 0;
@@ -72,7 +72,7 @@ public partial class MainWindow
     private void MarkSaved(EditSession s)
     {
         _saved = (s.TopStep, s.UndoList.Count);
-        (_savedWater, _savedAreas) = (MapWater.Snapshot(), MapAreas.Snapshot());
+        (_savedWater, _savedAreas, _savedCaves) = (MapWater.Snapshot(), MapAreas.Snapshot(), MapCaves.Snapshot());
     }
 
     /// <summary>Opens a map (null: the current one again); it is the current map once it is open.</summary>

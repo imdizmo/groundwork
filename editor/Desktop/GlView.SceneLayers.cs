@@ -1,6 +1,6 @@
 using System.Numerics;
-using Silk.NET.OpenGL;
 using Groundwork.Sdk;
+using Silk.NET.OpenGL;
 
 namespace Groundwork.Desktop;
 
@@ -131,10 +131,14 @@ public sealed partial class GlView
     private unsafe void DrawLayerMeshes(WorldScene s, uint program, Func<LayerMesh, bool> which)
     {
         SetHoles(s, program, false, 0);
+        // The meshes have no cut attribute (7): it reads the generic one, white for the models' colour, which the
+        // ground program takes as cut away. Not cut while they draw.
+        _gl.VertexAttrib1(7, 0f);
         foreach (var m in _layerMeshes.Where(which))
         {
             _gl.BindVertexArray(m.Vao);
             _gl.DrawElements(PrimitiveType.Triangles, m.Count, DrawElementsType.UnsignedInt, (void*)0);
         }
+        _gl.VertexAttrib4(7, 1f, 1f, 1f, 1f);
     }
 }

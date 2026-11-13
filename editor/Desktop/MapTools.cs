@@ -74,15 +74,24 @@ public static partial class MapTools
         return null;
     }
 
+    /// <summary>The tunnels drawn in the 3D view: registered once.</summary>
+    private static readonly Lazy<bool> SceneRegistered = new(() =>
+    {
+        ModExtensions.AddBuiltInScene(new MapCaves.Scene());
+        return true;
+    });
+
     /// <summary>The tools for the map open in a window.</summary>
     public static List<ModExtensions.Tool> For(MainWindow w)
     {
+        _ = SceneRegistered.Value;
         var (kinds, groups, biomes) = Catalog();
         var tools = new List<ModExtensions.Tool>
         {
             ModExtensions.BuiltIn(Own, new ObjectTool(w, kinds)),
             ModExtensions.BuiltIn(Own, new StampTool(w, Stamps())),
             ModExtensions.BuiltIn(Own, new RiverTool(w)),
+            ModExtensions.BuiltIn(Own, new TunnelTool(w)),
             ModExtensions.BuiltIn(Own, new PathTool(w, [.. kinds.Where(k => k.Category != "Markers")])),
             ModExtensions.BuiltIn(Own, new AreasTool(w, AreaKinds())),
             ModExtensions.BuiltIn(Own, new GrowTool(w)),
@@ -283,7 +292,7 @@ public static partial class MapTools
         }
 
         /// <summary>A number 0..1 fixed for a whole-metre spot and a seed.</summary>
-        protected static float Hash01(int x, int z, int seed)
+        internal static float Hash01(int x, int z, int seed)
         {
             uint h = (uint)((x * 374761393) + (z * 668265263) + (seed * 1442695041));
             h = (h ^ (h >> 13)) * 1274126177;
@@ -291,7 +300,7 @@ public static partial class MapTools
         }
 
         /// <summary>Smooth noise 0..1 with features about a unit across.</summary>
-        protected static float Noise01(float x, float z, int seed)
+        internal static float Noise01(float x, float z, int seed)
         {
             int xi = (int)MathF.Floor(x), zi = (int)MathF.Floor(z);
             float fx = x - xi, fz = z - zi, ux = fx * fx * (3 - (2 * fx)), uz = fz * fz * (3 - (2 * fz));
@@ -300,7 +309,7 @@ public static partial class MapTools
         }
 
         /// <summary>A smooth step from 0 at e0 to 1 at e1.</summary>
-        protected static float Step(float e0, float e1, float v)
+        internal static float Step(float e0, float e1, float v)
         {
             float t = Math.Clamp((v - e0) / (e1 - e0), 0, 1);
             return t * t * (3 - (2 * t));
