@@ -295,6 +295,26 @@ public sealed partial class ClaudeTools
     });
 
     /// <inheritdoc/>
+    [McpServerTool(Name = "map_bring_models", Title = "Bring the map's models into Unreal")]
+    [Description("As Bring the models into Unreal: the map's glTF models that the Unreal project has no mesh for yet imported through Unreal's importer (saved in the project under /Game/Groundwork/Models) and added to the models folder's names.json, so Live and Send place those objects. The editor asks the user first; refused for callers on another computer.")]
+    public Task<string> MapBringModels() => OnUi(async () =>
+    {
+        if (NoMap() is string why)
+        {
+            return why;
+        }
+        if (ClaudeServer.FromAnotherComputer.Value)
+        {
+            return "map_bring_models only works for Claude on this computer.";
+        }
+        if (!await _w.Ask("Bring the models into Unreal?", "Claude asks to import this map's models that the Unreal project has no mesh for yet. They are saved in the project.", "Bring them", "Not now"))
+        {
+            return "The user said no: nothing imported.";
+        }
+        return await UnrealLive.ImportModels(ModelStore.MapModels);
+    });
+
+    /// <inheritdoc/>
     [McpServerTool(Name = "map_checks", ReadOnly = true, Title = "Find misplaced objects and roads under water")]
     [Description("As the Checks panel, and more: trees, plants and rocks floating above the ground (more than floatBy metres), buried in it (more than buriedBy; rocks may be), standing under the sea, a river or a lake (reeds aside), trees on ground steeper than steepTrees degrees, buildings and props (any kind not a tree, bush, plant or rock) on ground steeper than steepBuildings, and (road: a layer, map_catalog's layers) where that layer runs under water, one spot per 10 m. Counts by problem, then each (object id, or none for a road; what is wrong; x, z), nearest first when near is given. map_settle puts floating and buried ones back on the ground; select picks the objects in the editor.")]
     public Task<string> MapChecks(float floatBy = 0.3f, float buriedBy = 1, float steepTrees = 40, float steepBuildings = 10, bool underWater = true,

@@ -21,7 +21,7 @@ Claude opens your maps (only ones you opened yourself), looks at the 3D view and
 sculpts and paints with the brushes, places, moves, copies and removes objects, edits rivers and lakes, lays paths and
 ramps, draws areas, makes holes and terraces, paints, fills or erodes the whole map, makes new zones, and saves. With
 Unreal open it can start the game at a point (Play here) and look at the level as the game draws it (fog, lighting,
-real materials); making the Unreal landscape asks you first. Every
+real materials); making the Unreal landscape and bringing the models into it ask you first. Every
 change is a step marked as Claude's in History; **Take back Claude's changes** removes them.
 
 Claude can also measure what it made: the slope, layer and water depth at a point; objects floating, buried or under

@@ -247,9 +247,36 @@ public partial class MainWindow
     /// The map's landscape made in the open Unreal level from its heights as they are now; a level that has one already is
     /// asked about first (rebuilt at the map's size, its material, edit layers and water kept).
     /// </summary>
+    /// <summary>
+    /// The open map linked to an Unreal project the user picks (its .uproject): map.json's unreal.project written in
+    /// place, nothing else in the file touched. True when the map has a project after it.
+    /// </summary>
+    /// <param name="change">Pick again even when the map has one.</param>
+    private async Task<bool> LinkUnreal(bool change = false)
+    {
+        if (MapProject.Current is not { } map)
+        {
+            return false;
+        }
+        if (map.HasUnrealLevel && !change)
+        {
+            return true;
+        }
+        string? file = await Pickers.File(StorageProvider, "The Unreal project for this map (its .uproject)", new("Unreal project") { Patterns = ["*.uproject"] });
+        if (file == null)
+        {
+            return map.HasUnrealLevel;
+        }
+        map.LinkUnreal(Path.GetDirectoryName(file)!);
+        TitleText.Text = map.Name;
+        _playButton?.IsVisible = true;
+        Msg(new Said($"This map now goes to the Unreal project {Path.GetFileName(file)}. Open the level you want it in, in Unreal.", ""));
+        return true;
+    }
+
     private async Task MakeLandscape()
     {
-        if (Session is not { Scene: var scene } || MapProject.Current is not { } map)
+        if (Session is not { Scene: var scene } || MapProject.Current is not { } map || !await LinkUnreal())
         {
             return;
         }
@@ -359,6 +386,10 @@ public partial class MainWindow
             var models = new MenuItem { Header = "Bring the models into Unreal" };
             models.Click += async (_, _) =>
             {
+                if (!await LinkUnreal())
+                {
+                    return;
+                }
                 Msg(new Said("Bringing the models into Unreal...", ""));
                 Msg(new Said(await UnrealLive.ImportModels(ModelStore.MapModels), ""));
             };
@@ -367,9 +398,14 @@ public partial class MainWindow
             again.Click += async (_, _) => await MakeAgain();
             var undoAgain = new MenuItem { Header = "Undo make it again" };
             undoAgain.Click += async (_, _) => await MakeAgain(_madeFrom?.Spec);
-            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, export, landscape, models } };
+            var link = new MenuItem();
+            link.Click += async (_, _) => await LinkUnreal(change: true);
+            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, export, link, landscape, models } };
             more.Opening += (_, _) =>
             {
+                link.Header = MapProject.Current?.UnrealProject is { } up
+                    ? $"Unreal project: {Path.GetFileName(up)} (change…)"
+                    : "Link to an Unreal project…";
                 again.IsVisible = MapProject.Current is { Untouched: true } && !MapDirty;
                 undoAgain.IsVisible = again.IsVisible && _madeFrom?.Folder == MapProject.Current?.Folder;
             };
@@ -703,11 +739,10 @@ public partial class MainWindow
         {
             return;
         }
-        if (MapProject.Current?.HasUnrealLevel != true)
+        if (!await LinkUnreal())
         {
             _liveButton!.IsChecked = false;
             LiveState($"lost Unreal {DateTime.Now:HH:mm}", error: true);
-            await Tell("This map has no Unreal level: Live needs map.json's unreal.project.");
             return;
         }
         if (MapDirty)

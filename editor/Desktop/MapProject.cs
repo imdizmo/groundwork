@@ -180,6 +180,24 @@ public sealed partial class MapProject
         return m;
     }
 
+    /// <summary>
+    /// The map linked to an Unreal project: map.json's unreal.project set in the file as it is on disk, nothing else in
+    /// it touched (unsaved changes to the map stay unsaved).
+    /// </summary>
+    /// <param name="project">The Unreal project's folder (where its .uproject is).</param>
+    public void LinkUnreal(string project)
+    {
+        string json = Path.Combine(Folder, FileName);
+        var j = JsonNode.Parse(File.ReadAllText(json))!.AsObject();
+        if (j["unreal"] is not JsonObject u)
+        {
+            j["unreal"] = u = [];
+        }
+        u["project"] = project;
+        File.WriteAllText(json, j.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+        UnrealProject = project;
+    }
+
     /// <summary>Writes map.json.</summary>
     public void WriteJson()
     {

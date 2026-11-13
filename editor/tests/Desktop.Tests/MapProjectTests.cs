@@ -285,4 +285,33 @@ public sealed class MapProjectTests : IDisposable
         Assert.Equal(made.Folder, map.Folder);
         Assert.Equal(made.HeightsFile, map.HeightsFile);
     }
+
+    [Fact]
+    public void LinkingToUnrealSetsOnlyTheProjectInMapJson()
+    {
+        var made = MapProject.Create("Linked", 1, generated: false, height: 2, seed: 1, under: _dir);
+        string json = Path.Combine(made.Folder, MapProject.FileName);
+        var before = JsonNode.Parse(File.ReadAllText(json))!.AsObject();
+        var map = MapProject.Open(made.Folder);
+        Assert.False(map.HasUnrealLevel);
+        string project = Path.Combine(_dir, "Game");
+
+        map.LinkUnreal(project);
+
+        Assert.Equal(project, map.UnrealProject);
+        var after = JsonNode.Parse(File.ReadAllText(json))!.AsObject();
+        Assert.Equal(project, (string?)after["unreal"]?["project"]);
+        after.Remove("unreal");
+        Assert.True(JsonNode.DeepEquals(before, after));   // nothing else in the file changed
+        Assert.Equal(project, MapProject.Open(made.Folder).UnrealProject);
+
+        // linked again: the unreal section's other keys stay
+        after["unreal"] = new JsonObject { ["project"] = project, ["waterPrefix"] = "Lake_" };
+        File.WriteAllText(json, after.ToJsonString());
+        string other = Path.Combine(_dir, "Other");
+        MapProject.Open(made.Folder).LinkUnreal(other);
+        var again = MapProject.Open(made.Folder);
+        Assert.Equal(other, again.UnrealProject);
+        Assert.Equal("Lake_", again.UnrealWaterPrefix);
+    }
 }

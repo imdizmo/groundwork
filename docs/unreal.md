@@ -2,6 +2,9 @@
 
 A map whose `map.json` names an Unreal project (`unreal.project`) can follow every change in the open Unreal level.
 
+**⋯ → Link to an Unreal project…** picks the project's `.uproject` and writes it into `map.json`. **Live**, **Make the
+Unreal landscape**, **Bring the models** and **Play here** ask for it the same way when the map has none yet.
+
 ## The Groundwork Bridge plugin
 
 Live talks to Unreal through the **Groundwork Bridge** editor plugin, which has a repository of its own:
