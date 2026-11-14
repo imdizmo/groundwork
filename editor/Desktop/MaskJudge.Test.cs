@@ -30,6 +30,10 @@ internal sealed partial class MaskJudge
                 return 0;
             }
         }
+        if (_terrain != null && (p >= _terrain.Length || _terrain[p] < _terrainMin || _terrain[p] > _terrainMax))
+        {
+            return 0;
+        }
         return PaintOk(p) ? 1 : 0;
     }
 }

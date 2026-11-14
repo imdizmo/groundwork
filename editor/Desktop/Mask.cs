@@ -65,6 +65,15 @@ public sealed class Mask
     /// </summary>
     public PaintRule Paint { get; set; }
     /// <summary>
+    /// A terrain map that limits the ground too (TerrainMaps.MaskMaps: flow, wetness, convexity, facing north or east,
+    /// snow); null: none.
+    /// </summary>
+    public string? Terrain { get; set; }
+    /// <summary>The terrain map's lowest value that passes, 0..1; null for no limit.</summary>
+    public float? TerrainMin { get; set; }
+    /// <summary>The terrain map's highest value that passes, 0..1; null for no limit.</summary>
+    public float? TerrainMax { get; set; }
+    /// <summary>
     /// Raised by <c>Notify</c> after the settings change.
     /// </summary>
     public event Action? Changed;
@@ -93,6 +102,10 @@ public sealed class Mask
         {
             w.Add(Said.Of("mask.error.heightRange"));
         }
+        if (Terrain != null && TerrainMin is float e && TerrainMax is float f && e > f)
+        {
+            w.Add(Said.Of("mask.error.terrainRange"));
+        }
         var said = Said.Join(" ", w);
         return english ? said.English : said.Shown;
     }
@@ -105,14 +118,15 @@ public sealed class Mask
     /// <param name="g">The ground to judge; its heights and paint are copied now.</param>
     /// <param name="layerAt">The layer a point mostly is, by ground point index.</param>
     /// <param name="frozen">Each point is also judged only once (the answer is remembered).</param>
+    /// <param name="sea">The sea level, for a terrain map (water runs off into the sea).</param>
     /// <returns>A test by ground point index, or null when the mask is off.</returns>
-    public Func<int, float>? For(Ground g, Func<int, int> layerAt, bool frozen = false)
+    public Func<int, float>? For(Ground g, Func<int, int> layerAt, bool frozen = false, float sea = 0)
     {
         if (!On)
         {
             return null;
         }
-        var judge = new MaskJudge(this, g, layerAt);
+        var judge = new MaskJudge(this, g, layerAt, sea);
         if (!frozen)
         {
             return judge.Test;

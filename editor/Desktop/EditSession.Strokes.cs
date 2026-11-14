@@ -11,7 +11,7 @@ public sealed partial class EditSession
     /// The mask over the ground as it is now (null when off).
     /// </summary>
     /// <returns>How much each grid point (by index) may change, 0 to 1; null when the mask is off.</returns>
-    public Func<int, float>? MaskNow() => Mask.For(Ground, Scene.LayerAt);
+    public Func<int, float>? MaskNow() => Mask.For(Ground, Scene.LayerAt, sea: Scene.Water);
 
     /// <summary>
     /// The brush goes down at grid point (cx, cz). Flatten with TargetFromClick takes its target height from the ground

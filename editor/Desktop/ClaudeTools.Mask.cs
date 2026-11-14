@@ -26,6 +26,18 @@ public sealed partial class ClaudeTools
         /// <summary>The rule on painted ground.</summary>
         [Description("By paint (optional): any, unpainted, painted, or one of the map's painted layers by name (map_catalog's layers; the first layer is unpainted).")]
         public string? Paint { get; set; }
+
+        /// <summary>The terrain map that limits the ground (TerrainMaps.MaskMaps), or null.</summary>
+        [Description("By a terrain map (optional): flow, wetness, convexity (0.5 even ground, more on ridges, less in hollows), facing_north, facing_east or snow, each 0..1; with TerrainMin and/or TerrainMax.")]
+        public string? Terrain { get; set; }
+
+        /// <summary>The terrain map's lowest value that passes, 0..1.</summary>
+        [Description("The terrain map's lowest value that changes, 0..1 (optional; e.g. wetness 0.6: wet ground).")]
+        public float? TerrainMin { get; set; }
+
+        /// <summary>The terrain map's highest value that passes, 0..1.</summary>
+        [Description("The terrain map's highest value that changes, 0..1 (optional).")]
+        public float? TerrainMax { get; set; }
     }
 
     /// <summary>The Mask over the session's ground for a spec (null: no mask), or why the spec is wrong.</summary>
@@ -35,7 +47,11 @@ public sealed partial class ClaudeTools
         {
             return (null, null);
         }
-        var mask = new Mask { On = true, HeightMin = spec.HeightMin, HeightMax = spec.HeightMax, SlopeMin = spec.SlopeMin, SlopeMax = spec.SlopeMax };
+        if (spec.Terrain != null && !TerrainMaps.MaskMaps.Contains(spec.Terrain))
+        {
+            return (null, $"No terrain map {spec.Terrain}: one of {string.Join(", ", TerrainMaps.MaskMaps)}.");
+        }
+        var mask = new Mask { On = true, HeightMin = spec.HeightMin, HeightMax = spec.HeightMax, SlopeMin = spec.SlopeMin, SlopeMax = spec.SlopeMax, Terrain = spec.Terrain, TerrainMin = spec.TerrainMin, TerrainMax = spec.TerrainMax };
         if (PaintOf(mask, spec.Paint) is string badPaint)
         {
             return (null, badPaint);
@@ -44,7 +60,7 @@ public sealed partial class ClaudeTools
         {
             return (null, "The mask lets nothing through: " + warning);
         }
-        return (mask.For(s.Ground, s.Scene.LayerAt), null);
+        return (mask.For(s.Ground, s.Scene.LayerAt, sea: s.Scene.Water), null);
     }
 
     /// <summary>Sets the mask's paint rule from its name (none given: any paint); or says which name is none.</summary>

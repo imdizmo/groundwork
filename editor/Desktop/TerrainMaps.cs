@@ -19,37 +19,57 @@ public static class TerrainMaps
     /// <param name="snowLine">Where snow starts lying, metres; null: the land's highest quarter.</param>
     public static IEnumerable<(string Name, float[] Values)> Of(float[] h, int cols, int rows, float sea, float[]? worn, float? snowLine = null)
     {
-        var (logArea, pond) = LogArea(h, cols, rows, sea);
-        // flow: the ground a point drains, from half a hectare (0) to 0.2 km² (1), on a log scale; none in a hollow, where
-        // the water stands rather than runs
-        yield return ("flow", Each(cols, rows, p => (1 - pond[p]) * (logArea[p] - 3.7f) / 1.6f));
-        // wetness: the topographic wetness index, ln(area / tan slope), as log10 from 2 (a dry slope) to 7 (a wet floor);
-        // a hollow (a lake's bed) wet through
-        yield return ("wetness", Each(cols, rows, p =>
+        // ponytail: flow and wetness each route the water (twice the drainage, a few hundred ms on a big map) so that
+        // One makes either alone for the Mask; share it if the export gets slow
+        foreach (string name in (string[])["flow", "wetness"])
         {
-            float tan = MathF.Tan(ZoneGenerator.Slope(h, cols, rows, p % cols, p / cols) * MathF.PI / 180);
-            return MathF.Max(pond[p], (logArea[p] - MathF.Log10(MathF.Max(tan, 0.01f)) - 2) / 5);
-        }));
-        (logArea, pond) = ([], []);
+            yield return (name, One(name, h, cols, rows, sea)!);
+        }
         yield return ("slope", Each(cols, rows, p => ZoneGenerator.Slope(h, cols, rows, p % cols, p / cols) / 90));
-        // convexity: the ground over (ridges, white) or under (hollows, black) its average over 30 m, ±6 m; flat is grey
-        float[] near = ZoneGenerator.BoxBlur(h, cols, rows, 2), far = ZoneGenerator.BoxBlur(h, cols, rows, 15);
-        yield return ("convexity", Each(cols, rows, p => 0.5f + ((near[p] - far[p]) / 12)));
-        (near, far) = ([], []);
-        // facing: which way the slope runs down, white facing the map's first row (north) or its last column (east), black
-        // the other way; flat ground grey, the full range from 10°
-        yield return ("facing_north", Each(cols, rows, p => Facing(h, cols, rows, p, north: true)));
-        yield return ("facing_east", Each(cols, rows, p => Facing(h, cols, rows, p, north: false)));
-        // snow: 3 m deep and more white
-        float[] snow = Snow(h, cols, rows, snowLine ?? SnowLine(h, sea));
-        yield return ("snow", Each(cols, rows, p => snow[p] / 3));
-        snow = [];
+        foreach (string name in (string[])["convexity", "facing_north", "facing_east", "snow"])
+        {
+            yield return (name, One(name, h, cols, rows, sea, snowLine)!);
+        }
         if (worn != null)
         {
             // what the water and weather cut (valleys, gullies) and laid down (fans, valley floors, scree), 24 m and more
             // white: the generator's valleys move about that much
             yield return ("wear", Each(cols, rows, p => -worn[p] / 24));
             yield return ("deposits", Each(cols, rows, p => worn[p] / 24));
+        }
+    }
+
+    /// <summary>The maps the Mask can limit by (slope it has already), in the Mask's order.</summary>
+    public static readonly string[] MaskMaps = ["flow", "wetness", "convexity", "facing_north", "facing_east", "snow"];
+
+    /// <summary>
+    /// One map of some ground, made on its own (null: no such map): what Of makes under that name, without the others.
+    /// </summary>
+    public static float[]? One(string name, float[] h, int cols, int rows, float sea, float? snowLine = null)
+    {
+        switch (name)
+        {
+            case "flow" or "wetness":
+                // flow: the ground a point drains, from half a hectare (0) to 0.2 km² (1), on a log scale; none in a
+                // hollow, where the water stands rather than runs. Wetness: the topographic wetness index,
+                // ln(area / tan slope), as log10 from 2 (a dry slope) to 7 (a wet floor); a hollow (a lake's bed) wet through
+                var (logArea, pond) = LogArea(h, cols, rows, sea);
+                return name == "flow"
+                    ? Each(cols, rows, p => (1 - pond[p]) * (logArea[p] - 3.7f) / 1.6f)
+                    : Each(cols, rows, p => MathF.Max(pond[p], (logArea[p] - MathF.Log10(MathF.Max(MathF.Tan(ZoneGenerator.Slope(h, cols, rows, p % cols, p / cols) * MathF.PI / 180), 0.01f)) - 2) / 5));
+            case "convexity":
+                // the ground over (ridges, white) or under (hollows, black) its average over 30 m, ±6 m; flat is grey
+                float[] near = ZoneGenerator.BoxBlur(h, cols, rows, 2), far = ZoneGenerator.BoxBlur(h, cols, rows, 15);
+                return Each(cols, rows, p => 0.5f + ((near[p] - far[p]) / 12));
+            case "facing_north" or "facing_east":
+                // which way the slope runs down: white facing the map's first row (north) or its last column (east)
+                return Each(cols, rows, p => Facing(h, cols, rows, p, north: name == "facing_north"));
+            case "snow":
+                // snow: 3 m deep and more white
+                float[] snow = Snow(h, cols, rows, snowLine ?? SnowLine(h, sea));
+                return Each(cols, rows, p => snow[p] / 3);
+            default:
+                return null;
         }
     }
 

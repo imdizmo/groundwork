@@ -60,6 +60,15 @@ public sealed class MaskPanel
     /// <summary>
     /// The mask's warning about settings that let (almost) nothing through; hidden when there is none.
     /// </summary>
+    internal ComboBox TerrainBox { get; } = new()
+    {
+        ItemsSource = new[] { Lang.T("mask.terrain.none"), Lang.T("mask.terrain.flow"), Lang.T("mask.terrain.wetness"), Lang.T("mask.terrain.convexity"), Lang.T("mask.terrain.facingNorth"), Lang.T("mask.terrain.facingEast"), Lang.T("mask.terrain.snow") },
+        SelectedIndex = 0,
+        FontSize = 12,
+        HorizontalAlignment = HorizontalAlignment.Stretch,
+    };
+    internal NumericUpDown TerrainMin { get; } = Num(0.05m, 0, 1);
+    internal NumericUpDown TerrainMax { get; } = Num(0.05m, 0, 1);
     internal TextBlock WarningText { get; } = new() { FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(240, 150, 90)), TextWrapping = TextWrapping.Wrap };
 
     /// <summary>
@@ -80,7 +89,11 @@ public sealed class MaskPanel
         SlopeMin.Tip("mask.smin");
         SlopeMax.Tip("mask.smax");
         PaintBox.Tip("mask.paint");
-        foreach (var n in new[] { HeightMin, HeightMax, SlopeMin, SlopeMax })
+        TerrainBox.Tip("mask.terrain");
+        TerrainMin.Tip("mask.tmin");
+        TerrainMax.Tip("mask.tmax");
+        TerrainBox.SelectionChanged += (_, _) => Changed();
+        foreach (var n in new[] { HeightMin, HeightMax, SlopeMin, SlopeMax, TerrainMin, TerrainMax })
         {
             n.ValueChanged += (_, _) => Changed();
         }
@@ -108,6 +121,8 @@ public sealed class MaskPanel
                 Pair(Lang.T("common.height"), HeightMin, HeightMax, Lang.T("common.metres")),
                 Pair(Lang.T("common.slope"), SlopeMin, SlopeMax, "°"),
                 new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,14"), ColumnSpacing = 4, Children = { new TextBlock { Text = Lang.T("common.paint"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PaintBox, 1) } },
+                new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,14"), ColumnSpacing = 4, Children = { new TextBlock { Text = Lang.T("mask.label.terrain"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(TerrainBox, 1) } },
+                Pair("", TerrainMin, TerrainMax, ""),
                 WarningText,
                 new TextBlock { Text = Lang.T("mask.hint.limits"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
             },
@@ -146,6 +161,9 @@ public sealed class MaskPanel
         _mask.SlopeMin = F(SlopeMin);
         _mask.SlopeMax = F(SlopeMax);
         _mask.Paint = (Mask.PaintRule)Math.Max(0, PaintBox.SelectedIndex);
+        _mask.Terrain = TerrainBox.SelectedIndex > 0 ? TerrainMaps.MaskMaps[TerrainBox.SelectedIndex - 1] : null;
+        _mask.TerrainMin = F(TerrainMin);
+        _mask.TerrainMax = F(TerrainMax);
         _body.IsVisible = _mask.On;
         WarningText.Text = _mask.Warning();
         WarningText.IsVisible = WarningText.Text != "";
@@ -164,6 +182,9 @@ public sealed class MaskPanel
         SlopeMin.Value = Box(_mask.SlopeMin);
         SlopeMax.Value = Box(_mask.SlopeMax);
         PaintBox.SelectedIndex = (int)_mask.Paint;
+        TerrainBox.SelectedIndex = _mask.Terrain is string t ? Array.IndexOf(TerrainMaps.MaskMaps, t) + 1 : 0;
+        TerrainMin.Value = Box(_mask.TerrainMin);
+        TerrainMax.Value = Box(_mask.TerrainMax);
         _filling = false;
         Changed();
     }
