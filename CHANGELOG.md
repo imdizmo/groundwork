@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.2.1
+
+- **A new icon:** the Tiers island's side silhouette in height bands over the sea, in the editor's colours, on the
+  window, the start page, the Windows program and macOS.
+- **Linux AppImage:** a single file to download and run. The `.tar.gz` has `install-desktop-entry.sh`, which adds
+  Groundwork to the app menu with its icon.
+- A new map's folder falls back to the home folder when there is no Documents folder yet.
+
 ## v0.2.0
 
 - **New map makes whole zones** from a style's sliders with a 3D preview: hills between two heights, a mountain rim,
