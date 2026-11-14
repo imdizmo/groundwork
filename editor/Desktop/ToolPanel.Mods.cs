@@ -153,6 +153,7 @@ public sealed partial class ToolPanel
     /// <summary>An own tool's rail section (by its id).</summary>
     private static string OwnSection(string id) => id switch
     {
+        "shape" or "mountain" => "SHAPE",
         "river" => "WATER",
         "tunnel" => "CAVES",
         "path" => "PATHS",

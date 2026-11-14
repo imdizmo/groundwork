@@ -63,7 +63,9 @@ public sealed partial class EditSession
         Func<float, float, float> shape, Func<int, float>? mask)
     {
         var touched = new List<int>();
-        int x0 = (int)MathF.Floor(cx - reach), x1 = (int)MathF.Ceiling(cx + reach), z0 = (int)MathF.Floor(cz - reach), z1 = (int)MathF.Ceiling(cz + reach);
+        // kept to the grid: a mountain reaching past the map's edge is cut off there
+        int x0 = Math.Max(1, (int)MathF.Floor(cx - reach)), x1 = Math.Min(gr.W - 2, (int)MathF.Ceiling(cx + reach));
+        int z0 = Math.Max(1, (int)MathF.Floor(cz - reach)), z1 = Math.Min(gr.H - 2, (int)MathF.Ceiling(cz + reach));
         for (int gz = z0; gz <= z1; gz++)
         {
             for (int gx = x0; gx <= x1; gx++)

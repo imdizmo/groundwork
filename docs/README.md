@@ -21,6 +21,7 @@ bottom.*
 - [Sculpt and paint](terrain.md)
 - [Select](select.md)
 - [Objects](objects.md)
+- [Shapes and mountains](shapes.md)
 - [Rivers and lakes](water.md)
 - [Tunnels and caves](caves.md)
 - [Paths and ramps](paths.md)

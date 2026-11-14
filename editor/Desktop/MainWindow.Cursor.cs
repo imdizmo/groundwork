@@ -43,6 +43,7 @@ public sealed partial class MainWindow
                 "object" => "Click places · R or , . turn · drag a picture from the drawer · Ctrl+Space drawer",
                 "brush" or "biome" => "Hold and drag · Ctrl+wheel radius · Ctrl+Shift+wheel density · Shift takes away",
                 "stamp" => "Click places the stamp",
+                "shape" or "mountain" => "Click puts it in the ground · Ctrl+Z takes it back",
                 "river" => "Click adds a point · drag moves · Shift+click deletes",
                 _ => "",
             },

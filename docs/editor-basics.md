@@ -15,6 +15,7 @@ drawer runs along the bottom; the minimap sits in the corner.
 | Select | **Select** (`E`): pick, move, turn, copy, delete. |
 | Ground | **Sculpt** (`1`) and **Paint** (`6`): see [Sculpt and paint](terrain.md). |
 | Place | **Object**, **Brush**, **Biome**, **Stamp**: see [Objects](objects.md). |
+| Shape | **Shape** and **Mountain**: whole shapes put into the ground with one click, see [Shapes and mountains](shapes.md). |
 | Water | **Rivers**: see [Rivers and lakes](water.md). |
 | Paths | **Path**: paths, roads and ramps, see [Paths and ramps](paths.md). |
 | Game | **Areas**: boxes that become Unreal volumes, see [Areas](areas.md). |
