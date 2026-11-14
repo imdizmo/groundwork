@@ -37,6 +37,15 @@ image, an objects list, a water file), and optionally its catalog, model folder 
 To try it, open `samples/Meadow` with **Open map folder…**: a 252 m map with hills, a stream and a lake, and woods of
 [Quaternius](https://quaternius.com)'s CC0 models (glTF). The SDK's sample plugin is `sdk/samples/Fences`.
 
+## Download
+
+The [releases](https://github.com/imdizmo/groundwork/releases) have Groundwork ready to run, no .NET needed:
+
+- **Linux:** the `.AppImage` (make it executable and run it; AppImage launchers add it to the app menu), or the
+  `.tar.gz`: extract it and run `./install-desktop-entry.sh` in its folder to add Groundwork to the app menu with its
+  icon (`--remove` takes it out).
+- **Windows:** the `.zip`: extract it and run `Groundwork.exe`.
+
 ## Build
 
 ```sh

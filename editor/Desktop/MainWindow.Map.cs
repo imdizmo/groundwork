@@ -1085,5 +1085,6 @@ public partial class MainWindow
     }
 
     /// <summary>Where new maps go: Settings' maps folder, else Documents/Groundwork.</summary>
-    internal string NewMapsFolder() => Settings.MapsFolder ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Groundwork");
+    internal string NewMapsFolder() => Settings.MapsFolder ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments, Environment.SpecialFolderOption.DoNotVerify) is { Length: > 0 } docs
+        ? docs : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Groundwork");   // asked for unchecked: on a fresh home it is not made yet and came back "" (a folder relative to wherever the app was started)
 }

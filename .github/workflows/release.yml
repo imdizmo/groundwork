@@ -1,7 +1,7 @@
 name: Release
 
 # A tag v<VERSION> (or a manual run with that tag) builds and tests the editor, publishes it for Linux and Windows
-# (one self-contained program each) and makes the GitHub release, its notes the CHANGELOG's section for the version.
+# (scripts/package.sh: a .tar.gz and an AppImage for Linux, a .zip for Windows) and makes the GitHub release, its notes the CHANGELOG's section for the version.
 on:
   push:
     tags: ['v*']
@@ -51,25 +51,16 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
-      - name: Publish
+      - name: Package (Linux .tar.gz and AppImage, Windows .zip)
         shell: bash
-        run: >
-          dotnet publish editor/Desktop/Groundwork.Desktop.csproj -c Release -r ${{ matrix.rid }} --self-contained
-          -p:PublishSingleFile=true -p:DebugType=none -o "out/Groundwork-$TAG-${{ matrix.rid }}"
-      - name: Package
-        shell: bash
-        run: |
-          dir="Groundwork-$TAG-${{ matrix.rid }}"
-          rm -f out/"$dir"/*.xml out/"$dir"/*.pdb
-          cp LICENSE NOTICE.md CHANGELOG.md out/"$dir"/
-          cd out
-          if [ "${{ matrix.rid }}" = win-x64 ]; then 7z a -tzip "$dir.zip" "$dir" > /dev/null; else tar -czf "$dir.tar.gz" "$dir"; fi
+        run: scripts/package.sh ${{ matrix.rid }} "$TAG" out
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.rid }}
           path: |
             out/*.zip
             out/*.tar.gz
+            out/*.AppImage
           if-no-files-found: error
 
   release:
