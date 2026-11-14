@@ -95,6 +95,10 @@ public static partial class HeightmapImport
     /// <exception cref="InvalidDataException">More than a map holds.</exception>
     public static (int X, int Z) SquaresFor(Heightmap hm, float metresPerSample)
     {
+        if (!float.IsFinite(metresPerSample) || metresPerSample <= 0)
+        {
+            throw new InvalidDataException("Across must be a size above 0 m");
+        }
         int Side(int samples) => Math.Max(1, (int)MathF.Ceiling((((samples - 1) * metresPerSample) - 1e-3f) / 63));
         var (x, z) = (Side(hm.Cols), Side(hm.Rows));
         if (x > MaxSquaresASide || z > MaxSquaresASide || x * z > MaxSquares)

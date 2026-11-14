@@ -16,6 +16,19 @@ public static partial class HeightmapImport
     /// <exception cref="InvalidDataException">Not a TIFF this reads, or too big.</exception>
     private static Heightmap ReadTiff(string file)
     {
+        // a file from anywhere: whatever else goes wrong in reading it, it is not a heightmap this reads
+        try
+        {
+            return ReadTiffUnchecked(file);
+        }
+        catch (Exception e) when (e is not (InvalidDataException or IOException or UnauthorizedAccessException or OutOfMemoryException))
+        {
+            throw new InvalidDataException($"{Path.GetFileName(file)}: not a TIFF this reads ({e.GetType().Name})", e);
+        }
+    }
+
+    private static Heightmap ReadTiffUnchecked(string file)
+    {
         string name = Path.GetFileName(file);
         Tiff.SetErrorHandler(Quiet.Handler);
         using var tif = Tiff.Open(file, "r") ?? throw new InvalidDataException($"{name}: not a TIFF");
@@ -28,6 +41,10 @@ public static partial class HeightmapImport
         if (Int(tif, TiffTag.PLANARCONFIG, 1) != 1 && samples > 1)
         {
             throw new InvalidDataException($"{name}: bands stored apart; save it with one band");
+        }
+        if (samples is < 1 or > 16)
+        {
+            throw new InvalidDataException($"{name}: {samples} samples a pixel");
         }
         int size = bits / 8;
         Func<byte[], int, float> sample = (format, bits) switch
@@ -46,7 +63,13 @@ public static partial class HeightmapImport
         if (tif.IsTiled())
         {
             int tw = Int(tif, TiffTag.TILEWIDTH, 0), th = Int(tif, TiffTag.TILELENGTH, 0);
-            byte[] tile = new byte[tif.TileSize()];
+            long tileBytes = tif.TileSize();
+            // tiles of a sane size, the buffer holding every sample read from it
+            if (tw is < 1 or > MaxSide || th is < 1 or > MaxSide || tileBytes < (long)tw * th * stride || tileBytes > 256L << 20)
+            {
+                throw new InvalidDataException($"{name}: tiles of {tw} x {th} ({tileBytes} bytes) that do not fit its samples");
+            }
+            byte[] tile = new byte[tileBytes];
             for (int y = 0; y < rows; y += th)
             {
                 for (int x = 0; x < cols; x += tw)
@@ -67,7 +90,12 @@ public static partial class HeightmapImport
         }
         else
         {
-            byte[] line = new byte[tif.ScanlineSize()];
+            int lineBytes = tif.ScanlineSize();
+            if (lineBytes < (long)cols * stride)
+            {
+                throw new InvalidDataException($"{name}: rows of {lineBytes} bytes that do not hold {cols} samples");
+            }
+            byte[] line = new byte[lineBytes];
             for (int r = 0; r < rows; r++)
             {
                 if (!tif.ReadScanline(line, r))
@@ -109,9 +137,13 @@ public static partial class HeightmapImport
             (across, down) = ((float)scale[0], (float)scale[1]);
             if (Geographic(tif) || scale[0] < 0.01)
             {
-                double lat = tie.Length >= 6 ? tie[4] - (scale[1] * rows / 2) : 0;
+                double lat = Math.Clamp(tie.Length >= 6 ? tie[4] - (scale[1] * rows / 2) : 0, -89, 89);
                 (across, down) = ((float)(scale[0] * 111320 * Math.Cos(lat * Math.PI / 180)), (float)(scale[1] * 110574));
             }
+        }
+        if (!float.IsFinite(across) || !float.IsFinite(down) || across <= 0 || down <= 0)
+        {
+            (across, down) = (1, 1);   // a pixel size that makes no sense: none (the user gives Across)
         }
         // square pixels: the rows stretched (or squeezed) to the pixels' size across
         if (MathF.Abs((down / across) - 1) > 0.01f)
@@ -139,54 +171,60 @@ public static partial class HeightmapImport
     }
 
     /// <summary>
-    /// Fills the holes from the ground round them: each pass, every hole next to known ground takes the average of its
-    /// known neighbours, so the fill grows in from the edges as a smooth surface.
+    /// Fills the holes from the ground round them, growing in from their edges (breadth first, each hole once): each
+    /// takes the average of its neighbours known or filled before it, so the fill is a smooth surface.
     /// </summary>
     internal static void FillHoles(float[] v, bool[] hole, int cols, int rows)
     {
-        var edge = new List<int>();
+        var queue = new Queue<int>();
+        bool[] queued = new bool[v.Length];
+        void Near(int i, Action<int> each)
+        {
+            int c = i % cols, r = i / cols;
+            for (int dr = -1; dr <= 1; dr++)
+            {
+                for (int dc = -1; dc <= 1; dc++)
+                {
+                    int nc = c + dc, nr = r + dr;
+                    if ((dc != 0 || dr != 0) && nc >= 0 && nr >= 0 && nc < cols && nr < rows)
+                    {
+                        each((nr * cols) + nc);
+                    }
+                }
+            }
+        }
+        // the holes beside known ground first
         for (int i = 0; i < v.Length; i++)
         {
             if (hole[i])
             {
-                edge.Add(i);
+                Near(i, n =>
+                {
+                    if (!hole[n] && !queued[i])
+                    {
+                        queued[i] = true;
+                        queue.Enqueue(i);
+                    }
+                });
             }
         }
-        var next = new List<int>();
-        var filled = new List<(int I, float V)>();
-        while (edge.Count > 0)
+        while (queue.TryDequeue(out int i))
         {
-            filled.Clear();
-            next.Clear();
-            foreach (int i in edge)
+            float sum = 0;
+            int count = 0;
+            Near(i, n =>
             {
-                int c = i % cols, r = i / cols, n = 0;
-                float sum = 0;
-                for (int dr = -1; dr <= 1; dr++)
+                if (!hole[n])
                 {
-                    for (int dc = -1; dc <= 1; dc++)
-                    {
-                        int nc = c + dc, nr = r + dr;
-                        if ((dc != 0 || dr != 0) && nc >= 0 && nr >= 0 && nc < cols && nr < rows && !hole[(nr * cols) + nc])
-                        {
-                            (sum, n) = (sum + v[(nr * cols) + nc], n + 1);
-                        }
-                    }
+                    (sum, count) = (sum + v[n], count + 1);
                 }
-                if (n > 0)
+                else if (!queued[n])
                 {
-                    filled.Add((i, sum / n));
+                    queued[n] = true;
+                    queue.Enqueue(n);
                 }
-                else
-                {
-                    next.Add(i);
-                }
-            }
-            foreach (var (i, value) in filled)
-            {
-                (v[i], hole[i]) = (value, false);
-            }
-            (edge, next) = (next, edge);
+            });
+            (v[i], hole[i]) = (count > 0 ? sum / count : v[i], false);
         }
     }
 

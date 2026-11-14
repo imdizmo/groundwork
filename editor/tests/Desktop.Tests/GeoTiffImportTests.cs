@@ -128,4 +128,31 @@ public class GeoTiffImportTests
         }
         Assert.InRange(v[(15 * N) + 15], 9, 20);
     }
+
+    [Fact]
+    public void ABrokenOrNonsenseFileIsNotAHeightmapAndANonsensePixelSizeIsIgnored()
+    {
+        string dir = Directory.CreateTempSubdirectory("gw-tif-").FullName;
+        try
+        {
+            // a TIFF's first bytes, then rubbish
+            string junk = Path.Combine(dir, "junk.tif");
+            File.WriteAllBytes(junk, [(byte)'I', (byte)'I', 42, 0, 8, 0, 0, 0, 255, 255, 1, 2, 3]);
+            _ = Assert.Throws<InvalidDataException>(() => HeightmapImport.Read(junk));
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+        string file = Write([.. Enumerable.Repeat(5f, 16)], 4, 4, double.NaN, double.PositiveInfinity, 0, 1, null);
+        try
+        {
+            Assert.Equal(1, HeightmapImport.Read(file).PerSample);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(file)!, true);
+        }
+        _ = Assert.Throws<InvalidDataException>(() => HeightmapImport.SquaresFor(new([0, 1, 0, 1], 2, 2), float.NaN));
+    }
 }
