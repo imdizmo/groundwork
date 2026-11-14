@@ -65,7 +65,12 @@ public sealed partial class StartPage
                         Spacing = 2,
                         Children =
                         {
-                            Ui.BrandTitle(19),
+                            new StackPanel
+                            {
+                                Orientation = Orientation.Horizontal,
+                                Spacing = 8,
+                                Children = { new Image { Width = 24, Height = 24, Source = new Avalonia.Media.Imaging.Bitmap(Avalonia.Platform.AssetLoader.Open(new Uri($"avares://{typeof(MainWindow).Assembly.GetName().Name}/Assets/icon.png"))) }, Ui.BrandTitle(19, VerticalAlignment.Center) },
+                            },
                             new TextBlock { Text = Lang.T("start.tagline"), Foreground = Ui.Muted, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 18) },
                             settings, docs, log,
                         },
