@@ -45,6 +45,7 @@ public sealed partial class GeneratorWindow
         new("Water", "Biggest lake", "ha", 0.5, 300, 0.5, s => s.LakeHectares is { Length: > 0 } l ? l.Max() : 5, (s, v) => s with { LakeHectares = Lakes(s.LakeHectares?.Length ?? 0, v) }),
         new("Water", "Rivers", "", 0, 8, 1, s => s.Rivers, (s, v) => s with { Rivers = I(v) }, "Rivers running downhill from high ground into a lake, the sea or off the edge."),
         new("Water", "River width", "m", 2, 30, 1, s => s.RiverWidth, (s, v) => s with { RiverWidth = F(v) }),
+        new("Water", "Meanders", "", 0, 1, 0.05, s => s.Meander, (s, v) => s with { Meander = F(v) }, "How much the rivers wind from side to side across their valleys (0: they follow the fall of the ground)."),
         new("Water", "Shore", "m", 0, 20, 1, s => s.Shore, (s, v) => s with { Shore = F(v) }, "The sand along shores (0: none)."),
         new("Water", "Marsh below", "m", 0, 60, 1, s => s.Marsh, (s, v) => s with { Marsh = F(v) }, "Ground lower than this flattened into wet flats (0: no marsh)."),
         new("Water", "Marsh pools", "%", 0, 100, 5, s => s.MarshShare * 100, (s, v) => s with { MarshShare = F(v / 100) }),

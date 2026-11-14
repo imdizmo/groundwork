@@ -38,6 +38,8 @@ public static partial class ZoneGenerator
     /// rock painted on the ground standing over its surroundings, so strongly (0..1); Valleys: streams cutting valleys
     /// down from the high ground and laying what they cut lower down, so strongly (0: none); Streams: earth painted
     /// where the water gathers, so strongly (0..1); SnowSlip: snow sliding off ground steeper than so many degrees and settling in the hollows (0: none).
+    /// Meander: the rivers winding from side to side across their valleys, up to three river widths each way (0..1; 0: they
+    /// follow the fall of the ground).
     /// </summary>
     public sealed record Spec(float Low = 20, float High = 70, float HillSize = 300, float RimHeight = 200, float RimWidth = 220,
         float[]? LakeHectares = null, float Woods = 0.35f, float WoodDensity = 17, float OpenTrees = 0.3f, float Small = 20, float TreeScale = 1, float Shore = 6, int Seed = 1,
@@ -46,7 +48,7 @@ public static partial class ZoneGenerator
         int Floaters = 0, float SnowLine = 0, float OpenDirt = 0.12f, int SnowChannel = 0, float RockSlope = 30, float Marsh = 0, float MarshShare = 0.3f, float Rough = 0, int Camps = 0, int CampSize = 5, bool Roads = false, int RoadChannel = 1, float Giants = 0, float GiantScale = 2.5f, float CliffSlope = 0,
         float Fjords = 0, float FjordWidth = 300, float FjordSpacing = 1400, float Crags = 0,
         float Strata = 0, float Erosion = 0, float Talus = 0, float Ridges = 0, float Expand = 0, float Crests = 0,
-        float Valleys = 0, float Streams = 0, float SnowSlip = 0);
+        float Valleys = 0, float Streams = 0, float SnowSlip = 0, float Meander = 0);
 
     /// <summary>A lake made: its middle and outline (Unreal X, Y metres), its surface height and depth.</summary>
     public sealed record Lake(Vector2 Middle, Vector2[] Outline, float Level, float Depth);

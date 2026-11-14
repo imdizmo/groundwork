@@ -311,6 +311,21 @@ public class ZoneGeneratorTests
     }
 
     [Fact]
+    public void MeandersWindTheRiversFromSideToSide()
+    {
+        static float Length(ZoneGenerator.Zone z) => z.Rivers.Sum(r => r.Points.Zip(r.Points.Skip(1), (a, b) => Vector2.Distance(new(a.X, a.Y), new(b.X, b.Y))).Sum());
+        var spec = new ZoneGenerator.Spec(Low: 5, High: 120, RimHeight: 150, LakeHectares: [], Seed: 4, Valleys: 1, Rivers: 3);
+        var straight = Make(spec, 1500);
+        var winding = Make(spec with { Meander = 1 }, 1500);
+        var (a, b) = (Length(straight), Length(winding));
+        // the same rivers, longer for their bends (though a bend climbing a valley's side can end one sooner, in a pond),
+        // still falling all the way and inside the map
+        Assert.True(b > a * 1.08f, $"{a} m straight, {b} m winding");
+        Assert.All(winding.Rivers, r => Assert.True(r.Top >= r.End - 0.01f));
+        Assert.All(winding.Rivers.SelectMany(r => r.Points), p => Assert.True(p.X >= -200 && p.X <= 1300 && p.Y >= -200 && p.Y <= 1300));
+    }
+
+    [Fact]
     public void ARiverRunsRoundTheHillsInsteadOfCuttingATrench()
     {
         // the same ground without its rivers: how deep each river cut under where it runs

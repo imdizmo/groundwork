@@ -276,6 +276,10 @@ public static partial class ZoneGenerator
                 }
             }
             path.Add(Vector2.Clamp(cells[^1], Vector2.Zero, new Vector2(cols - 1, rows - 1)));
+            if (spec.Meander > 0)
+            {
+                path = Meandered(path, spec.Meander * spec.RiverWidth * 3, spec.RiverWidth * 14, spec.Seed + (31 * n), cols, rows);
+            }
             // it joins an earlier river where it meets it
             for (int i = 1; i < path.Count; i++)
             {
@@ -344,6 +348,52 @@ public static partial class ZoneGenerator
             }
         }
         return all;
+    }
+
+    /// <summary>
+    /// A river's line winding from side to side: each point moved across it by up to <paramref name="swing"/> metres, in
+    /// bends about <paramref name="bend"/> metres long whose size and length wander (noise), straight at both ends so it
+    /// still starts and ends where it did; then a point every 12 m along it again.
+    /// </summary>
+    private static List<Vector2> Meandered(List<Vector2> path, float swing, float bend, int seed, int cols, int rows)
+    {
+        // a point every 3 m first, so the bends are drawn smoothly
+        var fine = Along(path, 3);
+        float total = (fine.Count - 1) * 3, gone = 0, phase = 0;
+        var moved = new List<Vector2>(fine.Count);
+        for (int i = 0; i < fine.Count; i++)
+        {
+            var dir = fine[Math.Min(fine.Count - 1, i + 1)] - fine[Math.Max(0, i - 1)];
+            var across = dir.LengthSquared() > 0 ? Vector2.Normalize(new Vector2(-dir.Y, dir.X)) : Vector2.Zero;
+            float ends = Smooth(0, 60, gone) * Smooth(total, total - 60, gone);   // straight for the first and last 60 m
+            float size = 0.6f + (0.4f * Fbm(gone / (bend * 3), 0, seed, 2));
+            moved.Add(Vector2.Clamp(fine[i] + (across * swing * size * ends * MathF.Sin(phase)), Vector2.Zero, new Vector2(cols - 1, rows - 1)));
+            phase += MathF.Tau * 3 / (bend * (1 + (0.3f * Fbm(gone / bend, 7, seed + 1, 2))));
+            gone += 3;
+        }
+        return Along(moved, 12);
+    }
+
+    /// <summary>A line with a point every <paramref name="step"/> metres along it, from its first point to its last.</summary>
+    private static List<Vector2> Along(List<Vector2> line, float step)
+    {
+        var points = new List<Vector2> { line[0] };
+        float carry = 0;
+        for (int i = 1; i < line.Count; i++)
+        {
+            var (a, b) = (line[i - 1], line[i]);
+            float len = Vector2.Distance(a, b);
+            for (float t = step - carry; t <= len; t += step)
+            {
+                points.Add(Vector2.Lerp(a, b, t / len));
+            }
+            carry = len <= 0 ? carry : (carry + len) % step;
+        }
+        if (Vector2.Distance(points[^1], line[^1]) > step * 0.3f)
+        {
+            points.Add(line[^1]);
+        }
+        return points;
     }
 
     /// <summary>The flow's cells, in pixels.</summary>
