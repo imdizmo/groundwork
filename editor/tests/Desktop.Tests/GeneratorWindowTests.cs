@@ -51,6 +51,26 @@ public class GeneratorWindowTests
         Assert.False(made.Rolling);
     }
 
+    [AvaloniaFact]
+    public async Task TheShapingStepsAreMovedSwitchedOffAndAdded()
+    {
+        var owner = Owner();
+        var asked = GeneratorWindow.NewMap(owner);
+        var d = TestWindows.Shown(owner);
+        CheckBox Step(string name) => d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content is string t && t.EndsWith(". " + name, StringComparison.Ordinal));
+        Grid Row(string name) => (Grid)Step(name).Parent!;
+        // Erosion up to just after Expand, Strata off, and Erosion again at the end
+        Row("Erosion").Children.OfType<Button>().Single(b => b.Content as string == "↑").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        Row("Erosion").Children.OfType<Button>().Single(b => b.Content as string == "↑").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        Row("Erosion").Children.OfType<Button>().Single(b => b.Content as string == "↑").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        Step("Strata").IsChecked = false;
+        d.GetLogicalDescendants().OfType<ComboBox>().Single(c => c.PlaceholderText == "Add a step…").SelectedIndex = ZoneGenerator.StepKinds.ToList().FindIndex(k => k.Kind == "erosion");
+        Press(d, "Make the map");
+        var steps = (await asked)!.Spec!.Steps!;
+        Assert.Equal(["expand", "erosion", "valleys", "glaciers", "strata", "scree", "sea", "dunes", "crags", "erosion"], steps.Select(x => x.Kind));
+        Assert.False(steps.Single(x => x.Kind == "strata").On);
+    }
+
     [Fact]
     public void ThePreviewIsTheGroundTheNumbersMake()
     {

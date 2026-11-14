@@ -210,6 +210,7 @@ public sealed partial class GeneratorWindow : Window
                 AddSwitch("A drop into nothing (no sea)", s => s.CoastDry, (s, on) => s with { CoastDry = on });
             }
         }
+        AddSteps();
         _knobs.Children.Add(Ui.Heading("Seed", 14));
         var seed = new TextBox { FontSize = 12 };
         var dice = new Button { Content = "Another", FontSize = 12 };

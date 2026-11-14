@@ -42,7 +42,8 @@ public static partial class ZoneGenerator
     /// follow the fall of the ground). Glaciers: the valleys fed from high ground carved into U-shaped troughs about so
     /// many metres across (0: none). SeaWear: how far the sea has cut the land back, metres (beaches, a bench and sea cliffs;
     /// 0: none). Dunes: sand dunes on flat open land, so many metres high (0: none), lying across the wind blowing
-    /// towards DuneWind degrees.
+    /// towards DuneWind degrees. Steps: the order the ground is shaped in (see <see cref="ShapeStep"/>; null: the usual
+    /// order, <see cref="DefaultSteps"/>).
     /// </summary>
     public sealed record Spec(float Low = 20, float High = 70, float HillSize = 300, float RimHeight = 200, float RimWidth = 220,
         float[]? LakeHectares = null, float Woods = 0.35f, float WoodDensity = 17, float OpenTrees = 0.3f, float Small = 20, float TreeScale = 1, float Shore = 6, int Seed = 1,
@@ -51,7 +52,7 @@ public static partial class ZoneGenerator
         int Floaters = 0, float SnowLine = 0, float OpenDirt = 0.12f, int SnowChannel = 0, float RockSlope = 30, float Marsh = 0, float MarshShare = 0.3f, float Rough = 0, int Camps = 0, int CampSize = 5, bool Roads = false, int RoadChannel = 1, float Giants = 0, float GiantScale = 2.5f, float CliffSlope = 0,
         float Fjords = 0, float FjordWidth = 300, float FjordSpacing = 1400, float Crags = 0,
         float Strata = 0, float Erosion = 0, float Talus = 0, float Ridges = 0, float Expand = 0, float Crests = 0,
-        float Valleys = 0, float Streams = 0, float SnowSlip = 0, float Meander = 0, float Glaciers = 0, float SeaWear = 0, float Dunes = 0, float DuneWind = 0);
+        float Valleys = 0, float Streams = 0, float SnowSlip = 0, float Meander = 0, float Glaciers = 0, float SeaWear = 0, float Dunes = 0, float DuneWind = 0, ShapeStep[]? Steps = null);
 
     /// <summary>A lake made: its middle and outline (Unreal X, Y metres), its surface height and depth.</summary>
     public sealed record Lake(Vector2 Middle, Vector2[] Outline, float Level, float Depth);
@@ -165,22 +166,7 @@ public static partial class ZoneGenerator
                 h[(r * cols) + c] = Marshed(spec, Fjorded(spec, Coasted(spec, ground + rim, c, r, cols, rows, x, y), c, r, cols, rows, x, y), x, y);
             }
         });
-        Unpooled(spec, h, cols, rows);
-        Expanded(spec, h, cols, rows);
-        // what the water and weather move (metres laid down, or cut when below 0) is kept for the paint
-        float[]? worn = spec.Valleys > 0 || spec.Erosion > 0 || spec.Talus > 0 || spec.Glaciers > 0 || spec.SeaWear > 0 ? (float[])h.Clone() : null;
-        Valleyed(spec, h, cols, rows);
-        Glaciated(spec, h, cols, rows);
-        Stratified(spec, h, cols, rows, x0, y0);
-        Eroded(spec, h, cols, rows);
-        Weathered(spec, h, cols, rows);
-        SeaWorn(spec, h, cols, rows, x0, y0);
-        if (worn != null)
-        {
-            Parallel.For(0, h.Length, p => worn[p] = h[p] - worn[p]);
-        }
-        float[]? dunes = Duned(spec, h, cols, rows, x0, y0);
-        Cragged(spec, h, cols, rows, x0, y0);
+        var (worn, dunes) = Shape(spec, h, cols, rows, x0, y0);
         var lakes = PlaceLakes(spec, h, cols, rows, x0, y0, rng);
         var rivers = MakeRivers(spec, h, cols, rows, x0, y0, lakes, rng);
         bool[] wet = Wet(spec, h, cols, rows, x0, y0, rivers);

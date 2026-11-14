@@ -30,6 +30,14 @@ sliders, by group:
 | Coast | How far in from one side the ground goes under the sea (0: none), how deep (up to 800 m), which side, or a drop into nothing instead; and how far the sea has cut the land back (**Sea cut back**: a bench rising gently from the water, more at the bays and less at the headlands, so low shores become beaches and higher ground behind is left as a sea cliff; 0: none). |
 | Water | How many lakes and the biggest one's size (each next about half the last), set in the low ground with banks sloping to the water; rivers, their width and how much they wind from side to side (**Meanders**); the sand along shores; marsh flats under a height, and the share of them that pools. |
 | Woods & plants | The share of the ground under woods, trees per hectare in the woods and in the open, the trees' size (a game's trees are often several times a real tree's), giant trees and their size, bushes and plants per hectare. |
+
+**Shaping steps**, under the sliders, are the order the ground is shaped in once its hills, rim and coast are laid
+and before the lakes, rivers, paint and planting: Expand, Valleys, Glaciers, Strata, Erosion, Scree, Sea cut back,
+Dunes and Crags. Each follows its slider; a step can be switched off, moved earlier (↑) or later (↓), run again just
+after (+) or taken out (✕), and its **×** box runs it stronger or weaker than its slider (×0.5: half). **Add a step…**
+puts one at the end, **Usual order** puts them all back. Erosion before Strata wears the bands smooth; after, the
+bands stay crisp. Erosion twice, the second at ×0.3, cuts deep valleys and then softens them. The steps are kept with
+the map's numbers (`generator.spec.steps`), so **Make it again** starts from them.
 | Paint | The slope rock is painted from, rock on crests (ridges, knolls and the lips of faces rocked, so strongly; 0: none), streams (earth painted where the water gathers, down every valley, so strongly; 0: none), snow slides off (snow gone from ground steeper than this, settled in the hollows below the snow line; 0: none), the share of open ground patched with dirt, the height snow lies from. |
 | Camps & roads | How many camps, buildings each, roads between them. |
 | Extras | Floating islands. |
