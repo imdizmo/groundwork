@@ -18,7 +18,7 @@
     <!-- The tests run on Microsoft.Testing.Platform (global.json): xUnit's runner for it, and a dump of a
          stuck test (testconfig.json). -->
     <PackageReference Include="xunit.v3.mtp-v2" Version="3.2.2" />
-    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.1" />
+    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.2" />
   </ItemGroup>
   <ItemGroup>
     <!-- The helpers both test projects share: the fixtures. -->

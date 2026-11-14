@@ -41,19 +41,19 @@
     <ProjectReference Include="../Core/Groundwork.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.1.4" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageReference Include="Avalonia" Version="12.1.5" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.5" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.5" />
     <PackageReference Include="Silk.NET.OpenGL" Version="2.23.0" />
     <!-- The Help window reads the documentation's Markdown (HelpDocs, HelpView). -->
-    <PackageReference Include="Markdig" Version="1.5.0" />
+    <PackageReference Include="Markdig" Version="1.6.0" />
     <!-- glTF models in a map's models folder (ModelStore.Gltf). -->
     <PackageReference Include="SharpGLTF.Core" Version="1.0.6" />
     <!-- GeoTIFF elevation models (DEMs) for New map over a heightmap (HeightmapImport.Tiff). -->
     <PackageReference Include="BitMiracle.LibTiff.NET" Version="2.4.660" />
     <!-- Claude's connection (Settings: Allow Claude to connect): an MCP server inside the app, on
          127.0.0.1 only (ClaudeServer.cs), with ASP.NET Core's web server. -->
-    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.3.0" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
