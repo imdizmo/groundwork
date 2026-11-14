@@ -326,6 +326,21 @@ public class ZoneGeneratorTests
     }
 
     [Fact]
+    public void GlaciersCarveTroughsDownTheHighValleysAndRaiseNothing()
+    {
+        var spec = new ZoneGenerator.Spec(Low: 40, High: 600, RimHeight: 0, LakeHectares: [], Seed: 21, Valleys: 1.5f, Ridges: 0.6f, HillSize: 900);
+        float[] plain = Make(spec, 1400).Heights;
+        float[] carved = Make(spec with { Glaciers = 250 }, 1400).Heights;
+        float[] cut = [.. plain.Zip(carved, (a, b) => a - b)];
+        Assert.True(cut.Min() > -0.01f, $"raised {-cut.Min()} m");
+        Assert.True(cut.Count(v => v > 10) > plain.Length / 100, $"{cut.Count(v => v > 10)} points cut over 10 m");
+        // troughs, not pits: the deepest cuts run along a line, so the cut region is long rather than round
+        var deep = Enumerable.Range(0, cut.Length).Where(p => cut[p] > 10).Select(p => (X: p % 1400, Y: p / 1400)).ToList();
+        int spanX = deep.Max(q => q.X) - deep.Min(q => q.X), spanY = deep.Max(q => q.Y) - deep.Min(q => q.Y);
+        Assert.True(Math.Max(spanX, spanY) > 300, $"the deep cuts span {spanX} x {spanY} m");
+    }
+
+    [Fact]
     public void DunesRiseOnFlatGroundAndArePaintedSand()
     {
         var spec = new ZoneGenerator.Spec(Low: 5, High: 25, RimHeight: 0, LakeHectares: [], Seed: 5, HillSize: 900, Shore: 0);

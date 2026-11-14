@@ -29,6 +29,7 @@ public sealed partial class GeneratorWindow
         new("Ground", "Fjord depth", "m", 0, 800, 10, s => s.Fjords, (s, v) => s with { Fjords = F(v) }, "Inlets cut from the coast into the high ground, sheer-walled, this deep under the sea at their mouths (0: none)."),
         new("Ground", "Fjord width", "m", 50, 1000, 10, s => s.FjordWidth, (s, v) => s with { FjordWidth = F(v) }),
         new("Ground", "Fjords apart", "m", 300, 4000, 50, s => s.FjordSpacing, (s, v) => s with { FjordSpacing = F(v) }),
+        new("Ground", "Glaciers", "m", 0, 800, 10, s => s.Glaciers, (s, v) => s with { Glaciers = F(v) }, "The valleys fed from the high ground carved by ice into troughs with flat floors and steep walls, about this wide (0: none)."),
         new("Ground", "Dunes", "m", 0, 30, 0.5, s => s.Dunes, (s, v) => s with { Dunes = F(v) }, "Sand dunes on flat open land, about this high, lying across the wind (0: none)."),
         new("Ground", "Dune wind", "°", 0, 359, 1, s => s.DuneWind, (s, v) => s with { DuneWind = F(v) }, "Which way the wind blows the sand: 0 east, 90 south, 180 west, 270 north."),
         new("Ground", "Cliffs from", "°", 0, 70, 1, s => s.CliffSlope, (s, v) => s with { CliffSlope = F(v) }, "Ground steeper than this faced with walls of rock, pieces overlapping along it (0: none; not in the preview)."),

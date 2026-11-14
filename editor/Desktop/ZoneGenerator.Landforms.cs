@@ -1,8 +1,139 @@
 namespace Groundwork.Desktop;
 
-/// <summary>Landforms worked into the ground: coasts cut back by the sea, sand dunes.</summary>
+/// <summary>Landforms worked into the ground: glacial troughs, coasts cut back by the sea, sand dunes.</summary>
 public static partial class ZoneGenerator
 {
+    /// <summary>
+    /// Glaciers: valleys fed from the high ground (above the snow line, else the land's highest quarter) carved into
+    /// troughs with flat floors and steep walls, a U where water cut a V. On the ground sampled every 16 m, each line of
+    /// ice is traced down its valley (every valley line draining at least 5 hectares of ground that reaches above the
+    /// line, down to where the ice melts 100 to 250 m under it; the longest first, a shorter one ending where it joins a
+    /// longer); along each, the ground is cut down to a U about Glaciers metres across (wider the more ice comes down it),
+    /// rising from the valley's floor: flat across its middle third, then up steeply. Nothing is raised.
+    /// </summary>
+    private static void Glaciated(Spec spec, float[] h, int cols, int rows)
+    {
+        if (spec.Glaciers < 32)
+        {
+            return;
+        }
+        const int Step = 16;
+        int w = ((cols - 1) / Step) + 1, d = ((rows - 1) / Step) + 1;
+        float[] soft = BoxBlur(h, cols, rows, Step / 2), g = new float[w * d], wt = new float[w * d];
+        for (int z = 0; z < d; z++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                float v = soft[(Math.Min(rows - 1, z * Step) * cols) + Math.Min(cols - 1, x * Step)];
+                (g[(z * w) + x], wt[(z * w) + x]) = (v, v > 1 ? 1 : 0);
+            }
+        }
+        soft = [];
+        float line = spec.SnowLine > 0 ? spec.SnowLine : Quantile([.. g.Where((v, i) => wt[i] > 0)], 0.75f);
+        var (order, to, _, _) = Drainage(g, wt, w, d, Step);
+        float[] area = OneWayArea(order, to, Step), fed = (float[])g.Clone();
+        for (int k = order.Length - 1; k >= 0; k--)
+        {
+            fed[to[order[k]]] = MathF.Max(fed[to[order[k]]], fed[order[k]]);   // the highest ground each sample drains
+        }
+        bool[] ice = new bool[g.Length], below = new bool[g.Length];
+        for (int i = 0; i < g.Length; i++)
+        {
+            ice[i] = wt[i] > 0 && area[i] >= 5e4f && fed[i] > line + 20 && g[i] > line - 250;
+        }
+        for (int i = 0; i < g.Length; i++)
+        {
+            if (ice[i] && to[i] != i)
+            {
+                below[to[i]] = true;   // fed by ice from above: not a head
+            }
+        }
+        var lines = new List<List<int>>();
+        for (int i = 0; i < g.Length; i++)
+        {
+            if (ice[i] && !below[i])
+            {
+                var path = new List<int> { i };
+                for (int c = i; to[c] != c && ice[to[c]];)
+                {
+                    c = to[c];
+                    path.Add(c);
+                }
+                lines.Add(path);
+            }
+        }
+        bool[] taken = new bool[g.Length];
+        // ponytail: one glacier's points held at a time (a few hundred thousand); where two troughs overlap, each cuts in turn
+        var near = new Dictionary<int, (float D, float Floor, float Half, float Ice)>();
+        float most = spec.Glaciers / 2;
+        foreach (var path in lines.OrderByDescending(l => l.Count))
+        {
+            int end = path.FindIndex(c => taken[c]);
+            var cells = end < 0 ? path : path[..(end + 1)];
+            if (cells.Count < 6)
+            {
+                continue;
+            }
+            foreach (int c in cells)
+            {
+                taken[c] = true;
+            }
+            // the line eased round its corners; its floor never rising downhill; wider where more ice comes down
+            near.Clear();
+            var pts = cells.Select(c => new System.Numerics.Vector2(c % w * Step, c / w * Step)).ToList();
+            for (int pass = 0; pass < 2; pass++)
+            {
+                pts = [pts[0], .. Enumerable.Range(1, pts.Count - 2).Select(i => (pts[i - 1] + (2 * pts[i]) + pts[i + 1]) / 4), pts[^1]];
+            }
+            float[] floor = new float[cells.Count], half = new float[cells.Count], strength = new float[cells.Count];
+            for (int i = 0; i < cells.Count; i++)
+            {
+                floor[i] = i == 0 ? g[cells[i]] : MathF.Min(floor[i - 1], g[cells[i]]);
+                half[i] = most * Math.Clamp(0.5f + MathF.Sqrt(area[cells[i]] / 2e6f), 0.5f, 1);
+                strength[i] = Smooth(line - 250, line - 100, floor[i]);
+            }
+            for (int i = 0; i + 1 < pts.Count; i++)
+            {
+                var (a, b) = (pts[i], pts[i + 1]);
+                float reach = MathF.Max(half[i], half[i + 1]) * 1.6f;
+                int c0 = Math.Max(0, (int)(MathF.Min(a.X, b.X) - reach)), c1 = Math.Min(cols - 1, (int)(MathF.Max(a.X, b.X) + reach));
+                int r0 = Math.Max(0, (int)(MathF.Min(a.Y, b.Y) - reach)), r1 = Math.Min(rows - 1, (int)(MathF.Max(a.Y, b.Y) + reach));
+                for (int r = r0; r <= r1; r++)
+                {
+                    for (int c = c0; c <= c1; c++)
+                    {
+                        float dist = MapWater.SegmentDistance(new System.Numerics.Vector2(c, r), a, b, out float t);
+                        int p = (r * cols) + c;
+                        if (dist <= reach && (!near.TryGetValue(p, out var was) || dist < was.D))
+                        {
+                            near[p] = (dist, floor[i] + ((floor[i + 1] - floor[i]) * t), half[i] + ((half[i + 1] - half[i]) * t), strength[i] + ((strength[i + 1] - strength[i]) * t));
+                        }
+                    }
+                }
+            }
+            foreach (var (p, (dist, fl, hw, s)) in near)
+            {
+                float off = MathF.Max(0, dist - (hw / 3)) / (hw * 2 / 3), u = fl + (hw * 0.8f * off * off);
+                if (u < h[p] && h[p] > 1)
+                {
+                    h[p] = MathF.Max(1, h[p] + ((u - h[p]) * s));
+                }
+            }
+        }
+        near.TrimExcess();
+    }
+
+    /// <summary>The value below which a share of some values lies.</summary>
+    private static float Quantile(float[] v, float share)
+    {
+        if (v.Length == 0)
+        {
+            return 0;
+        }
+        Array.Sort(v);
+        return v[Math.Clamp((int)(v.Length * share), 0, v.Length - 1)];
+    }
+
     /// <summary>
     /// The sea's wear: land within SeaWear metres of the sea (more at the bays, less at the headlands, by noise) cut down
     /// to a bench rising gently from the water (2°, from 0.3 m), so low shores become beaches and high ground standing
