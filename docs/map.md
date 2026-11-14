@@ -151,6 +151,7 @@ you pick, each named after the map (`<map>_flow.png` and so on). Use them as an 
 | `convexity` | The ground stands over its surroundings (ridges, crests). Grey is even ground, black the hollows. |
 | `facing_north` | The slope runs down towards the map's first row; black towards its last. Flat ground is grey. |
 | `facing_east` | The slope runs down towards the map's last column; black towards its first. |
+| `snow` | Snow lies (3 m and more white): from the snow line up, deepest 60 m over it, more on slopes facing north (away from the sun) and in hollows, blown off the ridges, none past 50°, slid down off steep ground into drifts at its foot. The snow line is New map's **Snow from** when the map was made with one, else the height of the land's highest quarter. |
 | `wear` | The generator's rain, streams and scree cut the ground (24 m and more white): valleys, gullies, bare channels. |
 | `deposits` | They laid it down (24 m and more white): fans, valley floors, screes at the foot of faces. |
 

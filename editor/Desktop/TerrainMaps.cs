@@ -9,14 +9,15 @@ public static class TerrainMaps
 {
     /// <summary>
     /// The maps of some ground, one at a time (each made only when it is asked for, so one is held at a time): flow,
-    /// wetness, slope, convexity, facing north and east, and wear and deposits when the generator's wear is given.
+    /// wetness, slope, convexity, facing north and east, snow, and wear and deposits when the generator's wear is given.
     /// </summary>
     /// <param name="h">Heights, rows of cols, a metre apart.</param>
     /// <param name="cols">Points a row.</param>
     /// <param name="rows">Rows.</param>
     /// <param name="sea">The sea level: water runs off into ground under it.</param>
     /// <param name="worn">What the generator's wear moved, metres a point (MapProject.ReadWorn); null: no wear maps.</param>
-    public static IEnumerable<(string Name, float[] Values)> Of(float[] h, int cols, int rows, float sea, float[]? worn)
+    /// <param name="snowLine">Where snow starts lying, metres; null: the land's highest quarter.</param>
+    public static IEnumerable<(string Name, float[] Values)> Of(float[] h, int cols, int rows, float sea, float[]? worn, float? snowLine = null)
     {
         var (logArea, pond) = LogArea(h, cols, rows, sea);
         // flow: the ground a point drains, from half a hectare (0) to 0.2 km² (1), on a log scale; none in a hollow, where
@@ -39,6 +40,10 @@ public static class TerrainMaps
         // the other way; flat ground grey, the full range from 10°
         yield return ("facing_north", Each(cols, rows, p => Facing(h, cols, rows, p, north: true)));
         yield return ("facing_east", Each(cols, rows, p => Facing(h, cols, rows, p, north: false)));
+        // snow: 3 m deep and more white
+        float[] snow = Snow(h, cols, rows, snowLine ?? SnowLine(h, sea));
+        yield return ("snow", Each(cols, rows, p => snow[p] / 3));
+        snow = [];
         if (worn != null)
         {
             // what the water and weather cut (valleys, gullies) and laid down (fans, valley floors, scree), 24 m and more
@@ -46,6 +51,94 @@ public static class TerrainMaps
             yield return ("wear", Each(cols, rows, p => -worn[p] / 24));
             yield return ("deposits", Each(cols, rows, p => worn[p] / 24));
         }
+    }
+
+    /// <summary>The height of the land's highest quarter (sampled): where snow starts when no snow line is given.</summary>
+    private static float SnowLine(float[] h, float sea)
+    {
+        float[] land = [.. h.Where((v, i) => i % 61 == 0 && v > sea).Order()];
+        return land.Length == 0 ? sea + 100 : land[land.Length * 3 / 4];
+    }
+
+    /// <summary>
+    /// Snow depth, metres: from nothing at the snow line to 2 m 60 m above it; more on ground facing away from the sun
+    /// (which stands to the south, past the map's last row) and less facing it; blown off the ridges into the hollows;
+    /// less and less sticking from 30° to none at 50°; then what lies slid down where snow and ground together are
+    /// steeper than 38°, piling at the foot of the slope; smoothed over a few metres.
+    /// </summary>
+    internal static float[] Snow(float[] h, int cols, int rows, float line)
+    {
+        float[] near = ZoneGenerator.BoxBlur(h, cols, rows, 2), far = ZoneGenerator.BoxBlur(h, cols, rows, 15), snow = new float[h.Length];
+        Parallel.For(0, rows, r =>
+        {
+            for (int c = 0; c < cols; c++)
+            {
+                int p = (r * cols) + c;
+                float fall = 2 * Math.Clamp((h[p] - line) / 60, 0, 1);
+                float shade = 0.6f + (0.8f * Facing(h, cols, rows, p, north: true));   // 0.6 facing the sun, 1.4 away
+                float wind = Math.Clamp(1 - ((near[p] - far[p]) / 4), 0.2f, 1.8f);   // ridges bare, hollows filled
+                float holds = 1 - Math.Clamp((ZoneGenerator.Slope(h, cols, rows, c, r) - 30) / 20, 0, 1);   // none sticks past 50°
+                snow[p] = fall * shade * wind * holds;
+            }
+        });
+        // ponytail: slides only spread about √passes points a pass run; enough for drifts at the foot of faces, not for
+        // avalanches running a kilometre (add coarse-to-fine passes, as the generator's scree, if they are wanted)
+        float talus = MathF.Tan(38 * MathF.PI / 180);
+        float[] moved = new float[h.Length];
+        for (int pass = 0; pass < 24; pass++)
+        {
+            Array.Clear(moved);
+            Parallel.For(1, rows - 1, r =>
+            {
+                Span<float> excess = stackalloc float[9];
+                for (int c = 1; c < cols - 1; c++)
+                {
+                    int i = (r * cols) + c;
+                    if (snow[i] <= 0)
+                    {
+                        continue;
+                    }
+                    // the drops to the neighbours beyond the resting slope: half the largest (at most the snow there)
+                    // slides, shared among them by their drops
+                    float top = h[i] + snow[i], most = 0, sum = 0;
+                    for (int k = 0; k < 9; k++)
+                    {
+                        int j = i + (((k / 3) - 1) * cols) + (k % 3) - 1;
+                        excess[k] = k == 4 ? 0 : MathF.Max(0, top - h[j] - snow[j] - (talus * (k is 0 or 2 or 6 or 8 ? 1.414f : 1)));
+                        (most, sum) = (MathF.Max(most, excess[k]), sum + excess[k]);
+                    }
+                    if (sum > 0)
+                    {
+                        float m = MathF.Min(snow[i], most * 0.5f);
+                        Interlocked(ref moved[i], -m);
+                        for (int k = 0; k < 9; k++)
+                        {
+                            if (excess[k] > 0)
+                            {
+                                Interlocked(ref moved[i + (((k / 3) - 1) * cols) + (k % 3) - 1], m * excess[k] / sum);
+                            }
+                        }
+                    }
+                }
+            });
+            for (int i = 0; i < snow.Length; i++)
+            {
+                snow[i] += moved[i];
+            }
+        }
+        return ZoneGenerator.BoxBlur(snow, cols, rows, 2);   // drifts are smooth: no snow a metre thick beside bare ground
+    }
+
+    /// <summary>Adds to a float shared between threads.</summary>
+    private static void Interlocked(ref float at, float by)
+    {
+        float was, now;
+        do
+        {
+            was = at;
+            now = was + by;
+        }
+        while (System.Threading.Interlocked.CompareExchange(ref at, now, was) != was);
     }
 
     /// <summary>A map of f at every point, clamped to 0..1.</summary>

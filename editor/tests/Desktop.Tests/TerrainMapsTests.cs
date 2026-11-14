@@ -96,4 +96,23 @@ public class TerrainMapsTests
             Directory.Delete(dir, true);
         }
     }
+
+    /// <summary>A plane at height base, falling degrees towards the map's first row (negative: towards its last).</summary>
+    private static float[] Plane(float height, float degrees) =>
+        [.. Enumerable.Range(0, N * N).Select(p => height + ((p / N) * MathF.Tan(degrees * MathF.PI / 180)))];
+
+    [Fact]
+    public void SnowLiesAboveTheLineDeeperInTheShadeAndSlidesOffSteepGround()
+    {
+        int mid = (100 * N) + 100;
+        // flat ground: 2 m 60 m and more over the line, none under it
+        Assert.Equal(2, TerrainMaps.Snow(Plane(500, 0), N, N, 400)[mid], 2);
+        Assert.Equal(0, TerrainMaps.Snow(Plane(300, 0), N, N, 400)[mid]);
+        // a 20° slope facing north (away from the sun) holds more than one facing south
+        float shaded = TerrainMaps.Snow(Plane(500, 20), N, N, 400)[mid], sunny = TerrainMaps.Snow(Plane(500 + (N * MathF.Tan(20 * MathF.PI / 180)), -20), N, N, 400)[mid];
+        Assert.True(shaded > 2.5f && sunny < 1.5f, $"{shaded} m in the shade, {sunny} m in the sun");
+        // at 60° it slides off, down to the foot
+        float[] steep = TerrainMaps.Snow(Plane(2000, -60), N, N, 400);
+        Assert.True(steep[mid] < 0.5f, $"{steep[mid]} m on a 60° face");
+    }
 }

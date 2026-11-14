@@ -327,7 +327,7 @@ public partial class MainWindow
         stem = stem.Length > 0 ? stem : "map";
         await Task.Run(() =>
         {
-            foreach (var (name, values) in TerrainMaps.Of(heights, cols, rows, map.SeaLevel, worn))
+            foreach (var (name, values) in TerrainMaps.Of(heights, cols, rows, map.SeaLevel, worn, map.Generated?.Spec.SnowLine is > 0 and var line ? line : null))
             {
                 File.WriteAllBytes(Path.Combine(folder, $"{stem}_{name}.png"), HeightmapExport.Png8(values, cols, rows));
                 names.Add(name);
