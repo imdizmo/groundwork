@@ -307,6 +307,32 @@ public partial class MainWindow
         Msg(new Said($"Heightmap written: {Path.GetFileName(file)}, {cols} x {rows}, 0 m = 32768, 128 steps a metre (Unreal at Z scale 100).", ""));
     }
 
+    /// <summary>The map's terrain maps (TerrainMaps: flow, wetness, slope and the rest) as 8-bit grey PNGs into a folder the user picks.</summary>
+    private async Task ExportTerrainMaps()
+    {
+        if (Session is not { Scene: var scene } || MapProject.Current is not { } map)
+        {
+            return;
+        }
+        string? folder = await Pickers.Folder(StorageProvider, "Export the terrain maps into");
+        if (folder == null)
+        {
+            return;
+        }
+        var (heights, cols, rows) = map.HeightsNow(scene);
+        float[]? worn = map.ReadWorn(cols, rows);
+        var names = new List<string>();
+        await Task.Run(() =>
+        {
+            foreach (var (name, values) in TerrainMaps.Of(heights, cols, rows, map.SeaLevel, worn))
+            {
+                File.WriteAllBytes(Path.Combine(folder, $"{map.Name}_{name}.png"), HeightmapExport.Png8(values, cols, rows));
+                names.Add(name);
+            }
+        });
+        Msg(new Said($"Terrain maps written to {folder}: {string.Join(", ", names)} ({cols} x {rows}).", ""));
+    }
+
     /// <summary>The map the drawer holds the kinds of.</summary>
     private string? _drawerFor;
 
@@ -381,6 +407,8 @@ public partial class MainWindow
             };
             var export = new MenuItem { Header = "Export the heightmap (16-bit PNG or .r16)…" };
             export.Click += async (_, _) => await ExportHeightmap();
+            var terrainMaps = new MenuItem { Header = "Export the terrain maps (flow, wetness, slope…)…" };
+            terrainMaps.Click += async (_, _) => await ExportTerrainMaps();
             var landscape = new MenuItem { Header = "Make the Unreal landscape from this map…" };
             landscape.Click += async (_, _) => await MakeLandscape();
             var models = new MenuItem { Header = "Bring the models into Unreal" };
@@ -400,7 +428,7 @@ public partial class MainWindow
             undoAgain.Click += async (_, _) => await MakeAgain(_madeFrom?.Spec);
             var link = new MenuItem();
             link.Click += async (_, _) => await LinkUnreal(change: true);
-            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, export, link, landscape, models } };
+            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, export, terrainMaps, link, landscape, models } };
             more.Opening += (_, _) =>
             {
                 link.Header = MapProject.Current?.UnrealProject is { } up

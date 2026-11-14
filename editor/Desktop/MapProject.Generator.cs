@@ -19,7 +19,7 @@ public sealed partial class MapProject
     public string? BaseFile { get; private set; }
 
     /// <summary>The ground it was generated over, as the map's heights are (null: none).</summary>
-    public float[]? ReadBase() => BaseFile != null && System.IO.File.Exists(BaseFile) ? Read(BaseFile, out _, out _) : null;
+    public float[]? ReadBase() => BaseFile != null && File.Exists(BaseFile) ? Read(BaseFile, out _, out _) : null;
 
     /// <summary>Generated, and its files as they were made: nothing worked on by hand and saved.</summary>
     public bool Untouched => Generated is { } g && Print() == g.Print;
@@ -44,12 +44,20 @@ public sealed partial class MapProject
         var zone = ZoneGenerator.Generate(spec, map.Cols, map.Rows, map.X0, map.Y0, planting, ReadBase());
         Write(HeightsFile, zone.Heights, map.Rows, map.Cols);
         WriteMask(LayersFile, zone.Mask, map);
+        if (zone.Worn != null)
+        {
+            Write(WornFile, zone.Worn, map.Rows, map.Cols);
+        }
+        else
+        {
+            File.Delete(WornFile);
+        }
         foreach (string f in LayersFiles.Skip(1))
         {
-            System.IO.File.Delete(f);   // the generator paints the first four layers: the others start bare
+            File.Delete(f);   // the generator paints the first four layers: the others start bare
         }
-        System.IO.File.WriteAllText(ObjectsFile, new JsonArray([.. zone.Objects.Select(o => (JsonNode)new JsonArray(o.Model, R(o.At.X), R(o.At.Y), R(o.At.Z), 0, R(o.Yaw), 0, R(o.Scale)))]).ToJsonString());
-        System.IO.File.WriteAllText(WaterFile, new JsonObject
+        File.WriteAllText(ObjectsFile, new JsonArray([.. zone.Objects.Select(o => (JsonNode)new JsonArray(o.Model, R(o.At.X), R(o.At.Y), R(o.At.Z), 0, R(o.Yaw), 0, R(o.Scale)))]).ToJsonString());
+        File.WriteAllText(WaterFile, new JsonObject
         {
             ["rivers"] = new JsonArray([.. zone.Rivers.Select((r, i) => (JsonNode)new JsonObject
             {
@@ -82,7 +90,7 @@ public sealed partial class MapProject
         {
             // made again without its drop: the sea back, no holes
             SeaLevel = 0;
-            System.IO.File.Delete(HolesFile);
+            File.Delete(HolesFile);
         }
         Generated = (spec, Print());
         WriteJson();
@@ -95,9 +103,9 @@ public sealed partial class MapProject
         foreach (string f in new[] { HeightsFile, LayersFile, ObjectsFile, WaterFile, HolesFile, AreasFile }.Concat(LayersFiles.Skip(1)))
         {
             hash.AppendData(System.Text.Encoding.UTF8.GetBytes(Path.GetFileName(f)));
-            if (System.IO.File.Exists(f))
+            if (File.Exists(f))
             {
-                using var s = System.IO.File.OpenRead(f);
+                using var s = File.OpenRead(f);
                 byte[] buffer = new byte[1 << 16];
                 for (int n; (n = s.Read(buffer)) > 0;)
                 {

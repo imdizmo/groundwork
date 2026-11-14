@@ -59,6 +59,9 @@ public static partial class ZoneGenerator
 
         /// <summary>The roads, each its points (Unreal X, Y metres).</summary>
         public List<List<Vector2>> Roads { get; init; } = [];
+
+        /// <summary>What the water and weather moved, metres a point (laid down, or cut when below 0); null: no wear asked.</summary>
+        public float[]? Worn { get; init; }
     }
 
     /// <summary>A stretch of river: its points (Unreal X, Y metres, half-width, depth, current) and its surface at its ends.</summary>
@@ -189,7 +192,7 @@ public static partial class ZoneGenerator
         objects.AddRange(cliffs);
         Furnish(spec, h, cols, rows, x0, y0, camps, planting, rng, objects);
         Float(spec, h, cols, rows, x0, y0, planting, rng, objects);
-        return new Zone(h, mask, objects, lakes, wooded) { Rivers = rivers, Roads = roads };
+        return new Zone(h, mask, objects, lakes, wooded) { Rivers = rivers, Roads = roads, Worn = worn };
     }
 
     /// <summary>The lowest and highest hundredth of some heights (sampled).</summary>
@@ -583,7 +586,7 @@ public static partial class ZoneGenerator
     }
 
     /// <summary>The heights averaged over a square <paramref name="radius"/> pixels each way (rows, then columns).</summary>
-    private static float[] BoxBlur(float[] h, int cols, int rows, int radius)
+    internal static float[] BoxBlur(float[] h, int cols, int rows, int radius)
     {
         float[] across = new float[h.Length], both = new float[h.Length];
         Parallel.For(0, rows, r =>
@@ -747,7 +750,7 @@ public static partial class ZoneGenerator
     }
 
     /// <summary>The height between the pixels.</summary>
-    private static float At(float[] h, int cols, int rows, float c, float r)
+    internal static float At(float[] h, int cols, int rows, float c, float r)
     {
         c = Math.Clamp(c, 0, cols - 1.001f);
         r = Math.Clamp(r, 0, rows - 1.001f);

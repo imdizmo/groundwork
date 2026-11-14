@@ -109,6 +109,7 @@ third on steep ground.
 | `files.areas` | The areas ([Areas](areas.md)). |
 | `files.holes` | The holes: a grey `.png` the size of the heightmap, white where the ground is taken away; written once there is a hole. |
 | `files.beds` | The ground kept under the beds of bedded objects (the catalog's `bed` kinds, [Objects](objects.md#the-catalog)): a count, then grid index and height pairs (int32, float32, little-endian); written once there is a bed. |
+| `files.worn` | What **New map**'s rain, streams and scree moved, metres a point (float32 `.npy`, the heightmap's size; below 0 cut, above 0 laid down); written when the map is made with them, read by [Export the terrain maps](#exporting-the-terrain-maps). |
 | `layers` | Up to eight: the first is the ground everywhere, the others are painted over it from a channel: `r`, `g`, `b` of the first layers file, `r2`, `g2`, `b2` of the second, `r3` of the third (in that order when not given). A layer's `texture` (a picture in the map's folder) is drawn instead of its colour, repeated every `size` metres (4 by default). |
 | `catalog` | The kinds the object tools offer and the categories the View panel sorts by. |
 | `models` | The model folder the 3D view draws objects with (it may be anywhere; see [Objects](objects.md#models)). |
@@ -135,3 +136,24 @@ first, then opens the bigger map.
 **⋯ → Export the heightmap** writes the map's heights as they are now to a 16-bit grey PNG or a raw `.r16` file
 (Unreal's landscape import formats, and most terrain tools'): 32768 is 0 m, 128 steps a metre, as an Unreal landscape
 at Z scale 100 reads them. The first row is the map's first (its origin's) row.
+
+## Exporting the terrain maps
+
+**⋯ → Export the terrain maps** writes grey 8-bit PNGs, the map's size, read off its ground as it is now, into a folder
+you pick, each named after the map (`<map>_flow.png` and so on). Use them as an Unreal landscape's paint layers
+(*Import from file* on a layer) or as masks in a material:
+
+| Map | White where |
+|---|---|
+| `flow` | Water runs: the ground a point drains, from half a hectare (black) to 0.2 km² (white). Streams and gullies; black in hollows, where water would stand. |
+| `wetness` | The ground stays wet: much water running in, little slope to run it off. Valley floors, the foot of slopes, and white in hollows (a lake's bed). |
+| `slope` | The ground is steep: 0° black to 90° white. |
+| `convexity` | The ground stands over its surroundings (ridges, crests). Grey is even ground, black the hollows. |
+| `facing_north` | The slope runs down towards the map's first row; black towards its last. Flat ground is grey. |
+| `facing_east` | The slope runs down towards the map's last column; black towards its first. |
+| `wear` | The generator's rain, streams and scree cut the ground (24 m and more white): valleys, gullies, bare channels. |
+| `deposits` | They laid it down (24 m and more white): fans, valley floors, screes at the foot of faces. |
+
+`wear` and `deposits` come only from a map made by **New map** with Valleys, Erosion or Scree on; they are what the
+generator moved when it made the map (kept in `worn.npy`), so ground reshaped by hand since is not in them, and a map
+grown since has none. The others are read off the ground as it is when you export.

@@ -38,6 +38,26 @@ public static class HeightmapExport
                 BinaryPrimitives.WriteUInt16BigEndian(raw.AsSpan((r * (1 + (cols * 2))) + 1 + (c * 2)), Value(heights[(r * cols) + c]));
             }
         }
+        return Png(raw, cols, rows, 16);
+    }
+
+    /// <summary>An 8-bit grey PNG of values 0..1 (0 black, 1 white), the first row first.</summary>
+    internal static byte[] Png8(float[] values, int cols, int rows)
+    {
+        byte[] raw = new byte[rows * (1 + cols)];
+        for (int r = 0; r < rows; r++)
+        {
+            for (int c = 0; c < cols; c++)
+            {
+                raw[(r * (1 + cols)) + 1 + c] = (byte)Math.Clamp((int)MathF.Round(values[(r * cols) + c] * 255), 0, 255);
+            }
+        }
+        return Png(raw, cols, rows, 8);
+    }
+
+    /// <summary>A grey PNG of rows already laid out (each a 0 filter byte and its values), bits a value.</summary>
+    private static byte[] Png(byte[] raw, int cols, int rows, byte bits)
+    {
         using var packed = new MemoryStream();
         using (var z = new ZLibStream(packed, CompressionLevel.Optimal, leaveOpen: true))
         {
@@ -46,7 +66,7 @@ public static class HeightmapExport
         byte[] head = new byte[13];
         BinaryPrimitives.WriteInt32BigEndian(head, cols);
         BinaryPrimitives.WriteInt32BigEndian(head.AsSpan(4), rows);
-        head[8] = 16;   // bits a value; colour type 0 (grey), compression, filter and interlace 0
+        head[8] = bits;   // bits a value; colour type 0 (grey), compression, filter and interlace 0
         using var png = new MemoryStream();
         png.Write([137, 80, 78, 71, 13, 10, 26, 10]);
         Chunk(png, "IHDR", head);

@@ -64,6 +64,9 @@ public sealed partial class MapProject
 
     /// <summary>The ground kept under the beds (EditSession.Beds): grid index and height pairs; written once there is a bed.</summary>
     public string BedsFile { get; private set; } = "";
+
+    /// <summary>What the generator's water and weather moved (a float .npy the heightmap's size, metres; written by Generate when it wears the ground).</summary>
+    public string WornFile { get; private set; } = "";
     /// <summary>
     /// The ground's layers: the first is the ground everywhere, the others (up to seven) are painted over it, each from a
     /// channel of the layers files (r, g and b of each: an image editor paints them as they are).
@@ -157,6 +160,7 @@ public sealed partial class MapProject
         m.CavesFile = m.Inside(S(f?["caves"]) ?? "caves.json");
         m.HolesFile = m.Inside(S(f?["holes"]) ?? "holes.png");
         m.BedsFile = m.Inside(S(f?["beds"]) ?? "beds.bin");
+        m.WornFile = m.Inside(S(f?["worn"]) ?? "worn.npy");
         m.Catalog = S(j["catalog"]) is string c ? m.Inside(c) : null;
         m.Models = S(j["models"]) is string mo ? m.Abs(mo) : null;
         m.Stamps = S(j["stamps"]) is string st ? m.Inside(st) : null;
@@ -206,7 +210,7 @@ public sealed partial class MapProject
             ["name"] = Name,
             ["origin"] = new JsonArray(X0, Y0),
             ["seaLevel"] = SeaLevel,
-            ["files"] = new JsonObject { ["heights"] = Rel(HeightsFile), ["layers"] = LayersFiles.Count == 1 ? Rel(LayersFile) : new JsonArray([.. LayersFiles.Select(l => (JsonNode)Rel(l))]), ["objects"] = Rel(ObjectsFile), ["water"] = Rel(WaterFile), ["areas"] = Rel(AreasFile), ["holes"] = Rel(HolesFile), ["beds"] = Rel(BedsFile), ["caves"] = Rel(CavesFile) },
+            ["files"] = new JsonObject { ["heights"] = Rel(HeightsFile), ["layers"] = LayersFiles.Count == 1 ? Rel(LayersFile) : new JsonArray([.. LayersFiles.Select(l => (JsonNode)Rel(l))]), ["objects"] = Rel(ObjectsFile), ["water"] = Rel(WaterFile), ["areas"] = Rel(AreasFile), ["holes"] = Rel(HolesFile), ["beds"] = Rel(BedsFile), ["caves"] = Rel(CavesFile), ["worn"] = Rel(WornFile) },
         };
         j["layers"] = new JsonArray([.. Layers.Select(l => (JsonNode)new JsonObject
         {
@@ -387,7 +391,7 @@ public sealed partial class MapProject
             m.Catalog = m.Abs("catalog.json");
             File.Copy(catalog, m.Catalog);
         }
-        (m.HeightsFile, m.LayersFile, m.ObjectsFile, m.WaterFile, m.AreasFile, m.HolesFile, m.BedsFile, m.CavesFile) = (m.Abs("height.npy"), m.Abs("layers.png"), m.Abs("objects.json"), m.Abs("water.json"), m.Abs("areas.json"), m.Abs("holes.png"), m.Abs("beds.bin"), m.Abs("caves.json"));
+        (m.HeightsFile, m.LayersFile, m.ObjectsFile, m.WaterFile, m.AreasFile, m.HolesFile, m.BedsFile, m.CavesFile, m.WornFile) = (m.Abs("height.npy"), m.Abs("layers.png"), m.Abs("objects.json"), m.Abs("water.json"), m.Abs("areas.json"), m.Abs("holes.png"), m.Abs("beds.bin"), m.Abs("caves.json"), m.Abs("worn.npy"));
         var raster = new Raster(n, rows, x0, y0);
         float[] heights = new float[n * rows];
         byte[] mask = new byte[n * rows * 4];
@@ -515,6 +519,17 @@ public sealed partial class MapProject
         MapAreas.Load(AreasFile);
         MapCaves.Load(CavesFile);
         MapNotes.Load(Path.Combine(Folder, "notes"));
+    }
+
+    /// <summary>What the generator's wear moved (metres a point, rows of cols), or null: none kept, or not the map's size any more (grown).</summary>
+    public float[]? ReadWorn(int cols, int rows)
+    {
+        if (!File.Exists(WornFile))
+        {
+            return null;
+        }
+        float[] worn = Read(WornFile, out int r, out int c);
+        return r == rows && c == cols ? worn : null;
     }
 
     /// <summary>The map's heights as they are now (its file's, with the open ground's over them): rows of cols.</summary>
