@@ -326,17 +326,7 @@ public static partial class ZoneGenerator
             // stretches falling evenly: each as long (up to a dozen points) as the even fall keeps the water no more than half a
             // metre over the surface (still under the ground) and the bed no more than 1.5 m deeper
             float half = spec.RiverWidth / 2;
-            var stretches = new List<(int From, int To)>();
-            for (int i = 0; i < path.Count - 1;)
-            {
-                int end = i + 1;
-                while (end + 1 < path.Count && end + 1 - i <= 12 && Enumerable.Range(i, end + 2 - i).All(j => (surface[i] + ((surface[end + 1] - surface[i]) * (j - i) / (end + 1 - i)) - surface[j]) is > -1.5f and < 0.5f))
-                {
-                    end++;
-                }
-                stretches.Add((i, end));
-                i = end;
-            }
+            var stretches = WaterFinder.Stretches(surface);
             float[] even = new float[path.Count];
             foreach (var (a, b) in stretches)
             {

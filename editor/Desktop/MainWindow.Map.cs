@@ -322,11 +322,14 @@ public partial class MainWindow
         var (heights, cols, rows) = map.HeightsNow(scene);
         float[]? worn = map.ReadWorn(cols, rows);
         var names = new List<string>();
+        // the map's name as a file name (it comes from map.json: no folders, nothing the system refuses)
+        string stem = string.Concat(Path.GetFileName(map.Name).Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c)).Trim('.', ' ');
+        stem = stem.Length > 0 ? stem : "map";
         await Task.Run(() =>
         {
             foreach (var (name, values) in TerrainMaps.Of(heights, cols, rows, map.SeaLevel, worn))
             {
-                File.WriteAllBytes(Path.Combine(folder, $"{map.Name}_{name}.png"), HeightmapExport.Png8(values, cols, rows));
+                File.WriteAllBytes(Path.Combine(folder, $"{stem}_{name}.png"), HeightmapExport.Png8(values, cols, rows));
                 names.Add(name);
             }
         });

@@ -988,6 +988,8 @@ public static partial class MapTools
             new SliderControl("end", "End level", -2, 40, 0.12f) { Step = 0.05f, Unit = "m" },
             new ButtonControl("carve", "Carve this one"),
             new ButtonControl("carveAll", "Carve all"),
+            new SliderControl("catchment", "Find: rivers drain", 0.01f, 2, 0.1f) { Step = 0.01f, Unit = "km²" },
+            new ButtonControl("find", "Find rivers and lakes in the ground"),
             new TextControl("status", ""),
         ];
 
@@ -1061,8 +1063,8 @@ public static partial class MapTools
         /// <inheritdoc/>
         public override void OnControl(IToolContext ctx, string id)
         {
-            _point = id is "body" or "new" or "newLake" or "delete" ? -1 : _point;
-            if (id is not ("body" or "carve" or "carveAll"))
+            _point = id is "body" or "new" or "newLake" or "delete" or "find" ? -1 : _point;
+            if (id is not ("body" or "carve" or "carveAll" or "catchment"))
             {
                 Start();
             }
@@ -1101,10 +1103,13 @@ public static partial class MapTools
                 case "carveAll":
                     Carve(ctx, MapWater.Lakes, MapWater.Rivers);
                     break;
+                case "find":
+                    Find(ctx);
+                    break;
                 default:
                     break;
             }
-            if (id is not ("body" or "carve" or "carveAll"))
+            if (id is not ("body" or "carve" or "carveAll" or "catchment"))
             {
                 MapWater.Touch();
                 Record(id switch
@@ -1112,13 +1117,45 @@ public static partial class MapTools
                     "new" => "New river",
                     "newLake" => "New lake",
                     "delete" => "Delete river or lake",
+                    "find" => "Find rivers and lakes",
                     "width" or "depth" or "current" when River(ctx) != null => "River point " + id,
                     _ => (Lakes(ctx) ? "Lake " : "River ") + id,
-                }, merge: id is not ("new" or "newLake" or "delete"));
+                }, merge: id is not ("new" or "newLake" or "delete" or "find"));
             }
             List(ctx);
             Fields(ctx);
             Show(ctx, null);
+        }
+
+        /// <summary>
+        /// Adds the rivers and lakes WaterFinder finds in the ground as it is now (rivers draining at least the catchment
+        /// slider's km², lakes of a tenth of a hectare and more), leaving out any where there is water already.
+        /// </summary>
+        private void Find(IToolContext ctx)
+        {
+            if (Session is not { Scene: var scene } || MapProject.Current is not { } map)
+            {
+                return;
+            }
+            var (heights, cols, rows) = map.HeightsNow(scene);
+            var (rivers, lakes) = WaterFinder.Find(heights, cols, rows, map.X0, map.Y0, Sea, ctx.Number("catchment") * 1e6f, 1000);
+            bool Wet(Vector2 p) => MapWater.Lakes.Any(l => l.Outline.Count > 2 && MapWater.InsideBy(l.Outline, p) > -5)
+                || MapWater.Rivers.Any(r => r.Points.Any(q => Vector2.Distance(new Vector2(q.X, q.Y), p) < q.HalfWidth + 10));
+            var newLakes = lakes.Where(l => !l.Outline.Any(Wet)).ToList();
+            var newRivers = rivers.Where(r => !r.Points.Any(q => Wet(new Vector2(q.X, q.Y)))).ToList();
+            foreach (var l in newLakes)
+            {
+                l.Name = $"Lake {MapWater.Lakes.Count + 1}";
+                MapWater.Lakes.Add(l);
+            }
+            foreach (var r in newRivers)
+            {
+                r.Name = $"River {MapWater.Rivers.Count + 1}";
+                MapWater.Rivers.Add(r);
+            }
+            ctx.Status(newLakes.Count + newRivers.Count == 0
+                ? "Found no new rivers or lakes: try a smaller catchment."
+                : $"Found {newRivers.Count} river stretches and {newLakes.Count} lakes. Their surfaces are just under the ground: Carve all cuts their beds.");
         }
 
         private void Carve(IToolContext ctx, IReadOnlyList<MapWater.Lake> lakes, IReadOnlyList<MapWater.River> rivers)
