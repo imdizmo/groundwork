@@ -38,7 +38,11 @@ sliders, by group:
 
 **Ground → From a heightmap…** makes the map over ground you made elsewhere: export a heightmap from your terrain
 tool as a 16-bit PNG, a raw `.r16` / `.raw` (16-bit, little-endian) or a raw `.r32` (32-bit float), of any width and
-height. The file holds no metres, so give them: **Across** (the world's size west to east in your tool; a metre a
+height. Real ground comes as a GeoTIFF elevation model (`.tif`: survey and satellite DEMs, such as a national
+survey's or Copernicus's): its heights in metres and its pixel size are read from the file and fill **Black is**,
+**White is** and **Across** for you (a DEM in degrees is measured in metres at its latitude, and its pixels made square),
+and its holes (no-data points) are filled from the ground round them. A DEM tile is often larger than a map holds:
+cut the part you want out of it first (any GIS tool does), or give a smaller **Across** to shrink it. The file holds no metres, so give them: **Across** (the world's size west to east in your tool; a metre a
 sample to start with), and the heights its black and its white stand for (**Black is**, **White is**: your tool's
 height range; under 0 is under the sea: to put your tool's water level at the sea, take it off both). A raw file holds
 no width either: when it is not square, give its **Samples across**. Pictures start at their north edge; for a raw
@@ -139,7 +143,7 @@ at Z scale 100 reads them. The first row is the map's first (its origin's) row.
 
 ## Exporting the terrain maps
 
-**⋯ → Export the terrain maps** writes grey 8-bit PNGs, the map's size, read off its ground as it is now, into a folder
+**⋯ → Export the terrain maps and paint weights** writes grey 8-bit PNGs, the map's size, read off its ground as it is now, into a folder
 you pick, each named after the map (`<map>_flow.png` and so on). Use them as an Unreal landscape's paint layers
 (*Import from file* on a layer) or as masks in a material:
 
@@ -158,3 +162,8 @@ you pick, each named after the map (`<map>_flow.png` and so on). Use them as an 
 `wear` and `deposits` come only from a map made by **New map** with Valleys, Erosion or Scree on; they are what the
 generator moved when it made the map (kept in `worn.npy`), so ground reshaped by hand since is not in them, and a map
 grown since has none. The others are read off the ground as it is when you export.
+
+With them come the paint's weights, one PNG a layer (`<map>_paint_<layer>.png`): how much of each point is that layer,
+every point's layers adding up to white, the first layer taking what the others leave. That is what an Unreal
+landscape's weight-blended layers take on import (**Make the Unreal landscape** sends the same), and other engines' and
+tools' splat maps alike.

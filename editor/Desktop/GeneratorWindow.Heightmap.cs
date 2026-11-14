@@ -64,7 +64,7 @@ public sealed partial class GeneratorWindow
             numbers.IsVisible = clear.IsVisible = on;
             size.IsEnabled = !on;
             file.Text = _heightmap is { } hm
-                ? $"{hm.Name}: {hm.Map.Cols} x {hm.Map.Rows} px, made {Metres} x {MetresZ} m"
+                ? $"{hm.Name}: {hm.Map.Cols} x {hm.Map.Rows} px, made {Metres} x {MetresZ} m" + (hm.Map.Holes > 0 ? $"; {hm.Map.Holes} holes (no data) filled" : "")
                 : "None: the generator's own hills";
             across.Show(_across);
             lowest.Show(_lowest);
@@ -131,7 +131,11 @@ public sealed partial class GeneratorWindow
                 _heightmap = (map, Path.GetFileName(path));
                 if (first || _across <= 0)
                 {
-                    _across = map.Cols - 1;   // a metre a sample unless told otherwise
+                    _across = (map.Cols - 1) * (map.PerSample ?? 1);   // a metre a sample unless the file says
+                }
+                if (first && map is { Low: float low, High: float high })
+                {
+                    (_lowest, _highest) = (low, high);   // a DEM's own heights
                 }
                 Use(first);
             }
@@ -148,7 +152,7 @@ public sealed partial class GeneratorWindow
         southFirst.IsCheckedChanged += (_, _) => { _southFirst = southFirst.IsChecked == true; Use(first: false); };
         pick.Click += async (_, _) =>
         {
-            if (await Pickers.File(StorageProvider, "A heightmap from another terrain tool", new("Heightmaps") { Patterns = ["*.png", "*.r16", "*.raw", "*.r32"] }) is not string picked)
+            if (await Pickers.File(StorageProvider, "A heightmap from another terrain tool", new("Heightmaps") { Patterns = ["*.png", "*.r16", "*.raw", "*.r32", "*.tif", "*.tiff"] }) is not string picked)
             {
                 return;
             }

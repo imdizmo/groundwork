@@ -322,15 +322,25 @@ public partial class MainWindow
         var (heights, cols, rows) = map.HeightsNow(scene);
         float[]? worn = map.ReadWorn(cols, rows);
         var names = new List<string>();
-        // the map's name as a file name (it comes from map.json: no folders, nothing the system refuses)
-        string stem = string.Concat(Path.GetFileName(map.Name).Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c)).Trim('.', ' ');
-        stem = stem.Length > 0 ? stem : "map";
+        // names from map.json (the map's, its layers') as file names: no folders, nothing the system refuses
+        static string Safe(string name, string otherwise) =>
+            string.Concat(Path.GetFileName(name).Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c)).Trim('.', ' ') is { Length: > 0 } s ? s : otherwise;
+        string stem = Safe(map.Name, "map");
+        var (weights, _, _) = map.LayersNow(scene);
         await Task.Run(() =>
         {
             foreach (var (name, values) in TerrainMaps.Of(heights, cols, rows, map.SeaLevel, worn, map.Generated?.Spec.SnowLine is > 0 and var line ? line : null))
             {
                 File.WriteAllBytes(Path.Combine(folder, $"{stem}_{name}.png"), HeightmapExport.Png8(values, cols, rows));
                 names.Add(name);
+            }
+            // the paint: each layer's weight, every point's adding up to white (as Unreal's landscape layers take them)
+            for (int k = 0; k < weights.Length; k++)
+            {
+                byte[] w = weights[k];
+                string layer = $"paint_{Safe(map.Layers[k].Name, $"layer{k + 1}")}";
+                File.WriteAllBytes(Path.Combine(folder, $"{stem}_{layer}.png"), HeightmapExport.Png8([.. w.Select(b => b / 255f)], cols, rows));
+                names.Add(layer);
             }
         });
         Msg(new Said($"Terrain maps written to {folder}: {string.Join(", ", names)} ({cols} x {rows}).", ""));
@@ -410,7 +420,7 @@ public partial class MainWindow
             };
             var export = new MenuItem { Header = "Export the heightmap (16-bit PNG or .r16)…" };
             export.Click += async (_, _) => await ExportHeightmap();
-            var terrainMaps = new MenuItem { Header = "Export the terrain maps (flow, wetness, slope…)…" };
+            var terrainMaps = new MenuItem { Header = "Export the terrain maps and paint weights…" };
             terrainMaps.Click += async (_, _) => await ExportTerrainMaps();
             var landscape = new MenuItem { Header = "Make the Unreal landscape from this map…" };
             landscape.Click += async (_, _) => await MakeLandscape();

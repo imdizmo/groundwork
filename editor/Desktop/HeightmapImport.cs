@@ -8,7 +8,7 @@ namespace Groundwork.Desktop;
 /// ground to 1 at its highest. The tools leave the metres out of the file (and a raw file its width), so they are asked
 /// for (<see cref="Metres"/>).
 /// </summary>
-public static class HeightmapImport
+public static partial class HeightmapImport
 {
     /// <summary>The biggest side read (8193 pixels: an 8 km map at a metre a pixel, as the tools export it).</summary>
     public const int MaxSide = 8193;
@@ -23,10 +23,23 @@ public static class HeightmapImport
     public const int MaxSquares = 6400;
 
     /// <summary>A heightmap read: its values (0 to 1, row by row from its first row) and its size in samples.</summary>
-    public sealed record Heightmap(float[] Values, int Cols, int Rows);
+    public sealed record Heightmap(float[] Values, int Cols, int Rows)
+    {
+        /// <summary>The height its 0 stands for, metres, when the file says (a GeoTIFF's); null: give it.</summary>
+        public float? Low { get; init; }
 
-    /// <summary>Whether a file's name is one of a heightmap this reads (16-bit PNG, .r16, .raw, .r32).</summary>
-    public static bool IsHeightmap(string file) => Path.GetExtension(file).ToLowerInvariant() is ".png" or ".r16" or ".raw" or ".r32";
+        /// <summary>The height its 1 stands for, metres, when the file says.</summary>
+        public float? High { get; init; }
+
+        /// <summary>Metres between its samples, when the file says.</summary>
+        public float? PerSample { get; init; }
+
+        /// <summary>How many of its samples were holes (no data), filled from the ground round them.</summary>
+        public int Holes { get; init; }
+    }
+
+    /// <summary>Whether a file's name is one of a heightmap this reads (16-bit PNG, .r16, .raw, .r32, GeoTIFF).</summary>
+    public static bool IsHeightmap(string file) => Path.GetExtension(file).ToLowerInvariant() is ".png" or ".r16" or ".raw" or ".r32" or ".tif" or ".tiff";
 
     /// <summary>
     /// A heightmap read from its file. A raw file holds no width: give it (<paramref name="cols"/>), or it is taken as
@@ -36,6 +49,10 @@ public static class HeightmapImport
     public static Heightmap Read(string file, int? cols = null)
     {
         string ext = Path.GetExtension(file).ToLowerInvariant();
+        if (ext is ".tif" or ".tiff")
+        {
+            return ReadTiff(file);
+        }
         long length = new FileInfo(file).Length;
         int size = ext switch { ".r16" or ".raw" => 2, ".r32" => 4, _ => 0 };
         if (size > 0)
