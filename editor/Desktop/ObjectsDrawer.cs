@@ -242,6 +242,25 @@ internal sealed class ObjectsDrawer
     private bool OverView(Point at) =>
         at.X >= 0 && at.Y >= 0 && at.X < _w.Surface.Bounds.Width && at.Y < (Card.TranslatePoint(default, _w.Surface)?.Y ?? _w.Surface.Bounds.Height);
 
+    /// <summary>
+    /// Picks the kind of an object in the map (a middle click on it): the Object tool takes it unless the Brush is in
+    /// use. Its name; null when it is no kind of the catalog.
+    /// </summary>
+    public string? PickKindOf(int prefab)
+    {
+        int i = _kinds.FindIndex(k => AssetIds.Of(k.Model) == prefab);
+        if (i < 0)
+        {
+            return null;
+        }
+        Pick([i]);
+        if (_w.Tools.ModTool?.Info.Id != "brush")
+        {
+            Use("object");
+        }
+        return _kinds[i].Label;
+    }
+
     /// <summary>The kinds picked: outlined here, and given to the Object or Brush card in use.</summary>
     private void Pick(List<int> picked)
     {

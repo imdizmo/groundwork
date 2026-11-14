@@ -50,6 +50,10 @@ public sealed partial class GlView
     public BrushTool? Tool { get; set { field = value; Wake(); } }
     /// <summary>A stroke finished, with what to say about it (empty when nothing).</summary>
     public event Action<Said>? StrokeEnded;
+    /// <summary>A middle click (no drag) on an object while a placing tool is in use: its index in the scene's things.</summary>
+    public event Action<int>? ObjectMiddleClicked;
+    /// <summary>A Shift + right click (no drag) on an object while a placing tool is in use: its index in the scene's things.</summary>
+    public event Action<int>? ObjectShiftRightClicked;
     /// <summary>Where the pointer is over the view, null when it is outside.</summary>
     private Point? _pointer;
 

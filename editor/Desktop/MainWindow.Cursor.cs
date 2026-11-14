@@ -40,7 +40,7 @@ public sealed partial class MainWindow
             ToolMode.Brush => "Hold and drag · Ctrl+wheel size · Ctrl+Shift+wheel strength · Shift: the opposite",
             ToolMode.Mod => Tools.ModTool?.Info.Id switch
             {
-                "object" => "Click places · R or , . turn · drag a picture from the drawer · Ctrl+Space drawer",
+                "object" => "Click places · drag lays a row · Alt: quarter-metre grid · R turns · middle click picks a kind · Shift+right click deletes",
                 "brush" or "biome" => "Hold and drag · Ctrl+wheel radius · Ctrl+Shift+wheel density · Shift takes away",
                 "stamp" => "Click places the stamp",
                 "shape" or "mountain" => "Click puts it in the ground · Ctrl+Z takes it back",

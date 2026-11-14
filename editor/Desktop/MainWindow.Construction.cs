@@ -47,6 +47,8 @@ public sealed partial class MainWindow
         Tools.ToolChanged += OnToolChanged;
         View.SelectTool.Message += (said, _) => Msg(said);
         View.StrokeEnded += OnStrokeEnded;
+        View.ObjectMiddleClicked += PickKindOfObject;
+        View.ObjectShiftRightClicked += DeleteObject;
         WireKeys();
         Closing += async (_, e) => await OnClosingAsync(e);
         // Takes the mouse for the 3D view (see GlView.Attach).

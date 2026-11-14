@@ -19,6 +19,7 @@ public sealed partial class GlView
     /// <param name="click">Whether it is a real release, which may pick (not a lost pointer).</param>
     private void Up(Point at, Size size, KeyModifiers mods, bool click)
     {
+        ObjectClick(at, size, mods, click);
         UpMod(at, mods);
         EndPress(at, size, mods, click);
         _pressAt = null;
@@ -73,5 +74,22 @@ public sealed partial class GlView
         // object is outlined.
         SelectTool.Hover(at, size);
         QueueHoverPick();
+    }
+
+    /// <summary>
+    /// With a tool of the rail's own in use (Object, Brush, Stamp...): a middle click on an object (ObjectMiddleClicked)
+    /// or a Shift + right click on one (ObjectShiftRightClicked); a drag (the view sliding) is neither.
+    /// </summary>
+    private void ObjectClick(Point at, Size size, KeyModifiers mods, bool click)
+    {
+        if (!click || Mode != ToolMode.Mod || _pressAt is not Point from || Point.Distance(from, at) >= 5)
+        {
+            return;
+        }
+        bool middle = _dragButton == PointerUpdateKind.MiddleButtonPressed, shiftRight = _dragButton == PointerUpdateKind.RightButtonPressed && mods.HasFlag(KeyModifiers.Shift);
+        if ((middle || shiftRight) && ObjectAt(at, size) is int i)
+        {
+            (middle ? ObjectMiddleClicked : ObjectShiftRightClicked)?.Invoke(i);
+        }
     }
 }

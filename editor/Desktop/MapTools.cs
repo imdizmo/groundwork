@@ -328,6 +328,10 @@ public static partial class MapTools
         private float _turn;
         private readonly Random _random = new();
         private float _nextYaw = -1, _nextSize;
+        private Vector3? _rowFrom;
+
+        /// <summary>The most a row lays at once.</summary>
+        private const int MostInARow = 64;
 
         /// <summary>The next one's turn and size (random ones drawn once, so the ghost shows what a click puts down).</summary>
         private (float Yaw, float Size) Next(IToolContext ctx, Kind kind)
@@ -341,7 +345,7 @@ public static partial class MapTools
         }
 
         /// <inheritdoc/>
-        public override ToolInfo Info { get; } = new("object", "Object", "Pick a kind, click the ground to put one there. R turns it 15°, Shift+R back. Select (E) moves or deletes it.") { Icon = "M7 9a5 5 0 1 0 10 0a5 5 0 1 0-10 0M12 14v7" };
+        public override ToolInfo Info { get; } = new("object", "Object", "Pick a kind, click the ground to put one there, or drag to lay a row of them edge to edge. Alt places on a quarter-metre grid. R turns it 15°, Shift+R back. Middle click an object to pick its kind; Shift+right click deletes one.") { Icon = "M7 9a5 5 0 1 0 10 0a5 5 0 1 0-10 0M12 14v7" };
 
         /// <inheritdoc/>
         public override IReadOnlyList<ToolControl> Controls { get; } =
@@ -353,6 +357,7 @@ public static partial class MapTools
             new ToggleControl("randomTurn", "Random turn", true),
             new ToggleControl("align", "Lean with the ground", false),
             new SliderControl("sink", "Sink into the ground", 0, 2, 0) { Step = 0.05f, Unit = "m" },
+            new SliderControl("gap", "Gap in a row", 0, 20, 0) { Step = 0.1f, Unit = "m" },
             new TextControl("status", ""),
         ];
 
@@ -386,28 +391,76 @@ public static partial class MapTools
             return true;
         }
 
+        /// <summary>The ground point with Alt held: on a quarter-metre grid (the ground's height there).</summary>
+        private static Vector3 Snapped(IToolContext ctx, PointerInput input, Vector3 at)
+        {
+            if (!input.Modifiers.HasFlag(KeyModifiers.Alt))
+            {
+                return at;
+            }
+            float x = MathF.Round(at.X * 4) / 4, z = MathF.Round(at.Z * 4) / 4;
+            return new Vector3(x, ctx.Area.GroundHeight(x, z), z);
+        }
+
+        /// <summary>
+        /// Where a row from one point to another puts its objects: edge to edge (the kind's width at the size, and the
+        /// gap), at most MostInARow; just the first point when they are less than a metre apart.
+        /// </summary>
+        private List<Vector3> Row(IToolContext ctx, Kind kind, Vector3 from, Vector3 to)
+        {
+            var flat = new Vector2(to.X - from.X, to.Z - from.Z);
+            float apart = ((W.View.WidthOf(AssetIds.Of(kind.Model)) ?? 2) * ctx.Number("size")) + ctx.Number("gap");
+            if (flat.Length() < 1 || apart <= 0.05f)
+            {
+                return [from];
+            }
+            int n = Math.Min(MostInARow, (int)(flat.Length() / apart) + 1);
+            var step = Vector2.Normalize(flat) * apart;
+            return [.. Enumerable.Range(0, n).Select(i =>
+            {
+                float x = from.X + (step.X * i), z = from.Z + (step.Y * i);
+                return new Vector3(x, ctx.Area.GroundHeight(x, z), z);
+            })];
+        }
+
         /// <inheritdoc/>
         public override void OnPointer(IToolContext ctx, PointerInput input)
         {
-            if (Ground(ctx, input) is not Vector3 at || Picked(ctx) is not { } kind || Session is not { } s)
+            if (Ground(ctx, input) is not Vector3 ground || Picked(ctx) is not { } kind || Session is not { } s)
             {
                 ctx.Preview([]);
                 W.View.SetModGhosts([]);
+                _rowFrom = input.Action == PointerAction.Release ? null : _rowFrom;
                 return;
             }
+            var at = Snapped(ctx, input, ground);
+            if (input.Action == PointerAction.Press)
+            {
+                _rowFrom = at;
+            }
+            // a click puts one down; a drag lays a row from the press to here
+            var points = _rowFrom is Vector3 from && input.Action is PointerAction.Drag or PointerAction.Release ? Row(ctx, kind, from, at) : [at];
             var (yaw, size) = Next(ctx, kind);
-            var up = ctx.IsOn("align") ? Normal(ctx.Area, at.X, at.Z) : Vector3.UnitY;
-            var (where, turned) = (at - new Vector3(0, ctx.Number("sink"), 0), Upright(up, yaw));
-            // The kind's own model, see-through, where a click puts it (a ring as well while its model loads).
-            W.View.SetModGhosts([(AssetIds.Of(kind.Model), where, turned, size)]);
-            ctx.Preview([Ring(ctx.Area, at, 0.6f, new Vector4(1, 0.85f, 0.3f, 0.9f))]);
-            if (input.Action != PointerAction.Press)
+            var sink = new Vector3(0, ctx.Number("sink"), 0);
+            var placed = points.Select((p, i) =>
+            {
+                // the first as the ghost showed it; the rest of a row each turned and sized afresh, as clicks would
+                float y = i == 0 || !ctx.IsOn("randomTurn") ? yaw : _random.NextSingle() * 360;
+                float z = i == 0 || !ctx.IsOn("randomSize") ? size : kind.MinScale + (_random.NextSingle() * (kind.MaxScale - kind.MinScale));
+                var up = ctx.IsOn("align") ? Normal(ctx.Area, p.X, p.Z) : Vector3.UnitY;
+                return (Where: p - sink, Turned: Upright(up, y), Size: z);
+            }).ToList();
+            // the kind's own model, see-through, where a click (or the row) puts it, a ring as well while its model loads
+            W.View.SetModGhosts([.. placed.Select(q => (AssetIds.Of(kind.Model), q.Where, q.Turned, q.Size))]);
+            ctx.Preview([.. points.Take(1).Select(p => Ring(ctx.Area, p, 0.6f, new Vector4(1, 0.85f, 0.3f, 0.9f)))]);
+            if (input.Action != PointerAction.Release || _rowFrom == null)
             {
                 return;
             }
-            _ = s.Commit("Place " + kind.Label, null, [], [New(kind.Model, where, turned, size)]);
+            _rowFrom = null;
+            _ = s.Commit(placed.Count == 1 ? "Place " + kind.Label : $"Place a row of {placed.Count} {kind.Label}", null, [], [.. placed.Select(q => New(kind.Model, q.Where, q.Turned, q.Size))]);
             _nextYaw = -1;
-            ctx.Status($"Placed {kind.Label}");
+            ctx.Status(placed.Count == 1 ? $"Placed {kind.Label}" : $"Placed a row of {placed.Count} {kind.Label}" + (placed.Count == MostInARow ? $" (at most {MostInARow} at once)" : ""));
         }
     }
 

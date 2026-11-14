@@ -167,6 +167,25 @@ public sealed partial class GlView
         }
     }
 
+    /// <summary>
+    /// How wide a kind's model is (its widest across, in metres at size 1), once its model has been read (shown in the
+    /// map or as the placing ghost); null before.
+    /// </summary>
+    internal float? WidthOf(int prefab)
+    {
+        lock (_groups)
+        {
+            foreach (var (key, g) in _groups)
+            {
+                if (key.Item1 == prefab && g.HasModel && g.Box is { } b && b.Max.X >= b.Min.X)
+                {
+                    return MathF.Max((b.Max.X - b.Min.X) * g.RootScale.X, (b.Max.Z - b.Min.Z) * g.RootScale.Z);
+                }
+            }
+        }
+        return null;
+    }
+
     /// <summary>A thing's box, in view space.</summary>
     internal (Vector3 Min, Vector3 Max) BoundsOf(int i)
     {

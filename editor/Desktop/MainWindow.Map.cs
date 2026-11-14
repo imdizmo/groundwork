@@ -349,6 +349,28 @@ public partial class MainWindow
     /// <summary>The map the drawer holds the kinds of.</summary>
     private string? _drawerFor;
 
+    /// <summary>A middle click on an object: its kind picked in the drawer, to place more of it.</summary>
+    private void PickKindOfObject(int thing)
+    {
+        if (Session?.Scene is { } scene && thing < scene.Things.Count && _drawer != null)
+        {
+            var t = scene.Things[thing];
+            Msg(new Said(_drawer.PickKindOf(t.Prefab) is string kind ? $"Picked {kind}: click to place more" : $"{ThingName(t)} is not a kind of the catalog", ""));
+        }
+    }
+
+    /// <summary>A Shift + right click on an object: it is deleted (one step in History).</summary>
+    private void DeleteObject(int thing)
+    {
+        if (Session is { } s && thing < s.Scene.Things.Count)
+        {
+            string name = ThingName(s.Scene.Things[thing]);
+            _ = s.Commit("Delete " + name, null, [thing], []);
+            Msg(new Said($"Deleted {name}", ""));
+            UpdateSaveBar();
+        }
+    }
+
     /// <summary>The objects drawer for the map open, the panels above it moving with it.</summary>
     private ObjectsDrawer NewDrawer()
     {

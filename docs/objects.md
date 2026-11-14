@@ -8,6 +8,14 @@ picture drawn from its model.
 
 **Object** places one kind at a time: pick it, click the ground. `R` turns it 15°, `Shift+R` back.
 
+| Mouse or key | What it does |
+|---|---|
+| Click the ground | Places one. |
+| Drag along the ground | Lays a row from where you pressed to where you let go, edge to edge by the model's width (plus **Gap in a row**), up to 64 at once: a fence, a hedge, a line of posts. One step in History. |
+| `Alt` + click or drag | Places on a quarter-metre grid, to line things up. |
+| Middle click an object | Picks its kind, to place more of it. |
+| `Shift` + right click an object | Deletes it. |
+
 ## Brush
 
 **Brush** scatters a group of kinds under the brush at the catalog's density and spacing: trees for a wood, plants
