@@ -40,18 +40,7 @@ public static class WaterFinder
         }
         soft = [];
         var (order, to, _, filled) = ZoneGenerator.Drainage(g, wt, w, d, S);
-        // the ground each point drains, all its water passed to its one receiver (Drainage's own area spreads it over
-        // every lower neighbour, so a wide valley floor never gathers it into one line)
-        float[] area = new float[w * d];
-        Array.Fill(area, S * S);
-        for (int k = order.Length - 1; k >= 0; k--)
-        {
-            int o = order[k];
-            if (to[o] != o)
-            {
-                area[to[o]] += area[o];
-            }
-        }
+        float[] area = ZoneGenerator.OneWayArea(order, to, S);
         bool[] pond = new bool[w * d];
         for (int i = 0; i < pond.Length; i++)
         {

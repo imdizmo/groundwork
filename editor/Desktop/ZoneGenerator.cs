@@ -39,7 +39,9 @@ public static partial class ZoneGenerator
     /// down from the high ground and laying what they cut lower down, so strongly (0: none); Streams: earth painted
     /// where the water gathers, so strongly (0..1); SnowSlip: snow sliding off ground steeper than so many degrees and settling in the hollows (0: none).
     /// Meander: the rivers winding from side to side across their valleys, up to three river widths each way (0..1; 0: they
-    /// follow the fall of the ground).
+    /// follow the fall of the ground). SeaWear: how far the sea has cut the land back, metres (beaches, a bench and sea cliffs;
+    /// 0: none). Dunes: sand dunes on flat open land, so many metres high (0: none), lying across the wind blowing
+    /// towards DuneWind degrees.
     /// </summary>
     public sealed record Spec(float Low = 20, float High = 70, float HillSize = 300, float RimHeight = 200, float RimWidth = 220,
         float[]? LakeHectares = null, float Woods = 0.35f, float WoodDensity = 17, float OpenTrees = 0.3f, float Small = 20, float TreeScale = 1, float Shore = 6, int Seed = 1,
@@ -48,7 +50,7 @@ public static partial class ZoneGenerator
         int Floaters = 0, float SnowLine = 0, float OpenDirt = 0.12f, int SnowChannel = 0, float RockSlope = 30, float Marsh = 0, float MarshShare = 0.3f, float Rough = 0, int Camps = 0, int CampSize = 5, bool Roads = false, int RoadChannel = 1, float Giants = 0, float GiantScale = 2.5f, float CliffSlope = 0,
         float Fjords = 0, float FjordWidth = 300, float FjordSpacing = 1400, float Crags = 0,
         float Strata = 0, float Erosion = 0, float Talus = 0, float Ridges = 0, float Expand = 0, float Crests = 0,
-        float Valleys = 0, float Streams = 0, float SnowSlip = 0, float Meander = 0);
+        float Valleys = 0, float Streams = 0, float SnowSlip = 0, float Meander = 0, float SeaWear = 0, float Dunes = 0, float DuneWind = 0);
 
     /// <summary>A lake made: its middle and outline (Unreal X, Y metres), its surface height and depth.</summary>
     public sealed record Lake(Vector2 Middle, Vector2[] Outline, float Level, float Depth);
@@ -165,15 +167,17 @@ public static partial class ZoneGenerator
         Unpooled(spec, h, cols, rows);
         Expanded(spec, h, cols, rows);
         // what the water and weather move (metres laid down, or cut when below 0) is kept for the paint
-        float[]? worn = spec.Valleys > 0 || spec.Erosion > 0 || spec.Talus > 0 ? (float[])h.Clone() : null;
+        float[]? worn = spec.Valleys > 0 || spec.Erosion > 0 || spec.Talus > 0 || spec.SeaWear > 0 ? (float[])h.Clone() : null;
         Valleyed(spec, h, cols, rows);
         Stratified(spec, h, cols, rows, x0, y0);
         Eroded(spec, h, cols, rows);
         Weathered(spec, h, cols, rows);
+        SeaWorn(spec, h, cols, rows, x0, y0);
         if (worn != null)
         {
             Parallel.For(0, h.Length, p => worn[p] = h[p] - worn[p]);
         }
+        float[]? dunes = Duned(spec, h, cols, rows, x0, y0);
         Cragged(spec, h, cols, rows, x0, y0);
         var lakes = PlaceLakes(spec, h, cols, rows, x0, y0, rng);
         var rivers = MakeRivers(spec, h, cols, rows, x0, y0, lakes, rng);
@@ -188,7 +192,7 @@ public static partial class ZoneGenerator
         var cliffs = new List<(string, Vector3, float, float)>();
         Cliffs(spec, h, cols, rows, x0, y0, planting.Cliffs, rng, cliffs, (c, r) => !busy[(r * cols) + c] && lakeIn[(r * cols) + c] <= -2 && RimAt(c, r) > 0.8f);   // the rim's mountains past its foothills: no steps
         float[] wooded = Woods(spec, h, cols, rows, x0, y0, lakeIn, busy);
-        byte[] mask = Paint(spec, h, cols, rows, x0, y0, lakeIn, wooded, wet, worn);
+        byte[] mask = Paint(spec, h, cols, rows, x0, y0, lakeIn, wooded, wet, worn, dunes);
         PaintRoads(mask, road, camps, cols, rows, spec.RoadChannel == 0 ? 0 : 1);
         var objects = Plant(spec, h, cols, rows, x0, y0, lakeIn, wooded, planting, rng, busy);
         objects.AddRange(cliffs);
@@ -625,7 +629,7 @@ public static partial class ZoneGenerator
         !wet[(r * cols) + c] && Slope(h, cols, rows, c, r) < 45 && lakeIn[(r * cols) + c] <= -4;
 
     /// <summary>The layers: rock on steep ground, dirt under the woods (and a little in the open), sand on the shores.</summary>
-    private static byte[] Paint(Spec spec, float[] h, int cols, int rows, float x0, float y0, float[] lakeIn, float[] wooded, bool[] wet, float[]? worn)
+    private static byte[] Paint(Spec spec, float[] h, int cols, int rows, float x0, float y0, float[] lakeIn, float[] wooded, bool[] wet, float[]? worn, float[]? dunes)
     {
         byte[] mask = new byte[cols * rows * 4];
         float open = Quantile(spec, cols, rows, x0, y0, 1 - spec.OpenDirt);
@@ -662,6 +666,7 @@ public static partial class ZoneGenerator
                 {
                     sand = MathF.Max(sand, 1 - Smooth(spec.Shore * 0.5f, spec.Shore, d));
                 }
+                sand = MathF.Max(sand, Smooth(0.2f, 0.6f, dunes?[p] ?? 0));   // the dunes' sand
                 sand *= 1 - rock;
                 if (spec.SnowChannel == 1)
                 {

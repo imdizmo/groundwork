@@ -311,6 +311,33 @@ public class ZoneGeneratorTests
     }
 
     [Fact]
+    public void TheSeaCutsTheShoreBackToABenchAndLeavesCliffsBehindIt()
+    {
+        var spec = new ZoneGenerator.Spec(Low: 10, High: 90, RimHeight: 0, LakeHectares: [], Seed: 3, Coast: 300, CoastSide: "south");
+        float[] plain = Make(spec, 800).Heights;
+        float[] worn = Make(spec with { SeaWear = 60 }, 800).Heights;
+        // nothing raised; land near the sea cut down, by metres
+        Assert.All(plain.Zip(worn), pw => Assert.True(pw.Second <= pw.First + 0.01f));
+        int cut = plain.Zip(worn).Count(pw => pw.First - pw.Second > 2);
+        Assert.True(cut > 2000, $"{cut} points cut more than 2 m");
+        // and, where higher ground stood, a cliff left at the bench's back: steeper there than anywhere before
+        static float Steepest(float[] h) => Enumerable.Range(0, 800 * 799).Where(p => p % 800 < 799).Max(p => MathF.Max(MathF.Abs(h[p + 1] - h[p]), MathF.Abs(h[p + 800] - h[p])));
+        Assert.True(Steepest(worn) > Steepest(plain), $"{Steepest(worn)} m a metre worn, {Steepest(plain)} before");
+    }
+
+    [Fact]
+    public void DunesRiseOnFlatGroundAndArePaintedSand()
+    {
+        var spec = new ZoneGenerator.Spec(Low: 5, High: 25, RimHeight: 0, LakeHectares: [], Seed: 5, HillSize: 900, Shore: 0);
+        var flat = Make(spec, 800);
+        var duned = Make(spec with { Dunes = 8, DuneWind = 30 }, 800);
+        Assert.All(flat.Heights.Zip(duned.Heights), fd => Assert.True(fd.Second >= fd.First - 0.01f));
+        var raised = Enumerable.Range(0, flat.Heights.Length).Where(p => duned.Heights[p] - flat.Heights[p] > 4).ToList();
+        Assert.True(raised.Count > 1000, $"{raised.Count} points raised over 4 m");
+        Assert.True(raised.Count(p => duned.Mask[p * 4] > 128) > raised.Count / 2, "most of the dunes painted with the sand layer");
+    }
+
+    [Fact]
     public void MeandersWindTheRiversFromSideToSide()
     {
         static float Length(ZoneGenerator.Zone z) => z.Rivers.Sum(r => r.Points.Zip(r.Points.Skip(1), (a, b) => Vector2.Distance(new(a.X, a.Y), new(b.X, b.Y))).Sum());
