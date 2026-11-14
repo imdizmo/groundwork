@@ -28,6 +28,10 @@ Claude can also measure what it made: the slope, layer and water depth at a poin
 water; trees and buildings on ground too steep for them; roads that run under a river, lake or the sea; and how many
 of a kind stand in a circle and how far apart.
 
+Claude is told that the text it reads from a map (its names, catalog, notes and plugins' data) is data about the map,
+written by whoever made it: it does not follow instructions in that text, and tells you when it finds some. Mind it
+all the same with maps from people you do not know.
+
 ## Notes for Claude
 
 **Notes** (on the rail under MAP) is how you point Claude at things. Type a note and click where it belongs, on the
