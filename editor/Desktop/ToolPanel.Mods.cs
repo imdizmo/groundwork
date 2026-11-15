@@ -204,6 +204,11 @@ public sealed partial class ToolPanel
         {
             Choose(null);
         }
+        // The tool in use made again (its kinds read again): the new one takes over, or its picks would name the old list's kinds.
+        else if (Mode == ToolMode.Mod && tools.FirstOrDefault(t => t.Name == ModTool!.Name) is { } again && !ReferenceEquals(again, ModTool))
+        {
+            ChooseMod(again);
+        }
     }
 
     /// <summary>A mod's tool's icon from its path data; null when there is none or it cannot be read (logged).</summary>

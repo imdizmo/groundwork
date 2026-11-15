@@ -45,6 +45,21 @@ public sealed partial class GlView
         }
         Wake();
     }
+    /// <summary>
+    /// Another model store for the shown area (models added or replaced in its folder): every model is read again, the
+    /// camera and the selection stay.
+    /// </summary>
+    internal void SwapModels(ModelStore? models)
+    {
+        Models = models;
+        _dropModels = true;
+        _thingsReset = true;
+        Wake();
+    }
+
+    /// <summary>The models on the graphics card let go of before the objects are made again (SwapModels).</summary>
+    private volatile bool _dropModels;
+
     /// <summary>The session whose changes are followed (the shown scene's), null when none.</summary>
     private EditSession? _followed;
 

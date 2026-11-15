@@ -202,6 +202,25 @@ public sealed partial class MapProject
         UnrealProject = project;
     }
 
+    /// <summary>
+    /// A catalog of the map's own (catalog.json in its folder, empty if not there yet) named in map.json: only that
+    /// field is written. The model folder's catalog is the map's until then.
+    /// </summary>
+    public void UseOwnCatalog()
+    {
+        string json = Path.Combine(Folder, FileName);
+        var j = JsonNode.Parse(File.ReadAllText(json))!.AsObject();
+        string own = Abs("catalog.json");
+        if (!File.Exists(own))
+        {
+            string shared = Path.Combine(Models ?? Path.Combine(Folder, "models"), "catalog.json");
+            File.WriteAllText(own, File.Exists(shared) ? File.ReadAllText(shared) : "{\"kinds\": []}");
+        }
+        j["catalog"] = "catalog.json";
+        File.WriteAllText(json, j.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+        Catalog = own;
+    }
+
     /// <summary>Writes map.json.</summary>
     public void WriteJson()
     {

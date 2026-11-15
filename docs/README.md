@@ -34,6 +34,7 @@ bottom.*
 ## Beyond the editor
 
 - [Unreal](unreal.md)
+- [Models from other programs](inbox.md)
 - [Plugins](plugins.md)
 - [Claude](claude.md)
 - [Keys and mouse](help/shortcuts.md)

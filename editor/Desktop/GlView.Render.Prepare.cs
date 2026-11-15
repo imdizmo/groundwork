@@ -32,6 +32,11 @@ public sealed partial class GlView
         {
             _thingsReset = false;
             DropObjects();
+            if (_dropModels)
+            {
+                _dropModels = false;
+                DropModels();
+            }
             StartModels(s);
         }
     }

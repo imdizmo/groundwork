@@ -432,6 +432,18 @@ public partial class MainWindow
         }
     }
 
+    /// <summary>The drawer made again where it is: the catalog's kinds read again.</summary>
+    private void RenewDrawer()
+    {
+        if (_drawer is { Card.Parent: Panel holder } old)
+        {
+            int at = holder.Children.IndexOf(old.Card);
+            holder.Children.RemoveAt(at);
+            _drawer = NewDrawer();
+            holder.Children.Insert(at, _drawer.Card);
+        }
+    }
+
     /// <summary>The objects drawer for the map open, the panels above it moving with it.</summary>
     private ObjectsDrawer NewDrawer()
     {
@@ -631,12 +643,9 @@ public partial class MainWindow
             };
         }
         // another map: its own kinds in the drawer
-        if (show && _drawer is { Card.Parent: Panel holder } old && _drawerFor != MapProject.Current?.Folder)
+        if (show && _drawerFor != MapProject.Current?.Folder)
         {
-            int at = holder.Children.IndexOf(old.Card);
-            holder.Children.RemoveAt(at);
-            _drawer = NewDrawer();
-            holder.Children.Insert(at, _drawer.Card);
+            RenewDrawer();
         }
         _drawer?.Card.IsVisible = show;
         _cameraBar?.IsVisible = show;

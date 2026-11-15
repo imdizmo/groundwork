@@ -53,6 +53,10 @@ public sealed partial class MainWindow
         {
             Edit(scene.Session);
         }
+        if (scene.IsMap)
+        {
+            WatchInbox();
+        }
         MapButton.IsVisible = true;
         TitleText.Text = scene.Name;
         ShowAreaInfo(scene);

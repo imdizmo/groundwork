@@ -47,6 +47,9 @@ public sealed partial class ModelStore
         return _modelNames.Names;
     }
 
+    /// <summary>The model folder read again on the next look (models were added to it).</summary>
+    internal static void Rescan() => _modelNames = ("", []);
+
     /// <summary>A map model's name, or null for any other prefab.</summary>
     internal static string? ModelName(int prefab) => ModelNames().GetValueOrDefault(prefab);
 

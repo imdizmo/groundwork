@@ -83,6 +83,15 @@ internal sealed class ObjectsDrawer
     /// <summary>The drawer.</summary>
     public Border Card { get; }
 
+    /// <summary>Opens it on All and what the search finds (models just sent in).</summary>
+    public void Reveal(string search)
+    {
+        _open.IsChecked = true;
+        _tab = "All";
+        Tabs();
+        _search.Text = search;
+    }
+
     /// <summary>Opens or closes it (Ctrl+Space).</summary>
     public void Toggle() => _open.IsChecked = _open.IsChecked != true;
 

@@ -40,6 +40,8 @@ The map's model folder (`models` in `map.json`, else `models/` beside it) gives 
 
 An object whose asset has no model is drawn as a box.
 
+Other programs can also [send models](inbox.md) into the open map.
+
 ## Stamp
 
 Select objects and press **Save stamp** on the top bar to keep them as a stamp; **Stamp** puts the whole group down
