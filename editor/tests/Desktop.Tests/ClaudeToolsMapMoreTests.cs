@@ -4,6 +4,7 @@ using Xunit;
 namespace Groundwork.Desktop.Tests;
 
 /// <summary>The newer map tools for Claude, on a real map: paths, areas, holes, terraces, paint over the whole map.</summary>
+[Collection("DataDir")]
 public sealed class ClaudeToolsMapMoreTests : IDisposable
 {
     private readonly string _dir = Directory.CreateTempSubdirectory("gw-claude-map-").FullName;
