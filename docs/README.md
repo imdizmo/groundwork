@@ -23,6 +23,7 @@ bottom.*
 - [Objects](objects.md)
 - [Shapes and mountains](shapes.md)
 - [Ground graph](graph.md)
+- [Script](script.md)
 - [Rivers and lakes](water.md)
 - [Tunnels and caves](caves.md)
 - [Paths and ramps](paths.md)

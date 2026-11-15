@@ -24,6 +24,12 @@ public static class Program
             ClaudeRelay.Run();
             return;
         }
+        // --script-host: one script for the editor that started this process (ScriptHost.Serve); ended with its code,
+        // so a thread the script left running cannot keep it alive.
+        if (args.Contains("--script-host"))
+        {
+            Environment.Exit(ScriptHost.Serve());
+        }
         // A command line that cannot be read (an option without its value, a number that is none): said, and the
         // editor does not start.
         try

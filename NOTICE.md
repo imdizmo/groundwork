@@ -27,7 +27,7 @@ SIL Open Font License 1.1 (`editor/Desktop/Assets/Fonts/OFL.txt`).
 Libraries Groundwork is built with, each under its own license: [Avalonia](https://github.com/AvaloniaUI/Avalonia)
 (MIT), [Silk.NET](https://github.com/dotnet/Silk.NET) (MIT), [SkiaSharp](https://github.com/mono/SkiaSharp) (MIT,
 through Avalonia), [Markdig](https://github.com/xoofx/markdig) (BSD 2-Clause) for the Help window,
-[SharpGLTF](https://github.com/vpenades/SharpGLTF) (MIT) for glTF models, [LibTiff.Net](https://github.com/BitMiracle/libtiff.net) (BSD 3-Clause) for GeoTIFF elevation models, and the [MCP C# SDK](https://github.com/modelcontextprotocol/csharp-sdk) (Apache License 2.0) with ASP.NET Core (MIT) for
+[SharpGLTF](https://github.com/vpenades/SharpGLTF) (MIT) for glTF models, [LibTiff.Net](https://github.com/BitMiracle/libtiff.net) (BSD 3-Clause) for GeoTIFF elevation models, [Roslyn](https://github.com/dotnet/roslyn) (MIT) and [Basic.Reference.Assemblies](https://github.com/jaredpar/basic-reference-assemblies) (MIT) for scripts, and the [MCP C# SDK](https://github.com/modelcontextprotocol/csharp-sdk) (Apache License 2.0) with ASP.NET Core (MIT) for
 Claude's connection.
 
 ## LibTiff.Net

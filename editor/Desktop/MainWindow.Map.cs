@@ -360,6 +360,21 @@ public partial class MainWindow
         GroundGraphWindow.Open(this, map, heights, cols, rows, map.SeaLevel, field => ApplyGround(field, cols, rows));
     }
 
+    /// <summary>The script window over the open map (one at a time).</summary>
+    private void OpenScript()
+    {
+        if (_scriptWindow is { } open)
+        {
+            open.Activate();
+            return;
+        }
+        _scriptWindow = new ScriptWindow(() => Session is { } s && MapProject.Current is { } m ? (s, m) : null, UpdateSaveBar);
+        _scriptWindow.Closed += (_, _) => _scriptWindow = null;
+        _scriptWindow.Show(this);
+    }
+
+    private ScriptWindow? _scriptWindow;
+
     /// <summary>A field (the map's rows of cols) made the map's ground: one step in History. What was done, in a line.</summary>
     private string ApplyGround(float[] field, int cols, int rows)
     {
@@ -490,6 +505,8 @@ public partial class MainWindow
             export.Click += async (_, _) => await ExportHeightmap();
             var graph = new MenuItem { Header = "Ground graph…" };
             graph.Click += (_, _) => OpenGroundGraph();
+            var script = new MenuItem { Header = "Script…" };
+            script.Click += (_, _) => OpenScript();
             var terrainMaps = new MenuItem { Header = "Export the terrain maps and paint weights…" };
             terrainMaps.Click += async (_, _) => await ExportTerrainMaps();
             var landscape = new MenuItem { Header = "Make the Unreal landscape from this map…" };
@@ -511,7 +528,7 @@ public partial class MainWindow
             undoAgain.Click += async (_, _) => await MakeAgain(_madeFrom?.Spec);
             var link = new MenuItem();
             link.Click += async (_, _) => await LinkUnreal(change: true);
-            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, graph, export, terrainMaps, link, landscape, models } };
+            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, graph, script, export, terrainMaps, link, landscape, models } };
             more.Opening += (_, _) =>
             {
                 link.Header = MapProject.Current?.UnrealProject is { } up

@@ -36,6 +36,7 @@
          works offline and always matches the version. Not the pages for the editor's own developers. -->
     <EmbeddedResource Include="../../docs/**/*.md" Exclude="../../docs/releases/**;../../docs/dev/**;../../docs/architecture.md;../../docs/development.md" LogicalName="Docs/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" />
     <EmbeddedResource Include="../../docs/images/**/*" LogicalName="Docs/images/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" />
+    <EmbeddedResource Include="ScriptApi.csx" LogicalName="Groundwork.ScriptApi.csx" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Core/Groundwork.Core.csproj" />
@@ -44,6 +45,8 @@
     <PackageReference Include="Avalonia" Version="12.1.5" />
     <PackageReference Include="Avalonia.Desktop" Version="12.1.5" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.5" />
+    <PackageReference Include="Basic.Reference.Assemblies.Net100" Version="1.8.14" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
     <PackageReference Include="Silk.NET.OpenGL" Version="2.23.0" />
     <!-- The Help window reads the documentation's Markdown (HelpDocs, HelpView). -->
     <PackageReference Include="Markdig" Version="1.6.0" />
