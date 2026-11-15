@@ -42,6 +42,9 @@ public static class GroundNodes
         new("crags", "Crags", "Shape", ["in"], [new("depth", "Depth", 0.5f, 20, 3, "m", 0.5f), new("rock", "Rock from", 0, 90, 30, "°"), Seed], "The rock faces' grain: crags, buttresses, gullies."),
         new("smooth", "Smooth", "Shape", ["in"], [new("radius", "Radius", 1, 60, 4, "m")], "Softened: each point the average round it."),
         new("terraces", "Terraces", "Shape", ["in"], [new("step", "Step", 0.5f, 100, 8, "m", 0.5f), new("sharp", "Sharpness", 0, 1, 0.7f, "", 0.05f)], "Steps of so many metres: flat treads and steep risers."),
+        new("warp", "Warp", "Shape", ["in"], [new("strength", "Strength", 0, 300, 30, "m"), new("size", "Size", 10, 3000, 200, "m", 10), Seed], "Bent sideways by noise: each point takes the ground from up to Strength metres away, so straight ridges wander and round hills twist."),
+        new("detail", "Detail", "Shape", ["in"], [new("height", "Height", 0, 50, 2, "m", 0.1f), new("size", "Size", 2, 1000, 40, "m"), new("ridged", "Ridged", 0, 1, 0, "", 0.05f), Seed], "Fractal bumps of about Size metres and smaller added on top, Height metres up and down (ridged: sharp crests)."),
+        new("fold", "Fold", "Shape", ["in"], [new("height", "Height", 0, 200, 15, "m"), new("apart", "Folds apart", 20, 3000, 300, "m", 10), new("turn", "Running towards", 0, 179, 30, "°"), new("bend", "Bend", 0, 1, 0.3f, "", 0.05f), Seed], "Folded like rock under pressure: long waves Height metres up and down, Folds apart metres apart, their lines running towards Turn and bending."),
         new("range", "Height range", "Shape", ["in"], [new("low", "Lowest", -1000, 3000, 0, "m"), new("high", "Highest", -1000, 5000, 100, "m")], "Stretched (or squeezed) so its lowest is Lowest and its highest Highest."),
 
         new("blend", "Blend", "Combine", ["a", "b", "mask"], [new("amount", "B's share", 0, 1, 0.5f, "", 0.05f)], "A and B mixed: B's share of B (or, with a mask joined, the mask's share)."),
@@ -203,6 +206,41 @@ public static class GroundNodes
                 {
                     float u = t[p] / stepH, f = u - MathF.Floor(u), ease = MathF.Pow(f, 1 + (sharp * 8));
                     return (MathF.Floor(u) + ease) * stepH;
+                });
+            case "warp":
+                float strength = V("strength"), wsize = MathF.Max(5, V("size"));
+                float[] wsrc = input[0]!;
+                int wseed = SeedOf();
+                return Each(p =>
+                {
+                    float x = (p % cols) + at.X0, y = (p / cols) + at.Y0;
+                    float dx = strength * ZoneGenerator.Fbm(x / wsize, y / wsize, wseed + 301, 3), dy = strength * ZoneGenerator.Fbm(x / wsize, y / wsize, wseed + 303, 3);
+                    return ZoneGenerator.At(wsrc, cols, rows, (p % cols) + dx, (p / cols) + dy);
+                });
+            case "detail":
+                float dh = V("height"), dsize = MathF.Max(1, V("size")), ridgedShare = Math.Clamp(V("ridged"), 0, 1);
+                float[] dsrc = input[0]!;
+                var dnoise = new Noise(SeedOf() + 307);
+                return Each(p =>
+                {
+                    float x = ((p % cols) + at.X0) / dsize, y = ((p / cols) + at.Y0) / dsize, v = ZoneGenerator.Fbm(x, y, SeedOf() + 305, 4);
+                    if (ridgedShare > 0)
+                    {
+                        v += ridgedShare * (ZoneGenerator.RidgedMultifractal(dnoise, x, y) - v);
+                    }
+                    return dsrc[p] + (dh * v);
+                });
+            case "fold":
+                float fh = V("height"), apart = MathF.Max(5, V("apart")), turn = V("turn") * MathF.PI / 180, bendShare = V("bend");
+                float fx = MathF.Cos(turn), fy = MathF.Sin(turn);
+                float[] fsrc = input[0]!;
+                int fseed = SeedOf();
+                return Each(p =>
+                {
+                    // across the folds' lines (they run towards Turn), bent by noise
+                    float x = (p % cols) + at.X0, y = (p / cols) + at.Y0;
+                    float across = (-x * fy) + (y * fx) + (bendShare * apart * ZoneGenerator.Fbm(x / (apart * 3), y / (apart * 3), fseed + 309, 2));
+                    return fsrc[p] + (fh * MathF.Sin(across / apart * MathF.Tau));
                 });
             case "range":
                 float[] src = input[0]!;

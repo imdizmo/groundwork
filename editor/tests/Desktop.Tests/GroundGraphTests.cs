@@ -92,4 +92,42 @@ public class GroundGraphTests
         // 50 m north of the middle: row 50 (the first row is the north edge), column 150
         Assert.True(f[(50 * 300) + 150] > f[(150 * 300) + 150] + 20);
     }
+
+    /// <summary>A graph of a source into one node into the output: the output's field.</summary>
+    private static float[] Through(string source, Action<GroundGraph.Node> setSource, string kind, Action<GroundGraph.Node> set)
+    {
+        var g = new GroundGraph();
+        var a = g.Add(source, 0, 0);
+        setSource(a);
+        var b = g.Add(kind, 0, 0);
+        set(b);
+        var o = g.Add("output", 0, 0);
+        Assert.True(g.Join(a.Id, b.Id, 0) && g.Join(b.Id, o.Id, 0));
+        var (field, problem) = GroundNodes.Run(g, At);
+        Assert.Null(problem);
+        return field!;
+    }
+
+    [Fact]
+    public void WarpBendsTheGroundWithoutRaisingIt()
+    {
+        float[] slope = Through("formula", n => n.Text = "x", "warp", n => n.Values["strength"] = 0);
+        float[] bent = Through("formula", n => n.Text = "x", "warp", n => (n.Values["strength"], n.Values["size"]) = (40, 80));
+        Assert.NotEqual(slope, bent);
+        // taken from elsewhere on the same slope: never past the slope's own heights
+        Assert.InRange(bent.Min(), slope.Min() - 0.01f, slope.Max());
+        Assert.InRange(bent.Max(), slope.Min(), slope.Max() + 0.01f);
+    }
+
+    [Fact]
+    public void DetailAndFoldAddAboutTheirHeight()
+    {
+        float[] detail = Through("flat", n => n.Values["height"] = 10, "detail", n => (n.Values["height"], n.Values["size"]) = (3, 20));
+        Assert.InRange(detail.Max() - detail.Min(), 2, 8);
+        Assert.InRange(detail.Average(), 9, 11);
+        float[] fold = Through("flat", n => n.Values["height"] = 10, "fold", n => (n.Values["height"], n.Values["apart"], n.Values["bend"]) = (5, 60, 0));
+        Assert.InRange(fold.Max(), 14.5f, 15.01f);
+        Assert.InRange(fold.Min(), 4.99f, 5.5f);
+    }
 }
+
