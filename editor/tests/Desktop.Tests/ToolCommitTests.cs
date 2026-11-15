@@ -29,6 +29,23 @@ public sealed class ToolCommitTests
     }
 
     [Fact]
+    public void AMoveTurnsAnObjectAndKeepsItsDataAndAChangeWithItGivesBoth()
+    {
+        var s = TestScenes.Flat(1);
+        ToolCommit.Apply(s, "Dig", new ToolEdit().Add("Canal", new Vector3(5, 30, 5), Vector3.Zero, new Dictionary<string, string> { ["width"] = "3" }));
+        var canal = s.ViewOf(s.Scene.Things[^1]);
+
+        var plan = ToolCommit.Apply(s, "Turn", new ToolEdit().Move(canal, rotation: new Vector3(0, 90, 0)).Change(canal, new Dictionary<string, string?> { ["width"] = "4" }));
+
+        Assert.Empty(plan.Skipped);
+        var t = s.Scene.Things[^1];
+        Assert.Equal(new Vector3(0, 90, 0), t.Rotation);
+        Assert.Equal(new Vector3(5, 30, 5), t.Position);
+        Assert.Equal("4", s.Edits.FindAdded(t.Id)!.Data!["width"]);
+        Assert.Single(s.Scene.Things, x => !x.Gone && AssetIds.NameOf(x.Prefab) == "Canal");
+    }
+
+    [Fact]
     public void AChangeIsACopyWithTheToolsValuesMergedIn()
     {
         var s = TestScenes.Flat(1);

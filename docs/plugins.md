@@ -48,7 +48,7 @@ The project references `Groundwork.Sdk` without copying it (`Private="false"`): 
 ## Objects and their data
 
 Plugins see objects as `IObjectView`: the asset's name, its place, turn and scale, and `Data`, text by key. A tool adds
-objects with data and changes it (`ToolEdit.Add`, `ToolEdit.Change`; a null value takes a key away). The data is saved
+objects with data and changes it (`ToolEdit.Add`, `ToolEdit.Change`; a null value takes a key away), and moves, turns or resizes them keeping their data (`ToolEdit.Move`). The data is saved
 with the object in the map's objects file and goes with its copies.
 
 ## Rules

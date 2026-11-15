@@ -74,6 +74,7 @@ public sealed class ToolEdit
     private readonly List<(string Asset, Vector3 Position, Vector3 Rotation, IReadOnlyDictionary<string, string>? Data)> _added = [];
     private readonly List<(IObjectView Object, IReadOnlyDictionary<string, string?> Change)> _changed = [];
     private readonly List<IObjectView> _removed = [];
+    private readonly List<(IObjectView Object, Vector3? Position, Vector3? Rotation, float? Scale)> _moved = [];
 
     /// <summary>The objects added.</summary>
     public IReadOnlyList<(string Asset, Vector3 Position, Vector3 Rotation, IReadOnlyDictionary<string, string>? Data)> Added => _added;
@@ -83,6 +84,9 @@ public sealed class ToolEdit
 
     /// <summary>The objects removed.</summary>
     public IReadOnlyList<IObjectView> Removed => _removed;
+
+    /// <summary>The objects placed anew: where, turned and sized (null: as they are).</summary>
+    public IReadOnlyList<(IObjectView Object, Vector3? Position, Vector3? Rotation, float? Scale)> Moved => _moved;
 
     /// <summary>Adds an object.</summary>
     /// <param name="asset">Its asset's name.</param>
@@ -101,6 +105,20 @@ public sealed class ToolEdit
     public ToolEdit Change(IObjectView obj, IReadOnlyDictionary<string, string?> change)
     {
         _changed.Add((obj, change));
+        return this;
+    }
+
+    /// <summary>
+    /// Places an object anew, keeping its data: moved, turned or sized (each left as it is when null). With a Change to
+    /// the same object in the same edit, the object gets both.
+    /// </summary>
+    /// <param name="obj">The object, as the area or the pointer gave it.</param>
+    /// <param name="position">Where, in metres.</param>
+    /// <param name="rotation">Its turn, Euler degrees.</param>
+    /// <param name="scale">Its size.</param>
+    public ToolEdit Move(IObjectView obj, Vector3? position = null, Vector3? rotation = null, float? scale = null)
+    {
+        _moved.Add((obj, position, rotation, scale));
         return this;
     }
 

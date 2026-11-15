@@ -32,14 +32,17 @@ internal static class ToolCommit
         {
             Add(plan, new NewObject(0, AssetIds.Of(asset), position, rotation, 1, data is { Count: > 0 } ? new Dictionary<string, string>(data) : null));
         }
-        foreach (var (obj, change) in edit.Changed)
+        // a changed or moved object: taken away and put back with its new data and place (both, when an edit does both)
+        var moves = edit.Moved.GroupBy(m => KeyOf(m.Object)).ToDictionary(g => g.Key, g => g.Last());
+        var changes = edit.Changed.GroupBy(c => KeyOf(c.Object)).ToDictionary(g => g.Key, g => g.SelectMany(c => c.Change).ToList());
+        foreach (var obj in edit.Changed.Select(c => c.Object).Concat(edit.Moved.Select(m => m.Object)).DistinctBy(KeyOf))
         {
             if (Remove(s, plan, obj) is not { } view)
             {
                 continue;
             }
             var data = new Dictionary<string, string>(view.Data);
-            foreach (var (key, value) in change)
+            foreach (var (key, value) in changes.GetValueOrDefault(KeyOf(obj)) ?? [])
             {
                 if (value == null)
                 {
@@ -50,7 +53,8 @@ internal static class ToolCommit
                     data[key] = value;
                 }
             }
-            Add(plan, new NewObject(0, AssetIds.Of(view.Asset), view.Position, view.Rotation, view.Scale, data));
+            var move = moves.GetValueOrDefault(KeyOf(obj));
+            Add(plan, new NewObject(0, AssetIds.Of(view.Asset), move.Position ?? view.Position, move.Rotation ?? view.Rotation, move.Scale ?? view.Scale, data));
         }
         foreach (var obj in edit.Removed)
         {
@@ -58,6 +62,9 @@ internal static class ToolCommit
         }
         return plan;
     }
+
+    /// <summary>The same object however often an edit names it: the map's object's id (the object itself for one the editor did not hand over).</summary>
+    private static object KeyOf(IObjectView o) => o is ObjectView { Id: int id } ? id : o;
 
     /// <summary>A new object: a building part when its catalog's kind is Buildings.</summary>
     private static void Add(Plan plan, NewObject n) => plan.AddThings.Add((n, ObjectKinds.Of(AssetIds.NameOf(n.Prefab)) == ObjectKind.Buildings));
