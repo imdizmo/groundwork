@@ -135,6 +135,18 @@ public sealed class GroundGraph
         return g;
     }
 
+    /// <summary>A graph to start from over a map: its ground, worn by erosion, into the output.</summary>
+    public static GroundGraph StarterOverMap()
+    {
+        var g = new GroundGraph();
+        var map = g.Add("map", 40, 60);
+        var erosion = g.Add("erosion", 300, 60);
+        var output = g.Add("output", 560, 60);
+        _ = g.Join(map.Id, erosion.Id, 0);
+        _ = g.Join(erosion.Id, output.Id, 0);
+        return g;
+    }
+
     /// <summary>A graph to start from: hills, worn by valleys and erosion, into the output.</summary>
     public static GroundGraph Starter()
     {

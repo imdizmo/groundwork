@@ -349,6 +349,52 @@ public partial class MainWindow
     /// <summary>The map the drawer holds the kinds of.</summary>
     private string? _drawerFor;
 
+    /// <summary>The Ground graph over the open map (its ground as it is now feeds the graph's map node).</summary>
+    private void OpenGroundGraph()
+    {
+        if (Session is not { Scene: var scene } || MapProject.Current is not { } map)
+        {
+            return;
+        }
+        var (heights, cols, rows) = map.HeightsNow(scene);
+        GroundGraphWindow.Open(this, map, heights, cols, rows, map.SeaLevel, field => ApplyGround(field, cols, rows));
+    }
+
+    /// <summary>A field (the map's rows of cols) made the map's ground: one step in History. What was done, in a line.</summary>
+    private string ApplyGround(float[] field, int cols, int rows)
+    {
+        if (Session is not { } s || MapProject.Current is not { } map)
+        {
+            return "No map open.";
+        }
+        var raster = map.ReadRaster();
+        if (raster.Cols != cols || raster.Rows != rows || field.Length != cols * rows)
+        {
+            return "The map's size changed since the graph was opened: open the graph again.";
+        }
+        var g = s.Ground;
+        int changed = s.EditGround("Ground graph", ground =>
+        {
+            var touched = new List<int>();
+            for (int gz = 1; gz < g.H - 1; gz++)
+            {
+                for (int gx = 1; gx < g.W - 1; gx++)
+                {
+                    var (col, row) = raster.Pixel(g.OriginX + gx, g.OriginZ + gz);
+                    int p = (gz * g.W) + gx;
+                    if (raster.Holds(col, row) && MathF.Abs(field[(row * cols) + col] - ground.HeightOf(p)) > 1e-3f)
+                    {
+                        ground.SetHeight(p, field[(row * cols) + col]);
+                        touched.Add(p);
+                    }
+                }
+            }
+            return (touched, (0, 0, g.W - 1, g.H - 1));
+        }).Count;
+        UpdateSaveBar();
+        return changed == 0 ? "The Output is the map's ground as it is: nothing changed." : $"Applied to the map: {changed} points changed, one step in History (Ctrl+Z takes it back).";
+    }
+
     /// <summary>A middle click on an object: its kind picked in the drawer, to place more of it.</summary>
     private void PickKindOfObject(int thing)
     {
@@ -442,6 +488,8 @@ public partial class MainWindow
             };
             var export = new MenuItem { Header = "Export the heightmap (16-bit PNG or .r16)…" };
             export.Click += async (_, _) => await ExportHeightmap();
+            var graph = new MenuItem { Header = "Ground graph…" };
+            graph.Click += (_, _) => OpenGroundGraph();
             var terrainMaps = new MenuItem { Header = "Export the terrain maps and paint weights…" };
             terrainMaps.Click += async (_, _) => await ExportTerrainMaps();
             var landscape = new MenuItem { Header = "Make the Unreal landscape from this map…" };
@@ -463,7 +511,7 @@ public partial class MainWindow
             undoAgain.Click += async (_, _) => await MakeAgain(_madeFrom?.Spec);
             var link = new MenuItem();
             link.Click += async (_, _) => await LinkUnreal(change: true);
-            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, export, terrainMaps, link, landscape, models } };
+            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, graph, export, terrainMaps, link, landscape, models } };
             more.Opening += (_, _) =>
             {
                 link.Header = MapProject.Current?.UnrealProject is { } up
