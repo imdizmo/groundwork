@@ -186,6 +186,11 @@ internal static class Inbox
     /// <summary>Opens a library's program on an asset (--show id), not waited for; why not, or null.</summary>
     internal static string? Show(string exe, string id)
     {
+        // Checked again here: a map's catalog may have been edited by hand or come from someone else.
+        if (!ShelfId(id))
+        {
+            return "its id in the library is not a plain one";
+        }
         try
         {
             var p = new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = false };
@@ -200,6 +205,9 @@ internal static class Inbox
             return e.Message;
         }
     }
+
+    /// <summary>A library id that can only be read as one: at most 400 characters, no control characters, not an option.</summary>
+    internal static bool ShelfId(string id) => id.Length is > 0 and <= 400 && !id.StartsWith('-') && !id.Any(char.IsControl);
 
     /// <summary>A plain name: no folder in it, nothing hidden, no device name.</summary>
     private static bool Plain(string name) =>
@@ -276,7 +284,7 @@ internal static class Inbox
                 }
                 meshes[model] = mesh;
             }
-            string? shelf = k["shelf"]?.GetValue<string>() is { Length: > 0 and <= 400 } sh && !sh.StartsWith('-') && !sh.Any(char.IsControl) ? sh : null;
+            string? shelf = k["shelf"]?.GetValue<string>() is { } sh && ShelfId(sh) ? sh : null;
             kinds.Add((fi, model, label, cat, min, max, shelf));
         }
 

@@ -199,6 +199,9 @@ public sealed class InboxTests : IDisposable
         File.WriteAllText(Path.Combine(libraries, "loose.json"), """{"version":1,"name":"Loose","exe":"relative/app"}""");
         Assert.Equal(exe, Inbox.Library("Shelf"));
         Assert.Null(Inbox.Library("Loose"));
+        // An id read back from a catalog that could be read as an option, or that hides a control character, is never passed on.
+        Assert.NotNull(Inbox.Show(exe, "--help"));
+        Assert.NotNull(Inbox.Show(exe, "a\nb"));
 
         Inbox.Announce(null);
         Assert.False(File.Exists(Path.Combine(Inbox.Folder, ".map.json")));
