@@ -794,7 +794,7 @@ public static partial class ZoneGenerator
     /// squared) weighted by the crest of the octave under it, so finer ridges run along the bigger ones and the valleys
     /// between stay smooth (Ebert et al., Texturing and Modeling, the ridged multifractal terrain).
     /// </summary>
-    private static float RidgedMultifractal(Noise noise, float x, float y)
+    internal static float RidgedMultifractal(Noise noise, float x, float y)
     {
         const float Gain = 2;
         float sum = 0, weight = 1, amp = 1, norm = 0;

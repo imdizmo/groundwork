@@ -61,41 +61,10 @@ public static partial class ZoneGenerator
                 before ??= new float[h.Length];
                 Array.Copy(h, before, h.Length);
             }
-            switch (step.Kind)
+            if (RunStep(s, step.Kind, h, cols, rows, x0, y0) is { } sand)
             {
-                case "expand":
-                    Expanded(s, h, cols, rows);
-                    break;
-                case "valleys":
-                    Valleyed(s, h, cols, rows);
-                    break;
-                case "glaciers":
-                    Glaciated(s, h, cols, rows);
-                    break;
-                case "strata":
-                    Stratified(s, h, cols, rows, x0, y0);
-                    break;
-                case "erosion":
-                    Eroded(s, h, cols, rows);
-                    break;
-                case "scree":
-                    Weathered(s, h, cols, rows);
-                    break;
-                case "sea":
-                    SeaWorn(s, h, cols, rows, x0, y0);
-                    break;
-                case "dunes":
-                    if (Duned(s, h, cols, rows, x0, y0) is { } sand)
-                    {
-                        dunes ??= new float[h.Length];
-                        Parallel.For(0, h.Length, p => dunes[p] = MathF.Max(dunes[p], sand[p]));
-                    }
-                    break;
-                case "crags":
-                    Cragged(s, h, cols, rows, x0, y0);
-                    break;
-                default:
-                    break;   // a kind this version does not know (a newer map's): skipped
+                dunes ??= new float[h.Length];
+                Parallel.For(0, h.Length, p => dunes[p] = MathF.Max(dunes[p], sand[p]));
             }
             if (wearing && Changed(before!, h))
             {
@@ -105,6 +74,46 @@ public static partial class ZoneGenerator
             cache?.Put(ShapeCache.KeyOf(spec, steps, i + 1, cols, rows, x0, y0, given), h, worn, dunes);
         }
         return (worn, dunes);
+    }
+
+    /// <summary>
+    /// Runs one shaping step of a kind on some ground, at its spec's sliders (the Ground graph's nodes run them too).
+    /// Returns how much each point is dune, for a dunes step that laid any; null otherwise.
+    /// </summary>
+    internal static float[]? RunStep(Spec s, string kind, float[] h, int cols, int rows, float x0, float y0)
+    {
+        switch (kind)
+        {
+            case "expand":
+                Expanded(s, h, cols, rows);
+                break;
+            case "valleys":
+                Valleyed(s, h, cols, rows);
+                break;
+            case "glaciers":
+                Glaciated(s, h, cols, rows);
+                break;
+            case "strata":
+                Stratified(s, h, cols, rows, x0, y0);
+                break;
+            case "erosion":
+                Eroded(s, h, cols, rows);
+                break;
+            case "scree":
+                Weathered(s, h, cols, rows);
+                break;
+            case "sea":
+                SeaWorn(s, h, cols, rows, x0, y0);
+                break;
+            case "dunes":
+                return Duned(s, h, cols, rows, x0, y0);
+            case "crags":
+                Cragged(s, h, cols, rows, x0, y0);
+                break;
+            default:
+                break;   // a kind this version does not know (a newer map's): skipped
+        }
+        return null;
     }
 
     /// <summary>Whether any height differs.</summary>
