@@ -27,6 +27,8 @@ public sealed partial class GeneratorWindow : Window
     private static readonly ZoneGenerator.Planting Nothing = new([], [], [], []);
     private readonly IReadOnlyList<MapProject.Layer> _layers;
     private readonly TerrainPreview _preview = new();
+    /// <summary>The ground after each shaping step, so a change to a later one previews from there (one preview at a time uses it).</summary>
+    private readonly ShapeCache _shapes = new();
     private readonly TextBlock _status = new() { FontSize = 12, Foreground = Ui.Muted, Margin = new Thickness(12, 8), TextWrapping = TextWrapping.Wrap };
     private readonly StackPanel _knobs = new() { Spacing = 4 };
     private readonly List<Action> _show = [];
@@ -318,7 +320,7 @@ public sealed partial class GeneratorWindow : Window
             _status.Text = "Making the preview…";
             try
             {
-                var mesh = await Task.Run(() => Make(spec, metres, style == StyleCount + 1, seed, _layers, ground, rows));
+                var mesh = await Task.Run(() => Make(spec, metres, style == StyleCount + 1, seed, _layers, ground, rows, _shapes));
                 if (!_again)
                 {
                     _preview.Show(mesh);
@@ -338,13 +340,13 @@ public sealed partial class GeneratorWindow : Window
     /// The preview of the ground the numbers make on a map so many metres across (and <paramref name="rows"/> north to
     /// south: null, as many), over the ground given (null: its own hills; no numbers: flat or gently rolling ground).
     /// </summary>
-    internal static TerrainPreview.Mesh Make(Spec? spec, int metres, bool rolling, int seed, IReadOnlyList<MapProject.Layer> layers, float[]? ground = null, int? rows = null)
+    internal static TerrainPreview.Mesh Make(Spec? spec, int metres, bool rolling, int seed, IReadOnlyList<MapProject.Layer> layers, float[]? ground = null, int? rows = null, ShapeCache? cache = null)
     {
         int x0 = -(metres / 2);
         if (spec != null)
         {
             int n = rows ?? metres, y0 = -(n / 2);
-            return TerrainPreview.Of(ZoneGenerator.Generate(spec, metres, n, x0, y0, Nothing, ground?.Length == metres * n ? ground : null), metres, n, x0, y0, layers, spec.CoastDry);
+            return TerrainPreview.Of(ZoneGenerator.Generate(spec, metres, n, x0, y0, Nothing, ground?.Length == metres * n ? ground : null, cache), metres, n, x0, y0, layers, spec.CoastDry);
         }
         float[] h = new float[metres * metres];
         byte[] mask = new byte[h.Length * 4];

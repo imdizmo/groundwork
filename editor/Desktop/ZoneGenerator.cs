@@ -103,10 +103,22 @@ public static partial class ZoneGenerator
     /// of its own hills, like a sheet laid on it: Low and High stretch it (as <see cref="Measured"/> leaves them, not at
     /// all), the rest of the numbers as ever.
     /// </summary>
-    public static Zone Generate(Spec spec, int cols, int rows, float x0, float y0, Planting planting, float[]? given = null)
+    public static Zone Generate(Spec spec, int cols, int rows, float x0, float y0, Planting planting, float[]? given = null, ShapeCache? cache = null)
     {
         var rng = new Random(spec.Seed);
         float[] h = new float[cols * rows];
+        var steps = spec.Steps ?? DefaultSteps;
+        // the ground as some steps left it, when the preview kept it: those steps are not run again
+        int done = 0;
+        for (int k = steps.Length; cache != null && k >= 0; k--)
+        {
+            if (cache.Get(ShapeCache.KeyOf(spec, steps, k, cols, rows, x0, y0, given)) is { } kept)
+            {
+                Array.Copy(kept.H, h, h.Length);
+                done = k + 1;   // the hills (and k steps) done
+                break;
+            }
+        }
         float Edge(int c, int r) => spec.Coast > 0 ? FarEdge(spec, c, r, cols, rows) : MathF.Min(MathF.Min(c, cols - 1 - c), MathF.Min(r, rows - 1 - r));
         // how far out of the rim a point is: under 1 in it (its width changing along the edge), 0 at the edge; no rim: 2
         float RimAt(int c, int r)
@@ -121,7 +133,7 @@ public static partial class ZoneGenerator
         }
         // the rolling ground: noise of the hills' size and smaller, stretched so that it reaches from Low to High (its
         // lowest and highest hundredth), more low ground than high (each pixel on its own: the rows in parallel)
-        if (given == null)
+        if (done == 0 && given == null)
         {
             var ridges = new Noise(spec.Seed + 19);
             Parallel.For(0, rows, r =>
@@ -134,8 +146,8 @@ public static partial class ZoneGenerator
                 }
             });
         }
-        var (lo, hi) = Spread(given ?? h);
-        Parallel.For(0, rows, r =>
+        var (lo, hi) = done == 0 ? Spread(given ?? h) : (0, 0);
+        Parallel.For(0, done == 0 ? rows : 0, r =>
         {
             for (int c = 0; c < cols; c++)
             {
@@ -166,7 +178,13 @@ public static partial class ZoneGenerator
                 h[(r * cols) + c] = Marshed(spec, Fjorded(spec, Coasted(spec, ground + rim, c, r, cols, rows, x, y), c, r, cols, rows, x, y), x, y);
             }
         });
-        var (worn, dunes) = Shape(spec, h, cols, rows, x0, y0);
+        if (done == 0)
+        {
+            Unpooled(spec, h, cols, rows);   // the fjords' cut-off pools: a fix to their ground, not a step of its own
+            cache?.Put(ShapeCache.KeyOf(spec, steps, 0, cols, rows, x0, y0, given), h, null, null);
+            done = 1;
+        }
+        var (worn, dunes) = Shape(spec, h, cols, rows, x0, y0, done - 1, cache, given);
         var lakes = PlaceLakes(spec, h, cols, rows, x0, y0, rng);
         var rivers = MakeRivers(spec, h, cols, rows, x0, y0, lakes, rng);
         bool[] wet = Wet(spec, h, cols, rows, x0, y0, rivers);

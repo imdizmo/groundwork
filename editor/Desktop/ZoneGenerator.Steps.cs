@@ -34,17 +34,24 @@ public static partial class ZoneGenerator
     private static readonly HashSet<string> Wearing = ["valleys", "glaciers", "strata", "erosion", "scree", "sea"];
 
     /// <summary>
-    /// Shapes the ground by the spec's steps (the usual order when it has none). Returns what the wearing steps moved
-    /// (metres laid down, or cut when below 0; null when none ran) and how much each point is dune (null: no dunes).
+    /// Shapes the ground by the spec's steps (the usual order when it has none), from step <paramref name="from"/> on
+    /// (the ground as the earlier ones left it, kept in the cache). Returns what the wearing steps moved (metres laid down,
+    /// or cut when below 0; null when none ran) and how much each point is dune (null: no dunes).
     /// </summary>
-    private static (float[]? Worn, float[]? Dunes) Shape(Spec spec, float[] h, int cols, int rows, float x0, float y0)
+    private static (float[]? Worn, float[]? Dunes) Shape(Spec spec, float[] h, int cols, int rows, float x0, float y0, int from = 0, ShapeCache? cache = null, float[]? given = null)
     {
         float[]? worn = null, dunes = null, before = null;
-        Unpooled(spec, h, cols, rows);   // the fjords' cut-off pools: a fix to their ground, not a step of its own
-        foreach (var step in spec.Steps ?? DefaultSteps)
+        var steps = spec.Steps ?? DefaultSteps;
+        if (from > 0 && cache?.Get(ShapeCache.KeyOf(spec, steps, from, cols, rows, x0, y0, given)) is { } kept)
         {
+            (worn, dunes) = ((float[]?)kept.Worn?.Clone(), (float[]?)kept.Dunes?.Clone());
+        }
+        for (int i = from; i < steps.Length; i++)
+        {
+            var step = steps[i];
             if (!step.On)
             {
+                cache?.Put(ShapeCache.KeyOf(spec, steps, i + 1, cols, rows, x0, y0, given), h, worn, dunes);
                 continue;
             }
             var s = Scaled(spec, step);
@@ -95,6 +102,7 @@ public static partial class ZoneGenerator
                 worn ??= new float[h.Length];
                 Parallel.For(0, h.Length, p => worn[p] += h[p] - before![p]);
             }
+            cache?.Put(ShapeCache.KeyOf(spec, steps, i + 1, cols, rows, x0, y0, given), h, worn, dunes);
         }
         return (worn, dunes);
     }
