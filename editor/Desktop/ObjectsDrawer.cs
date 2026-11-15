@@ -324,10 +324,9 @@ internal sealed class ObjectsDrawer
             m.Click += (_, _) => click();
             return m;
         }
-        return new ContextMenu
-        {
-            ItemsSource = new[]
-            {
+        List<MenuItem> items =
+        [
+
                 Item(Favourite(k.Model) ? "Take out of Favourites" : "Add to Favourites", () => Favour(k.Model, i)),
                 Item($"Select all {count:N0} on the map", () =>
                 {
@@ -335,8 +334,12 @@ internal sealed class ObjectsDrawer
                     _w.View.Select([.. Enumerable.Range(0, things!.Count).Where(t => things[t].Prefab == prefab)]);
                 }, count > 0),
                 Item("Brush with this", () => { Pick([i]); Use("brush"); }),
-            },
-        };
+        ];
+        if (k.Library is var (source, id) && Inbox.Library(source) is { } exe)
+        {
+            items.Add(Item($"Show in {source}", () => _w.Msg(Said.Raw(Inbox.Show(exe, id) is { } why ? $"{source} could not be opened: {why}" : $"Opening {k.Label} in {source}."))));
+        }
+        return new ContextMenu { ItemsSource = items };
     }
 
     private List<string> Listed(string key) => [.. _w.Prefs.Get(key, "").Split('|', StringSplitOptions.RemoveEmptyEntries)];

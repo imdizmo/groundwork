@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Avalonia.Headless.XUnit;
+using Groundwork.App;
 using Xunit;
 
 namespace Groundwork.Desktop.Tests;
@@ -25,6 +26,12 @@ public sealed class InboxTests : IDisposable
             Directory.Delete(d, true);
         }
         Directory.Delete(_dir, true);
+        string libraries = Path.Combine(AppSettings.DataDir, "libraries");
+        if (Directory.Exists(libraries))
+        {
+            Directory.Delete(libraries, true);
+        }
+        Inbox.Announce(null);
     }
 
     private MapProject Map() => MapProject.Open(MapProject.Create("Sent", 1, generated: false, height: 2, seed: 1, under: _dir).Folder);
@@ -142,5 +149,58 @@ public sealed class InboxTests : IDisposable
         Assert.Equal(MapTools.Catalog().Kinds.Select(k => k.Label), items);
         Assert.Equal("Whale", items.First());
         w.Close();
+    }
+
+    // A sender that copied its Unreal assets into the map's Unreal project names them: names.json gets them (Live and
+    // Send place those meshes); for another project they are left out with a warning; a collection is a biome; the
+    // kind keeps its library id, and a library registered in the data folder is found by the sender's name.
+    [Fact]
+    public void UnrealMeshesCollectionsAndLibrariesComeWithADelivery()
+    {
+        var map = Map();
+        string project = Path.Combine(_dir, "Game");
+        Directory.CreateDirectory(project);
+        File.WriteAllText(Path.Combine(project, "Game.uproject"), "{}");
+        map.LinkUnreal(project);
+
+        Inbox.Announce(map);
+        var said = JsonNode.Parse(File.ReadAllText(Path.Combine(Inbox.Folder, ".map.json")))!;
+        Assert.Equal(Path.Combine(project, "Game.uproject"), said["unrealProject"]!.GetValue<string>());
+
+        string up = Path.Combine(project, "Game.uproject").Replace("\\", "\\\\", StringComparison.Ordinal);
+        Send("u1", $$"""{"version":1,"source":"Shelf","unrealProject":"{{up}}","collection":"Shore","kinds":[{"file":"rock.glb","label":"Rock","shelf":"pack1/Rocks/SM_Rock","unreal":"/Game/Shelf/SM_Rock.SM_Rock"},{"file":"reed.glb"}]}""", "rock.glb", "reed.glb");
+        var t = Assert.Single(Inbox.TakeAll(map));
+        Assert.Null(t.Error);
+        Assert.Empty(t.Warnings);
+        var names = JsonNode.Parse(File.ReadAllText(Path.Combine(map.Folder, "models", "names.json")))!;
+        Assert.Equal("/Game/Shelf/SM_Rock.SM_Rock", names["rock"]!.GetValue<string>());
+        Assert.Null(names["reed"]);
+        var catalog = JsonNode.Parse(File.ReadAllText(map.Catalog!))!;
+        Assert.Equal(1.0, catalog["biomes"]!["Shore"]!["kinds"]!["reed"]!.GetValue<double>());
+        var rock = catalog["kinds"]!.AsArray().Single(k => k!["model"]!.GetValue<string>() == "rock")!;
+        Assert.Equal("pack1/Rocks/SM_Rock", rock["libraryId"]!.GetValue<string>());
+        Assert.Equal("Shelf", rock["source"]!.GetValue<string>());
+
+        Send("u2", """{"version":1,"source":"Shelf","unrealProject":"/elsewhere/Other.uproject","kinds":[{"file":"log.glb","unreal":"/Game/Shelf/SM_Log.SM_Log"}]}""", "log.glb");
+        t = Assert.Single(Inbox.TakeAll(map));
+        Assert.Null(t.Error);
+        Assert.Contains("left out", Assert.Single(t.Warnings));
+        Assert.Contains("warnings", File.ReadAllText(Path.Combine(Inbox.Folder, ".results", "u2.json")));
+        Assert.Null(JsonNode.Parse(File.ReadAllText(Path.Combine(map.Folder, "models", "names.json")))!["log"]);
+
+        Send("u3", """{"version":1,"source":"Shelf","kinds":[{"file":"bad.glb","unreal":"/Game/../x.x"}]}""", "bad.glb");
+        Assert.NotNull(Assert.Single(Inbox.TakeAll(map)).Error);
+
+        string libraries = Path.Combine(AppSettings.DataDir, "libraries");
+        Directory.CreateDirectory(libraries);
+        string exe = Path.Combine(_dir, "shelf-app");
+        File.WriteAllText(exe, "");
+        File.WriteAllText(Path.Combine(libraries, "shelf.json"), new JsonObject { ["version"] = 1, ["name"] = "Shelf", ["exe"] = exe }.ToJsonString());
+        File.WriteAllText(Path.Combine(libraries, "loose.json"), """{"version":1,"name":"Loose","exe":"relative/app"}""");
+        Assert.Equal(exe, Inbox.Library("Shelf"));
+        Assert.Null(Inbox.Library("Loose"));
+
+        Inbox.Announce(null);
+        Assert.False(File.Exists(Path.Combine(Inbox.Folder, ".map.json")));
     }
 }

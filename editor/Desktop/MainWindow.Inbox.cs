@@ -26,13 +26,16 @@ public sealed partial class MainWindow
             _inboxTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
             _inboxTimer.Tick += (_, _) =>
             {
+                Inbox.Announce(Session is { Scene.IsMap: true } ? MapProject.Current : null);
                 if (!_taking && Inbox.Waiting().Count > 0)
                 {
                     _ = TakeInbox();
                 }
             };
             _inboxTimer.Start();
+            Closed += (_, _) => Inbox.Announce(null);
         }
+        Inbox.Announce(MapProject.Current);
         _ = TakeInbox();
     }
 
@@ -67,6 +70,7 @@ public sealed partial class MainWindow
                 // One line for all that came in at once: what was added, by program, then what was refused.
                 static string From(Taken t) => t.Source.Length > 0 ? t.Source : "another program";
                 var said = taken.Where(t => t.Error == null).GroupBy(From).Select(g => g.Sum(t => t.Models.Count) is int n ? $"{n} model{(n == 1 ? "" : "s")} from {g.Key} added to the map: in the objects drawer" : "")
+                    .Concat(taken.SelectMany(t => t.Warnings))
                     .Concat(taken.Where(t => t.Error != null).Select(t => $"Models sent from {From(t)} were refused: {t.Error}"));
                 Msg(Said.Raw(string.Join(" · ", said)));
             }

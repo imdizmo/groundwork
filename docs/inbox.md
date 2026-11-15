@@ -13,6 +13,16 @@ catalog, and the [objects drawer](objects.md) opens on it, ready to place.
 A model sent while no map is open waits until you open one. A model sent again from the same program replaces the old
 one: the objects already placed take its new look.
 
+A program can send more with its models:
+
+- **Its Unreal meshes.** When the map is [linked to an Unreal project](unreal.md), a program can copy its original
+  Unreal assets into that project and name them. The map then places those meshes in Unreal ([Live](unreal.md) and
+  Send to Unreal) instead of the sent models, and **Bring the models into Unreal** leaves them out.
+- **A collection.** A collection of models comes in as a biome of its name: the Biome tool paints it at once, and the
+  map's catalog sets its weights.
+- **Where the model is in its library.** Right click its picture in the drawer: **Show in …** opens that program on
+  it (when the program says where it is installed, below).
+
 Sent models go into a folder per program in the map's models folder (`models/<program>/`), and their kinds into the
 map's catalog. If the map had no catalog of its own, it gets one (`catalog.json`, named in `map.json`).
 
@@ -54,13 +64,32 @@ The folder holds `send.json` and the `.glb` files:
 | `label` | The name the drawer shows; the model's name if left out. |
 | `category` | Trees, Rocks, Bushes, Plants, Props, Buildings, Markers or Other (anything else is Other). |
 | `scale` | The size range objects are placed in; `[1, 1]` if left out. |
+| `unreal` | Optional: the Unreal object path of the asset this model stands for, copied into the map's Unreal project (`/Game/Props/SM_Rock.SM_Rock`: letters, digits and `_` between the slashes). |
+| `shelf` | Optional: the model's id in the program's library, for **Show in …** (at most 400 characters, not starting with `-`). |
+
+Two more fields can go at the top, beside `source`:
+
+| Field | What it is |
+|---|---|
+| `unrealProject` | The `.uproject` the `unreal` assets were copied into. They are kept only when it is the map's own; otherwise the models come in without them and the answer has `warnings`. |
+| `collection` | A name of at most 80 characters: the delivery's models become the biome of that name, replacing one sent before. |
 
 Each `.glb` is at most 512 MB and holds everything it needs: no `uri` in its images or buffers other than `data:`.
 Metres, Y up (glTF's own axes), the origin at the model's base, where it meets the ground.
 
-Groundwork answers in `inbox/.results/<id>.json`, `{"ok": true, "map": "<name>", "models": [...]}` or
-`{"ok": false, "error": "..."}`, and deletes the delivery. No answer within a few seconds means no map is open (or
+Groundwork answers in `inbox/.results/<id>.json`, `{"ok": true, "map": "<name>", "models": [...]}` (with
+`"warnings": [...]` when part of it was left out) or `{"ok": false, "error": "..."}`, and deletes the delivery. No answer within a few seconds means no map is open (or
 Groundwork is not running): the delivery waits.
+
+While a map is open, `inbox/.map.json` says which, and the Unreal project it is linked to, so a program knows where
+to copy its Unreal assets before it sends: `{"version": 1, "map": "<name>", "unrealProject": "<.uproject or null>",
+"pid": <Groundwork's process>}`. It is deleted when no map is open.
+
+### Show in your program
+
+To get **Show in …** on the models you send, write `libraries/<program>.json` in Groundwork's data folder (beside
+`inbox`) each time your program starts: `{"version": 1, "name": "<the source you send as>", "exe": "<absolute path
+of your program>"}`. Groundwork runs it as `<exe> --show <shelf id>` (no shell) and does not wait for it.
 
 ## Related
 
