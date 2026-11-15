@@ -17,6 +17,36 @@ public sealed class SelectPanelTests : SavedSelectionsFolder
     private static readonly int Beech = AssetIds.Of("Beech1"), Wall = AssetIds.Of("wood_wall_half");
 
     [AvaloniaFact]
+    public void TheSizeBoxSizesTheSelectionWhereItStands()
+    {
+        var w = new MainWindow(load: false) { Width = 1200, Height = 800 };
+        w.Show();
+        var at = new Vector3(20, 30, 40);
+        var s = TestScenes.Flat(2, new WorldScene.Thing(10, Beech, at, new Vector3(0, 30, 0), 1.2f, false));
+        w.View.Show(s.Scene, null);
+        w.Edit(s);
+        w.Tools.ChooseSelect();
+        w.View.Select([0]);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        var p = w.SelectPanel;
+        Assert.Equal(1.2m, p.SizeBox.Value);
+        // Move there: this size, the place and turn kept
+        p.SizeBox.Value = 2;
+        p.ApplyButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        var sized = s.Scene.Things[^1];
+        Assert.Equal(2, sized.Scale, 4);
+        Assert.Equal(at, sized.Position);
+        Assert.Equal(30, sized.Rotation.Y, 3);
+        // Move by: times its own
+        p.ByButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        p.SizeBox.Value = 0.5m;
+        p.ApplyButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Assert.Equal(1, s.Scene.Things[^1].Scale, 4);
+        Assert.Single(s.Scene.Things, t => !t.Gone);
+        w.Close();
+    }
+
+    [AvaloniaFact]
     public void MoveThereMovesOnlyAlongTheAxesChanged()
     {
         // A tree on the ground whose place and turn the boxes cannot show exactly (a centimetre, a tenth of a degree).

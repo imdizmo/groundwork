@@ -60,6 +60,9 @@ public sealed partial class SelectPanel
     /// <summary>The exact turn, in degrees clockwise seen from above.</summary>
     internal NumericUpDown TurnBox { get; } = Num(1m);
 
+    /// <summary>The exact size (the first selected object's; Move there sizes them all to it, Move by times it).</summary>
+    internal NumericUpDown SizeBox { get; } = Num(0.05m);
+
     /// <summary>Moves the selection there (or by the boxes' values with Move by).</summary>
     internal Button ApplyButton { get; } = new() { Content = Lang.T("select.label.moveThere"), FontSize = 12 };
 

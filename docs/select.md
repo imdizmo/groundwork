@@ -7,6 +7,11 @@
 Click an object to select it, or drag a box over the ground to select what is inside. Drag a selected object to move
 the selection; drag an arrow or the ring of the handle to move along an axis or turn.
 
+The card's exact place holds the selection's **X**, **Y** (its lowest object's height) and **Z**, the first object's
+**Turn** and **Size**. Type new ones and press **Move there**: only what you changed moves, and a size gives every selected
+object that size where it stands. **Move by** turns the boxes into amounts instead: moved and turned by them, and each
+object's size times the **Size** box.
+
 ## Selecting
 
 | Mouse or key | Action |

@@ -19,6 +19,10 @@ public sealed partial class SelectPanel
             // An empty or zero box is no move along that axis.
             static float? By(NumericUpDown b) => b.Value is { } v && v != 0 ? (float)v : null;
             _tool.PlaceAt(By(XBox), By(YBox), By(ZBox), By(TurnBox), by: true);
+            if (SizeBox.Value is { } times && times > 0 && times != 1)
+            {
+                _tool.Resize((float)times, by: true);   // Move by: times its own size
+            }
             SetBy(false);
             return;
         }
@@ -31,6 +35,7 @@ public sealed partial class SelectPanel
         static bool Changed(NumericUpDown b, float from, int digits) => b.Value != (decimal)MathF.Round(from, digits);
         var (x, y, z, turn) = (V(XBox), V(YBox), V(ZBox), V(TurnBox));
         var (cx, cy, cz, ct) = (Changed(XBox, was.X, 2), Changed(YBox, was.Y, 2), Changed(ZBox, was.Z, 2), Changed(TurnBox, was.Turn, 1));
+        float? size = SizeBox.Value is { } sv && _shownSize is float shownSize && sv != (decimal)MathF.Round(shownSize, 2) ? (float)sv : null;
         if (_tool.Moving)
         {
             _tool.Commit();
@@ -39,6 +44,10 @@ public sealed partial class SelectPanel
         if (_shown is { } at)
         {
             _tool.PlaceAt(cx ? x - at.X : null, cy ? y - at.Y : null, cz ? z - at.Z : null, ct ? turn - at.Turn : null, by: true);
+        }
+        if (size is float to)
+        {
+            _tool.Resize(to, by: false);
         }
         SetBy(false);
     }
@@ -52,6 +61,7 @@ public sealed partial class SelectPanel
         if (by)
         {
             XBox.Value = YBox.Value = ZBox.Value = TurnBox.Value = 0;
+            SizeBox.Value = 1;   // Move by: times its own size
             _info.Text = Lang.T("select.hint.by");
         }
         else

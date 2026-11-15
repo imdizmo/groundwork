@@ -27,6 +27,7 @@ public sealed partial class SelectPanel
     /// along the axes whose box was changed since, by the difference from this (the boxes show rounded values).
     /// </summary>
     private (float X, float Y, float Z, float Turn)? _shown;
+    private float? _shownSize;
 
     // For tests.
 
@@ -108,7 +109,7 @@ public sealed partial class SelectPanel
             Tips.Label(l, box);
             return new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { l, box } };
         }
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), RowDefinitions = new RowDefinitions("Auto,Auto"), ColumnSpacing = 6, RowSpacing = 4 };
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), RowDefinitions = new RowDefinitions("Auto,Auto,Auto"), ColumnSpacing = 6, RowSpacing = 4 };
         void Put(Control c, int row, int col)
         {
             Grid.SetRow(c, row);
@@ -119,6 +120,8 @@ public sealed partial class SelectPanel
         Put(Cell(Lang.T("select.label.y"), YBox), 0, 1);
         Put(Cell(Lang.T("select.label.z"), ZBox), 1, 0);
         Put(Cell(Lang.T("brush.label.turn"), TurnBox), 1, 1);
+        Put(Cell(Lang.T("select.label.size"), SizeBox), 2, 0);
+        SizeBox.Tip("select.size");
         ByButton.Tip("select.by");
         ByButton.Click += (_, _) => SetBy(!_by);
         ApplyButton.Click += (_, _) => Apply();
@@ -210,6 +213,8 @@ public sealed partial class SelectPanel
         YBox.Value = (decimal)MathF.Round(at.Y, 2);
         ZBox.Value = (decimal)MathF.Round(at.Z, 2);
         TurnBox.Value = (decimal)MathF.Round(at.Turn, 1);
+        _shownSize = _tool.Size();
+        SizeBox.Value = _shownSize is float size ? (decimal)MathF.Round(size, 2) : null;
         _info.Text = at.Count > 1
             ? Lang.T("select.hint.middle", at.Count)
             : Lang.T("select.hint.one");
