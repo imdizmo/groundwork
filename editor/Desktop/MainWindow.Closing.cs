@@ -31,7 +31,7 @@ public sealed partial class MainWindow
     {
         foreach (var right in new[] { ViewPanelCard, History.Card, HelpCard })
         {
-            right.Margin = new Thickness(10, 70, 10, 58);
+            right.Margin = new Thickness(Edge, PanelsTop, Edge, 44);
             right.HorizontalAlignment = HorizontalAlignment.Right;
             right.VerticalAlignment = VerticalAlignment.Top;
         }

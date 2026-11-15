@@ -38,7 +38,7 @@ public sealed partial class MainWindow
         Icon = AppIcon();
         Width = Options.WindowWidth > 0 ? Options.WindowWidth : 1500;
         Height = Options.WindowHeight > 0 ? Options.WindowHeight : 950;
-        Background = Ui.Bg;
+        Background = Tokens.Bg;
         HelpCard = Help(RecordBox());
         ConfirmSave = text => Dialogs.Ask(this, Lang.T("save.ask.save.title"), text, Lang.T("common.save"));
         Ask = (title, text, yes, no) => Dialogs.Ask(this, title, text, yes, no);
@@ -56,7 +56,12 @@ public sealed partial class MainWindow
         Surface = surface;
         ViewPanelCard = ViewPanel();
         LayOutRightPanels();
-        _editorPage = new Grid { Children = { View, surface, tools, ViewPanelCard, History.Card, HelpCard, TopBar(), StatusBar() } };
+        var top = TopBar();
+        _editorPage = new Grid { Children = { View, surface, tools, ViewPanelCard, History.Card, HelpCard, Strip.Card, top, StatusBar() } };
+        if (Prefs.Get("history.strip", false))
+        {
+            ToggleStrip();
+        }
         _busy.Child = _busyText;
         _pages.Content = _editorPage;
         Content = new Grid { Children = { _pages, _busy } };
@@ -81,7 +86,7 @@ public sealed partial class MainWindow
             Orientation = Avalonia.Layout.Orientation.Horizontal,
             Spacing = Ui.Gap,
             // Under the top bar, above the status bar.
-            Margin = new Avalonia.Thickness(10, 70, 10, 58),
+            Margin = new Avalonia.Thickness(Edge, PanelsTop, Edge, 44),
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
             Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ModToolPanel.Card, PastePanel.Card, MaskPanel.Card },

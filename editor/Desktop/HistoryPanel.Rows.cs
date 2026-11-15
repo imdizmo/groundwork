@@ -81,7 +81,7 @@ public sealed partial class HistoryPanel
         {
             Orientation = Orientation.Horizontal,
             Spacing = 6,
-            Children = { new TextBlock { Text = c.Label, FontSize = 12.5, FontWeight = current ? FontWeight.SemiBold : FontWeight.Normal, TextDecorations = c.Removed ? TextDecorations.Strikethrough : null, Foreground = c.Removed ? Ui.Muted : Ui.Text } },
+            Children = { new TextBlock { Text = c.Label, FontSize = 12.5, FontWeight = current ? FontWeight.SemiBold : FontWeight.Normal, TextDecorations = c.Removed ? TextDecorations.Strikethrough : null, Foreground = c.Removed ? Tokens.Dim : Tokens.Text } },
         };
         if (ByClaude(c))
         {
@@ -92,14 +92,14 @@ public sealed partial class HistoryPanel
                 BorderBrush = new SolidColorBrush(Color.Parse("#7a4410")),
                 Padding = new Thickness(5, 0),
                 VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock { Text = Lang.T("settings.claude"), FontSize = 10, Foreground = Ui.Accent },
+                Child = new TextBlock { Text = Lang.T("settings.claude"), FontSize = 10, Foreground = Tokens.Accent },
             }.Tip("history.byClaude"));
         }
         // The current change outlined in amber, like the web editor's.
         return new Border
         {
             BorderThickness = new Thickness(1),
-            BorderBrush = current ? Ui.Accent : Brushes.Transparent,
+            BorderBrush = current ? Tokens.Accent : Brushes.Transparent,
             CornerRadius = new CornerRadius(7),
             Padding = new Thickness(6),
             Opacity = undone ? 0.5 : 1,
@@ -111,7 +111,7 @@ public sealed partial class HistoryPanel
                 {
                     label,
                     Col(acts, 1),
-                    RowOf(new TextBlock { Text = meta, FontSize = 11, Foreground = Ui.Muted }, 1),
+                    RowOf(new TextBlock { Text = meta, FontSize = 11, Foreground = Tokens.Dim }, 1),
                 },
             },
         };

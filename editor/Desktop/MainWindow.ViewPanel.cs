@@ -130,7 +130,7 @@ public sealed partial class MainWindow
         list.Width = 240;
         return Ui.AsCard(new Border
         {
-            Margin = new Thickness(10),
+            Margin = new Thickness(8),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top,
             // Scrolls when the window is too short for it (a bar only then).

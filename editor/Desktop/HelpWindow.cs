@@ -65,10 +65,10 @@ public sealed partial class HelpWindow : Window
     private Markdig.Syntax.MarkdownDocument? _doc;
 
     /// <summary>A line under the bar, when a link could not be opened: what to open by hand (it can be copied).</summary>
-    internal SelectableTextBlock Note { get; } = new() { Foreground = Ui.Warn, FontSize = 12, TextWrapping = TextWrapping.Wrap, IsVisible = false, Margin = new Thickness(18, 0, 18, 8) };
+    internal SelectableTextBlock Note { get; } = new() { Foreground = Tokens.Danger, FontSize = 12, TextWrapping = TextWrapping.Wrap, IsVisible = false, Margin = new Thickness(18, 0, 18, 8) };
 
     /// <summary>The page's title, above it.</summary>
-    private readonly TextBlock _title = new() { FontSize = 13, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly TextBlock _title = new() { FontSize = 13, Foreground = Tokens.Dim, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
 
     /// <summary>Builds the window, on the first page.</summary>
     public HelpWindow()
@@ -78,7 +78,7 @@ public sealed partial class HelpWindow : Window
         Height = 820;
         MinWidth = 640;
         MinHeight = 420;
-        Background = Ui.Bg;
+        Background = Tokens.Bg;
         Icon = MainWindow.AppIcon();
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         BackButton.Click += (_, _) => Move(-1);
@@ -119,7 +119,7 @@ public sealed partial class HelpWindow : Window
     /// <summary>The window's parts: the side (search, contents) and the page with its bar; the enlarged picture over all.</summary>
     private Grid Layout()
     {
-        var side = new DockPanel { Background = Ui.Panel2 };
+        var side = new DockPanel { Background = Tokens.Raised };
         DockPanel.SetDock(SearchBox, Dock.Top);
         side.Children.Add(SearchBox);
         side.Children.Add(new ScrollViewer { Content = Side });
@@ -131,12 +131,12 @@ public sealed partial class HelpWindow : Window
         _title.Margin = new Thickness(10, 0);
         bar.Children.Add(Ui.Col(BrowserButton, 4));
         var main = new DockPanel();
-        var barRow = new Border { Child = new StackPanel { Children = { bar, Note } }, BorderBrush = Ui.Line, BorderThickness = new Thickness(0, 0, 0, 1) };
+        var barRow = new Border { Child = new StackPanel { Children = { bar, Note } }, BorderBrush = Tokens.Line, BorderThickness = new Thickness(0, 0, 0, 1) };
         DockPanel.SetDock(barRow, Dock.Top);
         main.Children.Add(barRow);
         main.Children.Add(Scroller);
         var all = new Grid { ColumnDefinitions = new ColumnDefinitions("280,*") };
-        all.Children.Add(new Border { Child = side, BorderBrush = Ui.Line, BorderThickness = new Thickness(0, 0, 1, 0) });
+        all.Children.Add(new Border { Child = side, BorderBrush = Tokens.Line, BorderThickness = new Thickness(0, 0, 1, 0) });
         all.Children.Add(Ui.Col(main, 1));
         Grid.SetColumnSpan(Enlarged, 2);
         all.Children.Add(Enlarged);

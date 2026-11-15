@@ -14,7 +14,7 @@ public static partial class SettingsDialog
     internal sealed partial class Form
     {
         private readonly AppSettings _settings;
-        private readonly IBrush _muted = Ui.Muted;
+        private readonly IBrush _muted = Tokens.Dim;
         private CheckBox _claude = null!;
         private TextBox _port = null!;
         private ComboBox _address = null!;
@@ -48,7 +48,7 @@ public static partial class SettingsDialog
                 SizeToContent = SizeToContent.Height,
                 MaxHeight = 760,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Background = Ui.Panel2,
+                Background = Tokens.Raised,
             };
             BuildClaude();
         }

@@ -20,7 +20,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// The help card's notes: how the area was loaded and the 3D view's status lines, newest first.
     /// </summary>
-    internal TextBlock LoadedInfo { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    internal TextBlock LoadedInfo { get; } = new() { FontSize = 12, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap };
     /// <summary>
     /// Writes frame rates to a file while Record frame rates is on.
     /// </summary>
@@ -28,7 +28,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Walking or flying: how to move, in the status bar; empty otherwise.
     /// </summary>
-    private readonly TextBlock _eye = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(143, 240, 180)), TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _eye = new() { FontSize = 12, Foreground = Tokens.Success, TextWrapping = TextWrapping.Wrap };
     /// <summary>
     /// Help (?, F3): the controls, the graphics card, what was loaded, the frame rate.
     /// </summary>
@@ -48,7 +48,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Under the title: the map's size and objects.
     /// </summary>
-    internal TextBlock SubtitleText { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextTrimming = TextTrimming.CharacterEllipsis };
+    internal TextBlock SubtitleText { get; } = new() { FontSize = 12, Foreground = Tokens.Dim, TextTrimming = TextTrimming.CharacterEllipsis };
     /// <summary>
     /// The save bar's pill around what is waiting, tinted while something is.
     /// </summary>
@@ -56,7 +56,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// What is selected, in the status bar.
     /// </summary>
-    private readonly TextBlock _selection = new() { FontSize = 12, Foreground = Ui.Accent, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _selection = new() { FontSize = 12, Foreground = Tokens.Accent, TextWrapping = TextWrapping.Wrap };
     /// <summary>
     /// The game's models once opened; null before, or without the game.
     /// </summary>

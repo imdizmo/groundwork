@@ -24,7 +24,7 @@ public partial class MainWindow
             Take([Key.OemQuestion], KeyMods.NoCtrl, p => p.Shift, _ => ShowRight(HelpCard.IsVisible ? null : HelpCard)),
             Take([Key.V], KeyMods.None, null, _ => ShowRight(ViewPanelCard.IsVisible ? null : ViewPanelCard)),
             Take([Key.L], KeyMods.None, null, _ => ShowRight(History.Card.IsVisible ? null : History.Card)),
-            Take([Key.Space], KeyMods.Ctrl, _ => InMap, _ => _drawer?.Toggle()),
+            Take([Key.Space], KeyMods.Ctrl, _ => InMap, _ => Drawer?.Toggle()),
             Take([Key.Z], KeyMods.Ctrl, null, p => _ = p.Shift ? Redo() : Undo()),
             Take([Key.Y], KeyMods.Ctrl, null, p => _ = Redo()),
             Take([Key.C], KeyMods.Ctrl, _ => Tools.Mode is ToolMode.Select, _ => Copy()),

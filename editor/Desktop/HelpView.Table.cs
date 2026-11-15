@@ -36,7 +36,7 @@ public sealed partial class HelpView
                 grid.Children.Add(cell);
             }
         }
-        return new Border { Child = grid, BorderBrush = Ui.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), ClipToBounds = true };
+        return new Border { Child = grid, BorderBrush = Tokens.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), ClipToBounds = true };
     }
 
     /// <summary>A table cell: its text (bold in the header, on a darker band), a line under it but in the last row.</summary>
@@ -55,8 +55,8 @@ public sealed partial class HelpView
         return new Border
         {
             Child = text,
-            Background = header ? Ui.Panel2 : null,
-            BorderBrush = Ui.Line,
+            Background = header ? Tokens.Raised : null,
+            BorderBrush = Tokens.Line,
             BorderThickness = new Thickness(0, 0, 0, lineUnder ? 1 : 0),
             Padding = new Thickness(10, 6),
         };

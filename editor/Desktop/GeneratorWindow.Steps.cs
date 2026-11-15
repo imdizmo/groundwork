@@ -25,7 +25,7 @@ public sealed partial class GeneratorWindow
             Text = "The order the ground is shaped in, after its hills, rim and coast and before the water and planting. Each step follows its slider above; × runs it stronger or weaker. Add one again to run it twice.",
             TextWrapping = TextWrapping.Wrap,
             FontSize = 11,
-            Foreground = Ui.Muted,
+            Foreground = Tokens.Dim,
         });
         _knobs.Children.Add(_stepRows);
         var add = new ComboBox { ItemsSource = StepKinds.Select(k => k.Name).ToList(), PlaceholderText = "Add a step…", FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -90,7 +90,7 @@ public sealed partial class GeneratorWindow
         }
         if (steps.Length == 0)
         {
-            _stepRows.Children.Add(new TextBlock { Text = "No steps: the ground as its hills, rim and coast make it.", FontSize = 11, Foreground = Ui.Muted });
+            _stepRows.Children.Add(new TextBlock { Text = "No steps: the ground as its hills, rim and coast make it.", FontSize = 11, Foreground = Tokens.Dim });
         }
         ShapeStep[] With(int i, ShapeStep s) => [.. steps.Select((x, j) => j == i ? s : x)];
         ShapeStep[] Swapped(int i, int j)

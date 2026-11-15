@@ -32,7 +32,7 @@ public sealed partial class StartPage
     public StartPage(string? lastError = null, Func<IEnumerable<string>>? maps = null)
     {
         _mapFolders = maps ?? (() => []);
-        var lastErrorText = new TextBlock { Text = lastError, Foreground = Ui.Warn, TextWrapping = TextWrapping.Wrap, FontSize = 12, IsVisible = lastError != null };
+        var lastErrorText = new TextBlock { Text = lastError, Foreground = Tokens.Danger, TextWrapping = TextWrapping.Wrap, FontSize = 12, IsVisible = lastError != null };
         // The side: the brand, the links under it, the version and the data folder at the bottom.
         var settings = SideButton(Icons.With("settings", Lang.T("start.label.settings")), "start.settings", () => SettingsRequested?.Invoke());
         var docs = SideButton(Icons.With("help", Lang.T("start.label.docs")), "start.docs", () => HelpWindow.Open());
@@ -45,14 +45,14 @@ public sealed partial class StartPage
             Children =
             {
                 notes,
-                new TextBlock { Text = Lang.T("start.dataDir", Ui.Tilde(AppSettings.DataDir)), Foreground = Ui.Muted, FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12, 2, 8, 0) },
+                new TextBlock { Text = Lang.T("start.dataDir", Ui.Tilde(AppSettings.DataDir)), Foreground = Tokens.Dim, FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12, 2, 8, 0) },
             },
         };
         DockPanel.SetDock(footer, Dock.Bottom);
         var side = new Border
         {
-            Background = Ui.Panel2,
-            BorderBrush = Ui.Line,
+            Background = Tokens.Raised,
+            BorderBrush = Tokens.Line,
             BorderThickness = new Thickness(0, 0, 1, 0),
             Padding = new Thickness(14, 26, 14, 18),
             Child = new DockPanel
@@ -71,7 +71,7 @@ public sealed partial class StartPage
                                 Spacing = 8,
                                 Children = { new Image { Width = 24, Height = 24, Source = new Avalonia.Media.Imaging.Bitmap(Avalonia.Platform.AssetLoader.Open(new Uri($"avares://{typeof(MainWindow).Assembly.GetName().Name}/Assets/icon.png"))) }, Ui.BrandTitle(19, VerticalAlignment.Center) },
                             },
-                            new TextBlock { Text = Lang.T("start.tagline"), Foreground = Ui.Muted, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 18) },
+                            new TextBlock { Text = Lang.T("start.tagline"), Foreground = Tokens.Dim, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 18) },
                             settings, docs, log,
                         },
                     },
@@ -98,7 +98,7 @@ public sealed partial class StartPage
                     Children =
                     {
                         new TextBlock { Text = Lang.T("start.page.maps"), FontSize = 22, FontWeight = FontWeight.SemiBold },
-                        new TextBlock { Text = Lang.T("start.page.mapsText"), Foreground = Ui.Muted, FontSize = 13, TextWrapping = TextWrapping.Wrap, MaxWidth = 560, HorizontalAlignment = HorizontalAlignment.Left },
+                        new TextBlock { Text = Lang.T("start.page.mapsText"), Foreground = Tokens.Dim, FontSize = 13, TextWrapping = TextWrapping.Wrap, MaxWidth = 560, HorizontalAlignment = HorizontalAlignment.Left },
                     },
                 },
                 actions,
@@ -117,7 +117,7 @@ public sealed partial class StartPage
             },
         };
         Grid.SetColumn(main, 1);
-        View = new Grid { Background = Ui.Bg, ColumnDefinitions = new ColumnDefinitions("260,*"), Children = { side, main }, Focusable = true };
+        View = new Grid { Background = Tokens.Bg, ColumnDefinitions = new ColumnDefinitions("260,*"), Children = { side, main }, Focusable = true };
         View.KeyDown += (_, e) => e.Handled = Press(e.Key, e.KeyModifiers);
         // Shown: the keys work at once (the search box when there is one, else the page).
         View.AttachedToVisualTree += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = _search.IsVisible ? _search.Focus() : View.Focus());
@@ -213,7 +213,7 @@ public sealed partial class StartPage
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = Ui.Tilde(group.Key), Foreground = Ui.Muted, FontSize = 11.5 },
+                    new TextBlock { Text = Ui.Tilde(group.Key), Foreground = Tokens.Dim, FontSize = 11.5 },
                     cards,
                 },
             });

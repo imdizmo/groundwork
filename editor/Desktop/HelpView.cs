@@ -80,7 +80,7 @@ public sealed partial class HelpView
         AlertBlock a => Alert(a),
         QuoteBlock q => Quote(q),
         CodeBlock c => Code(c),
-        ThematicBreakBlock => new Border { Height = 1, Background = Ui.Line, Margin = new Thickness(0, 6) },
+        ThematicBreakBlock => new Border { Height = 1, Background = Tokens.Line, Margin = new Thickness(0, 6) },
         _ => null,
     };
 
@@ -93,7 +93,7 @@ public sealed partial class HelpView
         Control drawn = text;
         if (h.Level == 2)
         {
-            drawn = new Border { Child = text, BorderBrush = Ui.Line, BorderThickness = new Thickness(0, 0, 0, 1), Padding = new Thickness(0, 0, 0, 6) };
+            drawn = new Border { Child = text, BorderBrush = Tokens.Line, BorderThickness = new Thickness(0, 0, 0, 1), Padding = new Thickness(0, 0, 0, 6) };
         }
         drawn.Margin = new Thickness(0, top, 0, 0);
         if (HelpText.Id(h) is { } id)
@@ -110,7 +110,7 @@ public sealed partial class HelpView
     private TextBlock Caption(ContainerInline inline)
     {
         var t = Text(inline, 12.5, 18);
-        t.Foreground = Ui.Muted;
+        t.Foreground = Tokens.Dim;
         t.Margin = new Thickness(0, -6, 0, 0);
         return t;
     }
@@ -135,7 +135,7 @@ public sealed partial class HelpView
             return picture;
         }
         var t = Text(pic.Parent, 12.5, 18, caption);
-        t.Foreground = Ui.Muted;
+        t.Foreground = Tokens.Dim;
         return new StackPanel { Spacing = 6, Children = { picture, t } };
     }
 
@@ -150,11 +150,11 @@ public sealed partial class HelpView
         using var stream = HelpDocs.Open(path);
         if (stream == null)
         {
-            return new TextBlock { Text = "[" + alt + "]", Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+            return new TextBlock { Text = "[" + alt + "]", Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap };
         }
         var bitmap = new Bitmap(stream);
         var image = new Image { Source = bitmap, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left, MaxWidth = bitmap.Size.Width };
-        var frame = new Border { Child = image, CornerRadius = new CornerRadius(6), ClipToBounds = true, BorderBrush = Ui.Line, BorderThickness = new Thickness(1) };
+        var frame = new Border { Child = image, CornerRadius = new CornerRadius(6), ClipToBounds = true, BorderBrush = Tokens.Line, BorderThickness = new Thickness(1) };
         // A button: a click, or Enter and Space from the keyboard, shows it full size.
         var button = new Button
         {
@@ -183,7 +183,7 @@ public sealed partial class HelpView
                 Text = list.IsOrdered ? number++ + "." : "•",
                 FontSize = BodySize,
                 LineHeight = BodyLine,
-                Foreground = list.IsOrdered ? Ui.Accent : Ui.Muted,
+                Foreground = list.IsOrdered ? Tokens.Accent : Tokens.Dim,
                 HorizontalAlignment = HorizontalAlignment.Left,
             });
             row.Children.Add(Ui.Col(Blocks(item, 4), 1));
@@ -196,7 +196,7 @@ public sealed partial class HelpView
     private Border Quote(QuoteBlock quote) => new()
     {
         Child = Blocks(quote, 8),
-        BorderBrush = Ui.Line2,
+        BorderBrush = Tokens.LineStrong,
         BorderThickness = new Thickness(3, 0, 0, 0),
         Padding = new Thickness(12, 2, 0, 2),
     };
@@ -205,7 +205,7 @@ public sealed partial class HelpView
     private static Border Code(CodeBlock code) => new()
     {
         Background = new SolidColorBrush(Color.Parse("#0f0f10")),
-        BorderBrush = Ui.Line,
+        BorderBrush = Tokens.Line,
         BorderThickness = new Thickness(1),
         CornerRadius = new CornerRadius(6),
         Padding = new Thickness(12, 9),
@@ -224,13 +224,14 @@ public sealed partial class HelpView
     private Border Alert(AlertBlock alert)
     {
         string kind = alert.Kind.ToString().ToUpperInvariant();
+        static Color C(IBrush b) => ((ISolidColorBrush)b).Color;
         var (key, colour) = kind switch
         {
-            "TIP" => ("docs.alert.tip", Ui.OkColor),
+            "TIP" => ("docs.alert.tip", C(Tokens.Success)),
             "IMPORTANT" => ("docs.alert.important", Color.Parse("#a98af0")),
-            "WARNING" => ("docs.alert.warning", Ui.AccentColor),
-            "CAUTION" => ("docs.alert.caution", Ui.WarnColor),
-            _ => ("docs.alert.note", Color.Parse("#6aa5e8")),
+            "WARNING" => ("docs.alert.warning", C(Tokens.Warning)),
+            "CAUTION" => ("docs.alert.caution", C(Tokens.Danger)),
+            _ => ("docs.alert.note", C(Tokens.Info)),
         };
         var body = Blocks(alert, 6);
         body.Children.Insert(0, new TextBlock { Text = Lang.T(key), FontWeight = FontWeight.SemiBold, Foreground = new SolidColorBrush(colour), FontSize = 13 });

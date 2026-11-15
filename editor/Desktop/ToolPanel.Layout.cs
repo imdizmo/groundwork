@@ -20,7 +20,7 @@ public sealed partial class ToolPanel
             rail.Children.Add(b);
             return b;
         }
-        TextBlock Cap(string text) => AddCap(rail, new TextBlock { Text = text.ToUpperInvariant(), FontSize = 9, Foreground = Ui.Muted, LetterSpacing = 0.7, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, rail.Children.Count == 0 ? 0 : 5, 0, 1) });
+        TextBlock Cap(string text) => AddCap(rail, new TextBlock { Text = text.ToUpperInvariant(), FontSize = 9, Foreground = Tokens.Mute, LetterSpacing = 0.7, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, rail.Children.Count == 0 ? 0 : 5, 0, 1) });
         static TextBlock AddCap(StackPanel to, TextBlock cap)
         {
             to.Children.Add(cap);
@@ -61,8 +61,9 @@ public sealed partial class ToolPanel
         _viewButton.Click += (_, _) => Choose(null);
         // Mods' own tools (SetModTools), last; none until a world with them opens.
         rail.Children.Add(_modRail);
-        // On a short window the rail scrolls with the wheel; no bar (it would squeeze the buttons).
-        Rail = Ui.Card(new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Hidden, Content = new StackPanel { Width = 60, Children = { rail } } });
+        // On a short window (or over the drawer) the rail scrolls: with the wheel, or its thin bar, which shows over the
+        // buttons while the pointer is on the rail (a bar beside them would squeeze them).
+        Rail = Ui.Card(new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, AllowAutoHide = true, Content = new StackPanel { Width = 60, Children = { rail } } });
 
         // The options: size and strength, the brush shape, and each tool's own.
         var sizeV = new TextBlock();

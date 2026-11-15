@@ -38,7 +38,7 @@ public static partial class SettingsDialog
             _remote = Hint("");
             _remote.Name = "ClaudeRemote";
             // Off this computer the connection is plain HTTP: said where the address is chosen, not only in its tip.
-            _unencrypted = new TextBlock { Name = "ClaudeUnencrypted", Text = Lang.T("settings.claudeUnencrypted"), FontSize = 12, Foreground = Ui.Warn, TextWrapping = TextWrapping.Wrap };
+            _unencrypted = new TextBlock { Name = "ClaudeUnencrypted", Text = Lang.T("settings.claudeUnencrypted"), FontSize = 12, Foreground = Tokens.Danger, TextWrapping = TextWrapping.Wrap };
             ShowCommand();
             _port.TextChanged += (_, _) => ShowCommand();
             _address.PropertyChanged += (_, e) =>

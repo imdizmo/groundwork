@@ -27,9 +27,9 @@ public sealed partial class GroundGraphWindow : Window
     private readonly TranslateTransform _pan = new();
     private readonly StackPanel _settings = new() { Spacing = 6 };
     private readonly TerrainPreview _preview = new();
-    private readonly TextBlock _status = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _status = new() { FontSize = 12, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap };
     private readonly DispatcherTimer _later = new() { Interval = TimeSpan.FromMilliseconds(250) };
-    private readonly Path _dragging = new() { Stroke = Ui.Accent, StrokeThickness = 2, IsHitTestVisible = false };
+    private readonly Path _dragging = new() { Stroke = Tokens.Accent, StrokeThickness = 2, IsHitTestVisible = false };
     private (int From, Point At)? _joining;
     private (int Node, Point Grab)? _moving;
     private Point? _panFrom;
@@ -52,7 +52,7 @@ public sealed partial class GroundGraphWindow : Window
         Title = "Ground graph";
         Width = 1400;
         Height = 860;
-        Background = Ui.Bg;
+        Background = Tokens.Bg;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         _later.Tick += (_, _) =>
         {
@@ -105,16 +105,16 @@ public sealed partial class GroundGraphWindow : Window
         var save = new Button { Content = "Save as a heightmap…", FontSize = 12 };
         save.Click += async (_, _) => await SaveHeightmap();
         var bar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(12, 8), Children = { add, applyButton, save } };
-        var hint = new TextBlock { Text = "Drag a title to move a node · drag from an output's dot to an input's to join them · click a joined input's dot to unjoin it · drag the canvas to look round · Delete takes the picked node out", FontSize = 11, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0) };
+        var hint = new TextBlock { Text = "Drag a title to move a node · drag from an output's dot to an input's to join them · click a joined input's dot to unjoin it · drag the canvas to look round · Delete takes the picked node out", FontSize = 11, Foreground = Tokens.Dim, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0) };
         var left = new DockPanel();
         DockPanel.SetDock(bar, Dock.Top);
         DockPanel.SetDock(hint, Dock.Bottom);
         left.Children.Add(bar);
         left.Children.Add(hint);
-        left.Children.Add(new Border { Child = _surface, BorderBrush = Ui.Line, BorderThickness = new Thickness(0, 1), Background = new SolidColorBrush(Color.Parse("#141417")) });
+        left.Children.Add(new Border { Child = _surface, BorderBrush = Tokens.Line, BorderThickness = new Thickness(0, 1), Background = new SolidColorBrush(Color.Parse("#141417")) });
         var right = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto"), Margin = new Thickness(12) };
         right.Children.Add(new ScrollViewer { Content = _settings, MaxHeight = 420 });
-        var view = new Border { Child = _preview, CornerRadius = new CornerRadius(8), ClipToBounds = true, BorderBrush = Ui.Line, BorderThickness = new Thickness(1), Margin = new Thickness(0, 10) };
+        var view = new Border { Child = _preview, CornerRadius = new CornerRadius(8), ClipToBounds = true, BorderBrush = Tokens.Line, BorderThickness = new Thickness(1), Margin = new Thickness(0, 10) };
         Grid.SetRow(view, 1);
         right.Children.Add(view);
         Grid.SetRow(_status, 2);

@@ -35,14 +35,32 @@ public sealed partial class MainWindow
             History.Toggle();
         }
         ViewButton.Classes.Set("on", ViewPanelCard.IsVisible);
-        HistoryButton.Classes.Set("on", History.Card.IsVisible);
+        HistoryButton.Classes.Set("on", Strip.Card.IsVisible);
         HelpButton.Classes.Set("on", HelpCard.IsVisible);
+    }
+
+    /// <summary>The space between the cards over the view and its edges.</summary>
+    internal const double Edge = Tokens.S2;
+
+    /// <summary>Where the cards under the top bar start (the bar is 44 high).</summary>
+    internal const double PanelsTop = Edge + 44 + Edge;
+
+    /// <summary>The history as a strip along the top of the view (the History button shows it).</summary>
+    internal HistoryStrip Strip { get; private set; } = null!;
+
+    /// <summary>Shows or hides the history strip (remembered), the cards under it moving down.</summary>
+    internal void ToggleStrip()
+    {
+        Strip.Toggle();
+        Prefs.Set("history.strip", Strip.Card.IsVisible);
+        HistoryButton.Classes.Set("on", Strip.Card.IsVisible);
+        AboveDrawer();
     }
 
     /// <summary>
     /// A thin upright line between groups of the top bar.
     /// </summary>
-    private static Border Sep() => new() { Width = 1, Height = 26, Background = Ui.Line, Margin = new Thickness(4, 0), VerticalAlignment = VerticalAlignment.Center };
+    private static Border Sep() => new() { Width = 1, Height = 26, Background = Tokens.Line, Margin = new Thickness(4, 0), VerticalAlignment = VerticalAlignment.Center };
 
     /// <summary>
     /// The top bar: back to the start page, the map's name, undo and redo, what is waiting to be saved and Save, and
@@ -55,8 +73,11 @@ public sealed partial class MainWindow
         MapButton.Tip("top.map");
         ToolTip.SetTip(UndoButton, Lang.T("top.undo"));
         ToolTip.SetTip(RedoButton, Lang.T("top.redo"));
-        HistoryButton.Click += (_, _) => ShowRight(History.Card.IsVisible ? null : History.Card);
-        History.Closed += () => HistoryButton.Classes.Set("on", false);
+        Strip = new HistoryStrip(() => Session, steps => History.Allow(steps));
+        Strip.Moved += () => { UpdateSaveBar(); History.Refresh(); };
+        Strip.ListAsked += () => ShowRight(History.Card.IsVisible ? null : History.Card);
+        Strip.Card.SizeChanged += (_, _) => AboveDrawer();
+        HistoryButton.Click += (_, _) => ToggleStrip();
         HistoryButton.Tip("top.history");
         ViewButton.Click += (_, _) => ShowRight(ViewPanelCard.IsVisible ? null : ViewPanelCard);
         ViewButton.Tip("top.view");
@@ -85,9 +106,9 @@ public sealed partial class MainWindow
         bar.LayoutUpdated += (_, _) => FitTopBar(bar.Bounds.Width,
             right.DesiredSize.Width + MapButton.DesiredSize.Width + bar.ColumnSpacing + 2 * left.ColumnSpacing);
         var card = Ui.Card(bar);
-        card.Height = 50;
+        card.Height = 44;
         card.Padding = new Thickness(Ui.Pad.Left, 0);
-        card.Margin = new Thickness(10, 10, 10, 0);
+        card.Margin = new Thickness(Edge, Edge, Edge, 0);
         card.VerticalAlignment = VerticalAlignment.Top;
         return card;
     }
@@ -95,7 +116,7 @@ public sealed partial class MainWindow
     /// <summary>
     /// The status bar's cursor readout: where the pointer is on the ground (see CursorReadout).
     /// </summary>
-    internal TextBlock CursorText { get; } = new() { FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap };
+    internal TextBlock CursorText { get; } = new() { FontSize = 12, Foreground = Tokens.Dim, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap };
 
     /// <summary>
     /// Where the pointer last was on the 3D view (null: off it), so the readout can follow a stroke's changes.

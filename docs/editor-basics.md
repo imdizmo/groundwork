@@ -37,9 +37,14 @@ Click the minimap to look there.
 
 ## History
 
-Every change is a step: a stroke, a placement, a move, a paste, a river point. **History** (`L`) lists them, newest
-first. Click one to go back to it; **Remove** takes one step out and keeps what came after. Steps Claude made carry a
-chip, and **Take back Claude's changes** removes them all.
+Every change is a step: a stroke, a placement, a move, a paste, a river point. **History** shows them as a strip along
+the top of the view, a box for the map as you opened it and one per step: the current one is orange, undone ones are
+dark. Click a box, or drag along the strip, to step back and forward; `←` and `→` step one at a time, and Undo and Redo
+move along it too.
+
+**List** at the end of the strip (`L`) lists the steps by name, newest first. Click one to go back to it; **Remove**
+takes one step out and keeps what came after. Steps Claude made carry a chip, and **Take back Claude's changes**
+removes them all.
 
 ## View panel
 

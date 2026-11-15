@@ -10,8 +10,8 @@ public sealed partial class MainWindow
     private void SetPendingPill(bool waiting)
     {
         _pendingPill.Background = waiting ? PillWaiting : Brushes.Transparent;
-        _pendingPill.BorderBrush = waiting ? PillWaitingBorder : Ui.Line;
-        PendingText.Foreground = waiting ? PillWaitingText : Ui.Muted;
+        _pendingPill.BorderBrush = waiting ? PillWaitingBorder : Tokens.Line;
+        PendingText.Foreground = waiting ? PillWaitingText : Tokens.Dim;
     }
 
     /// <summary>The save bar as the map now stands: what waits to be saved, Save, undo and redo.</summary>

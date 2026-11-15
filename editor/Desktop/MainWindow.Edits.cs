@@ -51,6 +51,7 @@ public sealed partial class MainWindow
             ShowAreaInfo(session.Scene);
         }
         History.Refresh();
+        Strip.Refresh();
         RefreshToolAfterChange();
     }
 

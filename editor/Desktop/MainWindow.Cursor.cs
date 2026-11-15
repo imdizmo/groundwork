@@ -21,7 +21,10 @@ public sealed partial class MainWindow
     /// The status bar (bottom): the cursor, the last message, the selection, walking or flying, and the controls.
     /// </summary>
     /// <summary>The status bar's hints: the camera's, or (the map) the tool's keys and the frame rate.</summary>
-    private readonly TextBlock _tips = new() { FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _tips = new() { FontSize = 12, Foreground = Tokens.Dim, VerticalAlignment = VerticalAlignment.Center };
+
+    /// <summary>The map's frame rate in the status bar, after the hints (it never shrinks).</summary>
+    private readonly TextBlock _fpsText = new() { FontSize = 12, Foreground = Tokens.Mute, VerticalAlignment = VerticalAlignment.Center, FontFeatures = FontFeatureCollection.Parse("+tnum") };
 
     /// <summary>The frame rate the map last showed (fps · draws), kept for the hint line.</summary>
     private string _mapFps = "";
@@ -32,6 +35,7 @@ public sealed partial class MainWindow
         if (!InMap)
         {
             _tips.Text = Lang.T("help.statusTips");
+            _fpsText.Text = "";
             return;
         }
         string hint = Tools.Mode switch
@@ -49,12 +53,15 @@ public sealed partial class MainWindow
             },
             _ => "Right drag turns · wheel zooms · middle drag slides",
         };
-        _tips.Text = hint + (_mapFps.Length > 0 ? "   ·   " + _mapFps : "");
+        _tips.Text = hint;
+        _fpsText.Text = _mapFps;
     }
 
     private Border StatusBar()
     {
-        var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto,Auto"), ColumnSpacing = 18 };
+        // The message and the key hints end in "…" (their whole text in a tooltip) before anything else gives way: the
+        // frame rate and the counts on the right never shrink.
+        var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,2*,Auto,Auto,*,Auto"), ColumnSpacing = 16 };
         var tips = _tips;
         tips.Text = Lang.T("help.statusTips");
         _selection.VerticalAlignment = _eye.VerticalAlignment = VerticalAlignment.Center;
@@ -65,15 +72,29 @@ public sealed partial class MainWindow
         Grid.SetColumn(_selection, 2);
         Grid.SetColumn(_eye, 3);
         Grid.SetColumn(tips, 4);
+        Grid.SetColumn(_fpsText, 5);
+        tips.TextTrimming = TextTrimming.CharacterEllipsis;
+        tips.HorizontalAlignment = HorizontalAlignment.Right;
+        foreach (var t in new[] { MessageText, tips })
+        {
+            t.PropertyChanged += (_, e) =>
+            {
+                if (e.Property == TextBlock.TextProperty)
+                {
+                    ToolTip.SetTip(t, string.IsNullOrEmpty(t.Text) ? null : t.Text);
+                }
+            };
+        }
         bar.Children.Add(CursorText);
         bar.Children.Add(MessageText);
         bar.Children.Add(_selection);
         bar.Children.Add(_eye);
         bar.Children.Add(tips);
+        bar.Children.Add(_fpsText);
         var card = Ui.Card(bar);
-        card.Margin = new Thickness(10, 0, 10, 10);
+        card.Margin = new Thickness(Edge, 0, Edge, Edge);
+        card.Padding = new Thickness(Ui.Pad.Left, 4);
         card.VerticalAlignment = VerticalAlignment.Bottom;
-        // A message on two lines makes the bar taller: the panels stop above it still.
         card.SizeChanged += (_, e) => KeepAboveStatusBar(e.NewSize.Height);
         return card;
     }
@@ -81,7 +102,7 @@ public sealed partial class MainWindow
     /// <summary>
     /// Where the panels over the view stop at the bottom: above the status bar (58 px with its usual one line).
     /// </summary>
-    private double _panelsBottom = 58;
+    private double _panelsBottom = 44;
 
     /// <summary>
     /// The tool column, the right-hand panels and the locations note end above the status bar, as tall as it is now.
@@ -89,11 +110,8 @@ public sealed partial class MainWindow
     /// <param name="barHeight">The status bar's height.</param>
     private void KeepAboveStatusBar(double barHeight)
     {
-        _panelsBottom = Math.Max(58, barHeight + 18);
-        foreach (var c in new[] { Tools.Rail.Parent as Control, ViewPanelCard, History.Card, HelpCard }.OfType<Control>())
-        {
-            c.Margin = new Thickness(c.Margin.Left, c.Margin.Top, c.Margin.Right, _panelsBottom);
-        }
+        _panelsBottom = barHeight + 2 * Edge;
+        AboveDrawer();
     }
 
     /// <summary>
@@ -120,7 +138,7 @@ public sealed partial class MainWindow
         {
             list.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             var k = new TextBlock { Text = rows[i].Keys, FontSize = 12.5 };
-            var w = new TextBlock { Text = rows[i].What, FontSize = 12.5, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+            var w = new TextBlock { Text = rows[i].What, FontSize = 12.5, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap };
             Grid.SetRow(k, i);
             Grid.SetRow(w, i);
             Grid.SetColumn(w, 1);

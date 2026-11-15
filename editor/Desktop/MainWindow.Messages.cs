@@ -69,7 +69,7 @@ public sealed partial class MainWindow
     /// <summary>
     /// The status bar's last message.
     /// </summary>
-    internal TextBlock MessageText { get; } = new() { FontSize = 12.5, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+    internal TextBlock MessageText { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
 
     /// <summary>
     /// Asks before writing into the world (replaced by tests).

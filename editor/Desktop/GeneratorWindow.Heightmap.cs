@@ -32,7 +32,7 @@ public sealed partial class GeneratorWindow
     /// <summary>The rows that pick a heightmap and say what its numbers are.</summary>
     private StackPanel HeightmapRows(Slider size)
     {
-        var file = new TextBlock { Text = "None: the generator's own hills", FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+        var file = new TextBlock { Text = "None: the generator's own hills", FontSize = 12, Foreground = Tokens.Dim, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
         var pick = new Button { Content = "From a heightmap…", FontSize = 12 };
         ToolTip.SetTip(pick, "A heightmap from another terrain tool (16-bit PNG, .r16, .raw or .r32, any width and height): the map is made over it, its shape kept.");
         var clear = new Button { Content = "None", FontSize = 12, IsVisible = false };
@@ -171,7 +171,7 @@ public sealed partial class GeneratorWindow
         return new StackPanel { Spacing = 8, Children = { row, widthRow, numbers } };
     }
 
-    private static TextBlock Unit(string unit) => new() { Text = unit, FontSize = 11, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Avalonia.Thickness(6, 0, 0, 0) };
+    private static TextBlock Unit(string unit) => new() { Text = unit, FontSize = 11, Foreground = Tokens.Dim, VerticalAlignment = VerticalAlignment.Center, Margin = new Avalonia.Thickness(6, 0, 0, 0) };
 
     /// <summary>A box for a number: set when typed (Enter or leaving it), then <see cref="NumberInput.Typed"/>.</summary>
     private static NumberInput NumberBox(Action<float> set, string tip)

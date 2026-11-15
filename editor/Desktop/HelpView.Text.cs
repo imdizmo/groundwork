@@ -30,7 +30,7 @@ public sealed partial class HelpView
     /// <param name="from">The first inline drawn (a caption after its picture); null for all of them.</param>
     private TextBlock Text(ContainerInline? inline, double size, double line, Markdig.Syntax.Inlines.Inline? from = null)
     {
-        var t = new TextBlock { FontSize = size, LineHeight = line, TextWrapping = TextWrapping.Wrap, Foreground = Ui.Text };
+        var t = new TextBlock { FontSize = size, LineHeight = line, TextWrapping = TextWrapping.Wrap, Foreground = Tokens.Text };
         t.Inlines ??= [];
         var links = new List<LinkSpan>();
         int at = 0;
@@ -59,7 +59,7 @@ public sealed partial class HelpView
                 Add(into, new Run(l.Content.ToString()), ref at);
                 break;
             case CodeInline c:
-                Add(into, new Run(c.Content) { FontFamily = Mono, Background = Ui.Panel2, FontSize = _codeSize }, ref at);
+                Add(into, new Run(c.Content) { FontFamily = Mono, Background = Tokens.Raised, FontSize = _codeSize }, ref at);
                 break;
             case LineBreakInline br:
                 Add(into, new Run(br.IsHard ? "\n" : " "), ref at);
@@ -69,7 +69,7 @@ public sealed partial class HelpView
                 break;
             case LinkInline { IsImage: true } pic:
                 // A picture within text: its description, as a picture this small would say nothing.
-                Add(into, new Run(HelpText.Of(pic)) { Foreground = Ui.Muted }, ref at);
+                Add(into, new Run(HelpText.Of(pic)) { Foreground = Tokens.Dim }, ref at);
                 break;
             case LinkInline link:
                 Link(into, link, link.Url ?? "", links, ref at);
@@ -119,14 +119,14 @@ public sealed partial class HelpView
     private void Link(InlineCollection into, ContainerInline link, string href, List<LinkSpan> links, ref int at)
     {
         int start = at;
-        var span = new Span { Foreground = Ui.Accent, TextDecorations = TextDecorations.Underline };
+        var span = new Span { Foreground = Tokens.Accent, TextDecorations = TextDecorations.Underline };
         Children(span.Inlines, link, links, ref at);
         into.Add(span);
         links.Add(new LinkSpan(start, at - start, href));
     }
 
     /// <summary>A link's text when it has no other: the address itself.</summary>
-    private static Run LinkRun(string text) => new(text) { Foreground = Ui.Accent, TextDecorations = TextDecorations.Underline };
+    private static Run LinkRun(string text) => new(text) { Foreground = Tokens.Accent, TextDecorations = TextDecorations.Underline };
 
     /// <summary>Adds a run, counting its characters.</summary>
     private static void Add(InlineCollection into, Run run, ref int at)

@@ -10,7 +10,7 @@ namespace Groundwork.Desktop;
 public sealed partial class SelectPanel
 {
     /// <summary>Explains the exact place boxes (where the selection is, or what Move by means).</summary>
-    private readonly TextBlock _info = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _info = new() { FontSize = 12, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap };
 
     /// <summary>Deletes the selection.</summary>
     internal Button DeleteButton { get; }

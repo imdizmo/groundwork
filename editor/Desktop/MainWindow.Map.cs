@@ -29,8 +29,8 @@ public partial class MainWindow
 
     private Border? _selectionBar;
 
-    /// <summary>The objects drawer along the bottom (ObjectsDrawer), made when the map is first opened.</summary>
-    private ObjectsDrawer? _drawer;
+    /// <summary>The objects drawer (ObjectsDrawer), made when the map is first opened; null until then.</summary>
+    internal ObjectsDrawer? Drawer { get; private set; }
 
     /// <summary>The rail and the tool cards (they end above the drawer).</summary>
     private readonly Panel _toolColumn = null!;
@@ -413,10 +413,10 @@ public partial class MainWindow
     /// <summary>A middle click on an object: its kind picked in the drawer, to place more of it.</summary>
     private void PickKindOfObject(int thing)
     {
-        if (Session?.Scene is { } scene && thing < scene.Things.Count && _drawer != null)
+        if (Session?.Scene is { } scene && thing < scene.Things.Count && Drawer != null)
         {
             var t = scene.Things[thing];
-            Msg(new Said(_drawer.PickKindOf(t.Prefab) is string kind ? $"Picked {kind}: click to place more" : $"{ThingName(t)} is not a kind of the catalog", ""));
+            Msg(new Said(Drawer.PickKindOf(t.Prefab) is string kind ? $"Picked {kind}: click to place more" : $"{ThingName(t)} is not a kind of the catalog", ""));
         }
     }
 
@@ -435,12 +435,12 @@ public partial class MainWindow
     /// <summary>The drawer made again where it is: the catalog's kinds read again.</summary>
     private void RenewDrawer()
     {
-        if (_drawer is { Card.Parent: Panel holder } old)
+        if (Drawer is { Card.Parent: Panel holder } old)
         {
             int at = holder.Children.IndexOf(old.Card);
             holder.Children.RemoveAt(at);
-            _drawer = NewDrawer();
-            holder.Children.Insert(at, _drawer.Card);
+            Drawer = NewDrawer();
+            holder.Children.Insert(at, Drawer.Card);
         }
     }
 
@@ -481,7 +481,7 @@ public partial class MainWindow
         {
             // Live: a pill with its state (UnrealLive)
             _liveDot = new Avalonia.Controls.Shapes.Ellipse { Width = 8, Height = 8, Fill = Brushes.Gray, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
-            _liveStatus = new TextBlock { Text = "off", Foreground = Ui.Muted, FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
+            _liveStatus = new TextBlock { Text = "off", Foreground = Tokens.Dim, FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
             _liveButton = new Avalonia.Controls.Primitives.ToggleButton
             {
                 Content = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 7, Children = { _liveDot, new TextBlock { Text = "Live", FontWeight = FontWeight.SemiBold, FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center }, _liveStatus } },
@@ -562,7 +562,7 @@ public partial class MainWindow
             bar.Children.Insert(h, _objectsButton);
             bar.Children.Insert(h, _checksButton);
             bar.Children.Insert(h, _layersButton);
-            foreach (var other in new[] { HistoryButton, ViewButton, HelpButton })
+            foreach (var other in new[] { ViewButton, HelpButton })
             {
                 other.Click += (_, _) => ShowOwnRight(null);
             }
@@ -576,7 +576,7 @@ public partial class MainWindow
                     UpdateSaveBar();
                 }
             };
-            _ownRight.Card.Margin = new Avalonia.Thickness(10, 70, 10, 58);
+            _ownRight.Card.Margin = new Avalonia.Thickness(Edge, PanelsTop, Edge, _panelsBottom);
             _ownRight.Card.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
             _ownRight.Card.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top;
             _ownRight.Card.IsVisible = false;
@@ -597,14 +597,8 @@ public partial class MainWindow
             _selectionCount = new TextBlock { FontWeight = FontWeight.SemiBold, FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, Margin = new Avalonia.Thickness(4, 0, 6, 0) };
             _selectionBar = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(235, 27, 30, 36)),
-                BorderBrush = Ui.Line,
-                BorderThickness = new Avalonia.Thickness(1),
-                CornerRadius = new Avalonia.CornerRadius(10),
-                Padding = new Avalonia.Thickness(8, 6),
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom,
-                Margin = new Avalonia.Thickness(0, 0, 0, 52),
                 IsVisible = false,
                 Child = new StackPanel
                 {
@@ -621,14 +615,18 @@ public partial class MainWindow
                     },
                 },
             };
+            Ui.AsCard(_selectionBar).Padding = new Avalonia.Thickness(8, 6);
             page.Children.Insert(page.Children.IndexOf(_ownRight.Card), _selectionBar);
             _cameraBar = CameraBar();
             page.Children.Insert(page.Children.IndexOf(_selectionBar), _cameraBar);
-            _drawer = NewDrawer();
-            page.Children.Insert(page.Children.IndexOf(_selectionBar), _drawer.Card);
+            Drawer = NewDrawer();
+            page.Children.Insert(page.Children.IndexOf(_selectionBar), Drawer.Card);
             Minimap = new Minimap(this);
             page.Children.Insert(page.Children.IndexOf(_selectionBar), Minimap.Card);
             Minimap.Card.SizeChanged += (_, _) => AboveDrawer();
+            _toolColumn.SizeChanged += (_, _) => AboveDrawer();
+            _editorPage.SizeChanged += (_, _) => AboveDrawer();
+            _cameraBar.SizeChanged += (_, _) => AboveDrawer();
             View.SelectionChanged += things =>
             {
                 _selectionBar.IsVisible = Session is { Scene.IsMap: true } && things.Count > 0;
@@ -647,7 +645,7 @@ public partial class MainWindow
         {
             RenewDrawer();
         }
-        _drawer?.Card.IsVisible = show;
+        Drawer?.Card.IsVisible = show;
         _cameraBar?.IsVisible = show;
         Minimap?.Card.IsVisible = show;
         ModToolPanel.PalettesElsewhere = show;
@@ -732,32 +730,46 @@ public partial class MainWindow
         }
         View.EyeChanged += _ => Mark();
         Mark();
-        return new Border
+        var bar = Ui.AsCard(new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(225, 27, 30, 36)),
-            BorderBrush = Ui.Line,
-            BorderThickness = new Avalonia.Thickness(1),
-            CornerRadius = new Avalonia.CornerRadius(10),
-            Padding = new Avalonia.Thickness(4),
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
-            Margin = new Avalonia.Thickness(0, 70, 0, 0),
+            Margin = new Avalonia.Thickness(0, PanelsTop, 0, 0),
             Child = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 4, Children = { buttons[0].Button, buttons[1].Button, buttons[2].Button } },
-        };
+        });
+        bar.Padding = new Avalonia.Thickness(4);
+        return bar;
     }
 
-    /// <summary>The tool column, the right-hand panels and the selection bar end above the drawer while it shows.</summary>
+    /// <summary>
+    /// Where the cards over the view go, 8 apart and 8 from its edges: under the top bar (and the history strip when it
+    /// shows), above the status bar and the drawer at the bottom, right of the drawer on the left.
+    /// </summary>
     private void AboveDrawer()
     {
-        double bottom = 58 + (_drawer is { Card.IsVisible: true } d ? d.Card.Bounds.Height + 8 : 0);
-        _toolColumn.Margin = new Avalonia.Thickness(10, 70, 10, bottom);
-        Minimap?.Card.Margin = new Avalonia.Thickness(0, 0, 10, bottom);
-        double map = Minimap is { Card.IsVisible: true } m ? m.Card.Bounds.Height + 8 : 0;
+        double top = PanelsTop + (Strip.Card.IsVisible ? Strip.Card.Bounds.Height + Ui.Gap : 0);
+        Strip.Card.Margin = new Avalonia.Thickness(Edge, PanelsTop, Edge, 0);
+        var d = Drawer is { Card.IsVisible: true } dr ? dr : null;
+        bool left = d is { Left: true };
+        double bottom = _panelsBottom + (d != null && !left ? d.Card.Bounds.Height + Ui.Gap : 0);
+        // On the left it goes between the rail and the tool's card (the rail keeps its place).
+        d?.Card.Margin = left ? new Avalonia.Thickness(Edge + Tools.Rail.Bounds.Width + Ui.Gap, top, 0, _panelsBottom) : new Avalonia.Thickness(Edge, 0, Edge, _panelsBottom);
+        Tools.Rail.Margin = new Avalonia.Thickness(0, 0, left ? d!.Card.Bounds.Width + Ui.Gap : 0, 0);
+        _toolColumn.Margin = new Avalonia.Thickness(Edge, top, Edge, bottom);
+        Minimap?.Card.Margin = new Avalonia.Thickness(0, 0, Edge, bottom);
+        double map = Minimap is { Card.IsVisible: true } m ? m.Card.Bounds.Height + Ui.Gap : 0;
         foreach (var right in new Control?[] { ViewPanelCard, History.Card, HelpCard, _ownRight?.Card })
         {
-            right?.Margin = new Avalonia.Thickness(10, 70, 10, bottom + map);
+            right?.Margin = new Avalonia.Thickness(Edge, top, Edge, bottom + map);
         }
-        _selectionBar?.Margin = new Avalonia.Thickness(0, 0, 0, bottom - 6);
+        // Centred over the view, but right of the tool column when that reaches the middle.
+        if (_cameraBar != null)
+        {
+            double middle = (_editorPage.Bounds.Width - _cameraBar.Bounds.Width) / 2, toolsEnd = _toolColumn.Bounds.Right + Ui.Gap;
+            _cameraBar.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left;
+            _cameraBar.Margin = new Avalonia.Thickness(Math.Max(middle, toolsEnd), top, 0, 0);
+        }
+        _selectionBar?.Margin = new Avalonia.Thickness(0, 0, 0, bottom);
     }
 
     /// <summary>The editor's own tools on the rail (Layers and Checks go to the right-hand panels).</summary>
@@ -812,7 +824,7 @@ public partial class MainWindow
             : (Color.FromRgb(76, 195, 138), text ?? $"synced {DateTime.Now:HH:mm:ss}");
         _liveDot.Fill = new SolidColorBrush(dot);
         _liveStatus.Text = words;
-        _liveStatus.Foreground = error ? new SolidColorBrush(dot) : Ui.Muted;
+        _liveStatus.Foreground = error ? new SolidColorBrush(dot) : Tokens.Dim;
     }
 
     /// <summary>Save stamp: the selection as a named stamp; the Stamp tool then offers it.</summary>

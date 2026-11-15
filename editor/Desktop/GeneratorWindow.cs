@@ -29,7 +29,7 @@ public sealed partial class GeneratorWindow : Window
     private readonly TerrainPreview _preview = new();
     /// <summary>The ground after each shaping step, so a change to a later one previews from there (one preview at a time uses it).</summary>
     private readonly ShapeCache _shapes = new();
-    private readonly TextBlock _status = new() { FontSize = 12, Foreground = Ui.Muted, Margin = new Thickness(12, 8), TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _status = new() { FontSize = 12, Foreground = Tokens.Dim, Margin = new Thickness(12, 8), TextWrapping = TextWrapping.Wrap };
     private readonly StackPanel _knobs = new() { Spacing = 4 };
     private readonly List<Action> _show = [];
     private readonly DispatcherTimer _later = new() { Interval = TimeSpan.FromMilliseconds(300) };
@@ -58,7 +58,7 @@ public sealed partial class GeneratorWindow : Window
         Title = isNew ? "New map" : $"Make {name} again";
         (Width, Height, MinWidth, MinHeight) = (1180, 800, 820, 560);
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = Ui.Panel2;
+        Background = Tokens.Raised;
         _later.Tick += (_, _) => { _later.Stop(); _ = Preview(); };
         Closed += (_, _) => _later.Stop();
     }
@@ -106,7 +106,7 @@ public sealed partial class GeneratorWindow : Window
         Spec? result = null;
         var make = new Button { Content = "Make it again", IsDefault = true }.Classed("primary");
         make.Click += (_, _) => { result = w.Asked(); w.Close(); };
-        w.Build([new TextBlock { Text = "Everything on the map is made again from these numbers. It is still as it was made, so nothing of yours is lost.", TextWrapping = TextWrapping.Wrap, FontSize = 12, Foreground = Ui.Muted }], make, []);
+        w.Build([new TextBlock { Text = "Everything on the map is made again from these numbers. It is still as it was made, so nothing of yours is lost.", TextWrapping = TextWrapping.Wrap, FontSize = 12, Foreground = Tokens.Dim }], make, []);
         await w.ShowDialog(owner);
         return result;
     }
@@ -138,7 +138,7 @@ public sealed partial class GeneratorWindow : Window
             FontSize = 13,
         };
         _styles = styles;
-        var about = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 12, Foreground = Ui.Muted, Text = _style >= 0 ? ZoneGenerator.Styles[_style].About : "" };
+        var about = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 12, Foreground = Tokens.Dim, Text = _style >= 0 ? ZoneGenerator.Styles[_style].About : "" };
         styles.SelectionChanged += (_, _) =>
         {
             _style = styles.SelectedIndex;
@@ -171,7 +171,7 @@ public sealed partial class GeneratorWindow : Window
         left.Children.Add(buttons);
         left.Children.Add(new ScrollViewer { Content = _knobs, Margin = new Thickness(0, 10, 0, 0), Padding = new Thickness(0, 0, 12, 0) });
         var right = new Grid { RowDefinitions = new RowDefinitions("*,Auto"), Margin = new Thickness(8, 14, 16, 14) };
-        right.Children.Add(new Border { Child = _preview, CornerRadius = new CornerRadius(8), ClipToBounds = true, BorderBrush = Ui.Line, BorderThickness = new Thickness(1) });
+        right.Children.Add(new Border { Child = _preview, CornerRadius = new CornerRadius(8), ClipToBounds = true, BorderBrush = Tokens.Line, BorderThickness = new Thickness(1) });
         Grid.SetRow(_status, 1);
         right.Children.Add(_status);
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("460,*") };
@@ -268,7 +268,7 @@ public sealed partial class GeneratorWindow : Window
             slider.Value = Math.Clamp(v, k.Min, k.Max);
             box.Text = v.ToString(format, CultureInfo.InvariantCulture);
         });
-        var unit = new TextBlock { Text = k.Unit, FontSize = 11, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0) };
+        var unit = new TextBlock { Text = k.Unit, FontSize = 11, Foreground = Tokens.Dim, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0) };
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("150,*,58,46"), ColumnSpacing = 6 };
         row.Children.Add(new TextBlock { Text = k.Label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
         row.Children.Add(Ui.Col(slider, 1));

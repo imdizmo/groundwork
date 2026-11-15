@@ -130,7 +130,7 @@ public sealed partial class SelectPanel
             Spacing = 4,
             Children =
             {
-                new TextBlock { Text = Lang.T("select.head.exact"), FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 0) },
+                new TextBlock { Text = Lang.T("select.head.exact"), FontSize = 10, Foreground = Tokens.Dim, Margin = new Thickness(0, 6, 0, 0) },
                 grid,
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ApplyButton, ByButton } },
                 _info,
@@ -156,7 +156,7 @@ public sealed partial class SelectPanel
                     ThroughBox,
                     new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 6, Children = { new TextBlock { Text = Lang.T("select.label.picks"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PickBox, 1) } },
                     GroundBox,
-                    new TextBlock { Text = Lang.T("select.head.saved"), FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 0) },
+                    new TextBlock { Text = Lang.T("select.head.saved"), FontSize = 10, Foreground = Tokens.Dim, Margin = new Thickness(0, 6, 0, 0) },
                     new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 6, Children = { SavedBox, Ui.Col(KeepButton, 1) } },
                     _savedRow,
                     _exact,
@@ -167,9 +167,9 @@ public sealed partial class SelectPanel
         Refresh();
     }
 
-    private readonly TextBlock _clickHint = new() { Text = Lang.T("select.hint.click"), FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _clickHint = new() { Text = Lang.T("select.hint.click"), FontSize = 12, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap };
 
-    private readonly TextBlock _keysHint = new() { Text = Lang.T("select.hint.keys"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _keysHint = new() { Text = Lang.T("select.hint.keys"), FontSize = 11, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap };
 
     /// <summary>
     /// The map: no buildings, claims or object data, Delete is on the selection bar, and the keys are

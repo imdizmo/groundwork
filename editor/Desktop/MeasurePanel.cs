@@ -17,7 +17,7 @@ public sealed class MeasurePanel
     /// <summary>
     /// The tape's hint: what to click next.
     /// </summary>
-    private readonly TextBlock _hint = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _hint = new() { FontSize = 12, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap };
     /// <summary>
     /// The measured values, a label and a value per row.
     /// </summary>
@@ -87,7 +87,7 @@ public sealed class MeasurePanel
             }
             if (r == _rowsMade.Count)
             {
-                var l = new TextBlock { FontSize = 12, Foreground = Ui.Muted };
+                var l = new TextBlock { FontSize = 12, Foreground = Tokens.Dim };
                 var v = new SelectableTextBlock { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Right };
                 Grid.SetRow(l, r);
                 Grid.SetRow(v, r);

@@ -47,7 +47,7 @@ public partial class MainWindow
         if (chosen != null && !ReferenceEquals(_modInUse, chosen))
         {
             ModToolPanel.Show(chosen);
-            _drawer?.Apply(chosen, ModToolPanel);
+            Drawer?.Apply(chosen, ModToolPanel);
             _modInUse = chosen;
             chosen.Chosen(_modContext!);
         }

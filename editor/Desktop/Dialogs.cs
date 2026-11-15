@@ -81,7 +81,7 @@ public static class Dialogs
         SizeToContent = SizeToContent.Height,
         CanResize = false,
         WindowStartupLocation = WindowStartupLocation.CenterOwner,
-        Background = Ui.Panel2,
+        Background = Tokens.Raised,
     };
 
     /// <summary>A dialog's buttons in a row on the right.</summary>

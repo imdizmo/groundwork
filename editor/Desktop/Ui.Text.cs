@@ -21,11 +21,11 @@ public static partial class Ui
     {
         var t = new TextBlock { FontSize = size, FontWeight = FontWeight.SemiBold, VerticalAlignment = valign };
         t.Inlines ??= [];
-        t.Inlines.Add(new Avalonia.Controls.Documents.Run("Ground") { Foreground = Accent });
+        t.Inlines.Add(new Avalonia.Controls.Documents.Run("Ground") { Foreground = Tokens.Accent });
         t.Inlines.Add(new Avalonia.Controls.Documents.Run("work"));
         return t;
     }
 
     /// <summary>A small grey wrapped explanation under a control.</summary>
-    public static TextBlock Hint(string text) => new() { Text = text, FontSize = 11.5, Foreground = Muted, TextWrapping = TextWrapping.Wrap };
+    public static TextBlock Hint(string text) => new() { Text = text, FontSize = 11.5, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap };
 }

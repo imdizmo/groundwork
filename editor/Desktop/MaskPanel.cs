@@ -117,14 +117,14 @@ public sealed class MaskPanel
             Spacing = 6,
             Children =
             {
-                new TextBlock { Text = Lang.T("mask.hint.matches"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
+                new TextBlock { Text = Lang.T("mask.hint.matches"), FontSize = 11, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap },
                 Pair(Lang.T("common.height"), HeightMin, HeightMax, Lang.T("common.metres")),
                 Pair(Lang.T("common.slope"), SlopeMin, SlopeMax, "°"),
                 new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,14"), ColumnSpacing = 4, Children = { new TextBlock { Text = Lang.T("common.paint"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PaintBox, 1) } },
                 new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,14"), ColumnSpacing = 4, Children = { new TextBlock { Text = Lang.T("mask.label.terrain"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(TerrainBox, 1) } },
                 Pair("", TerrainMin, TerrainMax, ""),
                 WarningText,
-                new TextBlock { Text = Lang.T("mask.hint.limits"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
+                new TextBlock { Text = Lang.T("mask.hint.limits"), FontSize = 11, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap },
             },
         };
         Card = Ui.AsCard(new Border

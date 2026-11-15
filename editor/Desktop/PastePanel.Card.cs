@@ -31,7 +31,7 @@ public sealed partial class PastePanel
                     Ui.Title(Lang.T("paste.label.paste"), HelpTopics.Tool(ToolMode.Paste)),
                     Info, GroundBox, ObjectsBox,
                     Row(Lang.T("common.height"), OffsetBox, metres: true),
-                    new TextBlock { Text = Lang.T("paste.head.repeat"), FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 4, 0, 0) },
+                    new TextBlock { Text = Lang.T("paste.head.repeat"), FontSize = 10, Foreground = Tokens.Dim, Margin = new Thickness(0, 4, 0, 0) },
                     Row(Lang.T("paste.label.copies"), CopiesBox),
                     Row(Lang.T("paste.label.along"), AlongBox),
                     Row(Lang.T("paste.label.gap"), GapBox, metres: true),
@@ -39,7 +39,7 @@ public sealed partial class PastePanel
                     new TextBlock
                     {
                         Text = Lang.T("paste.hint.click"),
-                        FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
+                        FontSize = 11, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap,
                     },
                 },
             },

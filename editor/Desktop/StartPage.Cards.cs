@@ -43,8 +43,8 @@ public sealed partial class StartPage
             Name = Found ? NameOf(folder) : Path.GetFileName(folder);
             var image = new Image { Stretch = Stretch.Uniform };
             var picture = new Border { Height = ThumbHeight, CornerRadius = new CornerRadius(4), ClipToBounds = true, Child = image };
-            Facts = new TextBlock { FontSize = 11, Foreground = Ui.Muted, Text = Found ? Lang.T("start.card.reading") : Lang.T("start.card.missing"), TextWrapping = TextWrapping.Wrap };
-            var when = new TextBlock { FontSize = 11, Foreground = Ui.Muted, Text = Found ? "" : Ui.Tilde(folder), TextTrimming = TextTrimming.CharacterEllipsis };
+            Facts = new TextBlock { FontSize = 11, Foreground = Tokens.Dim, Text = Found ? Lang.T("start.card.reading") : Lang.T("start.card.missing"), TextWrapping = TextWrapping.Wrap };
+            var when = new TextBlock { FontSize = 11, Foreground = Tokens.Dim, Text = Found ? "" : Ui.Tilde(folder), TextTrimming = TextTrimming.CharacterEllipsis };
             Button = new Button
             {
                 Width = CardWidth,

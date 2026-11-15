@@ -18,7 +18,7 @@ public sealed partial class HistoryPanel
     /// <summary>One row per change, rebuilt by <c>Refresh</c>.</summary>
     internal StackPanel Rows { get; } = new() { Spacing = 4 };
     /// <summary>How many changes are on the undo list (undone ones not counted); empty when none.</summary>
-    internal TextBlock Count { get; } = new() { FontSize = 11, Foreground = Ui.Muted };
+    internal TextBlock Count { get; } = new() { FontSize = 11, Foreground = Tokens.Dim };
     /// <summary>Take back Claude's changes; shown only while some of Claude's changes are in.</summary>
     internal Button TakeBackClaude { get; } = new Button { Content = Lang.T("history.label.takeBackClaude"), FontSize = 11, Padding = new Thickness(6, 1), IsVisible = false }.Tip("history.claude");
     /// <summary>The current edit session, null when no world is open.</summary>
@@ -44,7 +44,7 @@ public sealed partial class HistoryPanel
         Card = Ui.AsCard(new Border
         {
             // Just above the save bar.
-            Margin = new Thickness(10, 10, 10, 70),
+            Margin = new Thickness(8, 8, 8, 60),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Bottom,
             IsVisible = false,

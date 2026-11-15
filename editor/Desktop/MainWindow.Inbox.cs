@@ -100,6 +100,6 @@ public sealed partial class MainWindow
         MapRailTools();
         RenewDrawer();
         // The drawer finds by label: one model shown alone, several on All.
-        _drawer?.Reveal(models.Count == 1 ? MapTools.Catalog().Kinds.FirstOrDefault(k => k.Model == models[0])?.Label ?? "" : "");
+        Drawer?.Reveal(models.Count == 1 ? MapTools.Catalog().Kinds.FirstOrDefault(k => k.Model == models[0])?.Label ?? "" : "");
     }
 }

@@ -163,8 +163,8 @@ public sealed class ModToolPanel
         foreach (var ((title, sub, tag), i) in items.Select((x, i) => (x, i)))
         {
             var face = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
-            face.Children.Add(new StackPanel { Children = { new TextBlock { Text = title, FontSize = 12, FontWeight = FontWeight.SemiBold }, new TextBlock { Text = sub, FontSize = 10.5, Foreground = Ui.Muted } } });
-            var tagText = new TextBlock { Text = tag, FontSize = 10.5, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
+            face.Children.Add(new StackPanel { Children = { new TextBlock { Text = title, FontSize = 12, FontWeight = FontWeight.SemiBold }, new TextBlock { Text = sub, FontSize = 10.5, Foreground = Tokens.Dim } } });
+            var tagText = new TextBlock { Text = tag, FontSize = 10.5, Foreground = Tokens.Dim, VerticalAlignment = VerticalAlignment.Center };
             Grid.SetColumn(tagText, 1);
             face.Children.Add(tagText);
             var card = new Avalonia.Controls.Primitives.ToggleButton { Content = face, IsChecked = i == picked, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Avalonia.Thickness(10, 5) };
@@ -200,13 +200,13 @@ public sealed class ModToolPanel
         _toggleBoxes.Clear();
         _lists.Clear();
         // The name, a "?" with all the help, and the help's first sentence under them.
-        var more = new TextBlock { Text = "?", FontSize = 12, FontWeight = FontWeight.SemiBold, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Help) };
+        var more = new TextBlock { Text = "?", FontSize = 12, FontWeight = FontWeight.SemiBold, Foreground = Tokens.Dim, VerticalAlignment = VerticalAlignment.Center, Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Help) };
         ToolTip.SetTip(more, tool.Info.Help);
         var name = new TextBlock { Text = tool.Info.Name, FontSize = 14, FontWeight = FontWeight.SemiBold };
         Grid.SetColumn(more, 1);
         _body.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { name, more } });
         int stop = tool.Info.Help.IndexOf(". ", StringComparison.Ordinal);
-        _body.Children.Add(new TextBlock { Text = stop > 0 ? tool.Info.Help[..(stop + 1)] : tool.Info.Help, FontSize = 11.5, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap });
+        _body.Children.Add(new TextBlock { Text = stop > 0 ? tool.Info.Help[..(stop + 1)] : tool.Info.Help, FontSize = 11.5, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap });
         Panel into = _body;
         foreach (var c in tool.Controls)
         {
@@ -224,7 +224,7 @@ public sealed class ModToolPanel
         }
         if (tool.Mod != MapTools.Own)
         {
-            _body.Children.Add(new TextBlock { Text = Lang.T("mods.tool.from", tool.Mod), FontSize = 10, Foreground = Ui.Muted });
+            _body.Children.Add(new TextBlock { Text = Lang.T("mods.tool.from", tool.Mod), FontSize = 10, Foreground = Tokens.Dim });
         }
         AddTail();
     }
@@ -502,7 +502,7 @@ public sealed class ModToolPanel
             Content = (folded ? "▸ " : "▾ ") + s.Label.ToUpperInvariant(),
             FontSize = 10.5,
             FontWeight = FontWeight.SemiBold,
-            Foreground = Ui.Muted,
+            Foreground = Tokens.Dim,
             Background = Brushes.Transparent,
             BorderThickness = new Avalonia.Thickness(0),
             Padding = new Avalonia.Thickness(0, 6, 0, 0),

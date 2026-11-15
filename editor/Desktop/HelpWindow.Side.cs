@@ -2,8 +2,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Markdig.Syntax;
 using Groundwork.App;
+using Markdig.Syntax;
 
 namespace Groundwork.Desktop;
 
@@ -57,7 +57,7 @@ public sealed partial class HelpWindow
         {
             foreach (var (title, id) in Parts())
             {
-                var t = new TextBlock { Text = title, FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+                var t = new TextBlock { Text = title, FontSize = 12, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap };
                 var b = SideButton(t, new HelpTarget(Shown.Page, id), Shown.Anchor == id);
                 b.Margin = new Thickness(14, 0, 0, 0);
                 Side.Children.Add(b);
@@ -77,15 +77,15 @@ public sealed partial class HelpWindow
         Hits = HelpSearch.Carried.Find(query);
         if (Hits.Count == 0)
         {
-            Side.Children.Add(new TextBlock { Text = Lang.T("docs.noHits", query.Trim()), Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(6, 8) });
+            Side.Children.Add(new TextBlock { Text = Lang.T("docs.noHits", query.Trim()), Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(6, 8) });
             return;
         }
         foreach (var hit in Hits)
         {
             var lines = new StackPanel { Spacing = 2 };
-            lines.Children.Add(new TextBlock { Text = hit.Page, FontSize = 11, Foreground = Ui.Muted });
+            lines.Children.Add(new TextBlock { Text = hit.Page, FontSize = 11, Foreground = Tokens.Dim });
             lines.Children.Add(new TextBlock { Text = hit.Heading, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap });
-            lines.Children.Add(new TextBlock { Text = hit.Snippet, FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap });
+            lines.Children.Add(new TextBlock { Text = hit.Snippet, FontSize = 12, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap });
             var b = SideButton(lines, hit.Target, false);
             b.Padding = new Thickness(8, 6);
             Side.Children.Add(b);

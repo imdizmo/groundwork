@@ -11,7 +11,7 @@ public sealed partial class ToolPanel
     /// <summary>The options card's title: the brush's name.</summary>
     private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold };
     /// <summary>The options card's help line for the brush.</summary>
-    private readonly TextBlock _help = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _help = new() { FontSize = 12, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap };
     /// <summary>The option rows shown only for some brushes or shapes (Flatten, Naturalize, Turn, Erode, Falloff, stamps).</summary>
     private readonly Control _holeRows, _terraceRows, _flattenRows, _naturalRows, _turnRow, _erodeRows, _falloffRow, _stampOnceRows, _stampHeightRow;
     /// <summary>The stamps in the Shape list after the four shapes: the built-in ones, then loaded pictures.</summary>

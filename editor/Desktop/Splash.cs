@@ -12,9 +12,9 @@ namespace Groundwork.Desktop;
 /// </summary>
 public sealed class Splash : Window
 {
-    private readonly TextBlock _what = new() { FontSize = 12.5, Foreground = Ui.Muted };
-    private readonly TextBlock _percent = new() { FontSize = 12.5, Foreground = Ui.Muted, HorizontalAlignment = HorizontalAlignment.Right };
-    private readonly ProgressBar _bar = new() { Minimum = 0, Maximum = 1, Height = 4, MinHeight = 4, IsIndeterminate = true, Foreground = Ui.Accent, Background = Ui.Line };
+    private readonly TextBlock _what = new() { FontSize = 12.5, Foreground = Tokens.Dim };
+    private readonly TextBlock _percent = new() { FontSize = 12.5, Foreground = Tokens.Dim, HorizontalAlignment = HorizontalAlignment.Right };
+    private readonly ProgressBar _bar = new() { Minimum = 0, Maximum = 1, Height = 4, MinHeight = 4, IsIndeterminate = true, Foreground = Tokens.Accent, Background = Tokens.Line };
 
     /// <summary>The window, centred, with no frame.</summary>
     public Splash()
@@ -25,7 +25,7 @@ public sealed class Splash : Window
         CanResize = false;
         WindowDecorations = WindowDecorations.None;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        Background = Ui.Panel2;
+        Background = Tokens.Raised;
         Icon = MainWindow.AppIcon();
         var logo = new Image { Width = 64, Height = 64, Source = new Bitmap(Avalonia.Platform.AssetLoader.Open(new Uri($"avares://{typeof(MainWindow).Assembly.GetName().Name}/Assets/icon.png"))) };
         var status = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
@@ -34,7 +34,7 @@ public sealed class Splash : Window
         status.Children.Add(_percent);
         Content = new Border
         {
-            BorderBrush = Ui.Line2,
+            BorderBrush = Tokens.LineStrong,
             BorderThickness = new Thickness(1),
             Child = new DockPanel
             {
@@ -56,7 +56,7 @@ public sealed class Splash : Window
                                 Children =
                                 {
                                     Ui.BrandTitle(26, VerticalAlignment.Center),
-                                    new TextBlock { Text = Lang.T("start.tagline"), FontSize = 13, Foreground = Ui.Muted },
+                                    new TextBlock { Text = Lang.T("start.tagline"), FontSize = 13, Foreground = Tokens.Dim },
                                 },
                             },
                         },

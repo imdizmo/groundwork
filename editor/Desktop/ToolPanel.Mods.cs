@@ -105,7 +105,7 @@ public sealed partial class ToolPanel
     }
 
     /// <summary>The heading over Select when it leads the rail (maps).</summary>
-    private readonly TextBlock _capSelect = new() { Text = "SELECT", FontSize = 9, Foreground = Ui.Muted, LetterSpacing = 0.7, HorizontalAlignment = HorizontalAlignment.Center, IsVisible = false };
+    private readonly TextBlock _capSelect = new() { Text = "SELECT", FontSize = 9, Foreground = Tokens.Mute, LetterSpacing = 0.7, HorizontalAlignment = HorizontalAlignment.Center, IsVisible = false };
 
     /// <summary>Whether a map is open: its rail (Select first; ground, paint, place, water, map).</summary>
     public bool MapOpen { get; private set; }
@@ -183,7 +183,7 @@ public sealed partial class ToolPanel
         _modButtons.Clear();
         if (tools.Any(t => t.Mod != MapTools.Own))
         {
-            _modRail.Children.Add(new TextBlock { Text = Lang.T("rail.cap.mods").ToUpperInvariant(), FontSize = 9, Foreground = Ui.Muted, LetterSpacing = 0.7, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 5, 0, 1) });
+            _modRail.Children.Add(new TextBlock { Text = Lang.T("rail.cap.mods").ToUpperInvariant(), FontSize = 9, Foreground = Tokens.Mute, LetterSpacing = 0.7, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 5, 0, 1) });
         }
         string? section = null;
         foreach (var t in tools)
@@ -195,7 +195,7 @@ public sealed partial class ToolPanel
             if (t.Mod == MapTools.Own && OwnSection(t.Info.Id) != section)
             {
                 section = OwnSection(t.Info.Id);
-                _ownRail.Children.Add(new TextBlock { Text = section, FontSize = 9, Foreground = Ui.Muted, LetterSpacing = 0.7, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 5, 0, 1) });
+                _ownRail.Children.Add(new TextBlock { Text = section, FontSize = 9, Foreground = Tokens.Mute, LetterSpacing = 0.7, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 5, 0, 1) });
             }
             (t.Mod == MapTools.Own ? _ownRail : _modRail).Children.Add(b);
             _modButtons[t.Name] = b;

@@ -6,30 +6,16 @@ using Avalonia.Media;
 namespace Groundwork.Desktop;
 
 /// <summary>
-/// The look of the whole app, the web editor's (editor.html's :root): dark cards, amber accent, rounded
+/// The look of the whole app, the shared design's (Tokens): dark cards, amber accent, rounded
 /// buttons (plain, "primary" amber, "ghost" flat, "on" chosen), switches, and the same colours for every
 /// box and list. Applied once to the application; panels use Card and the classes below.
 /// </summary>
 public static partial class Ui
 {
-    /// <summary>The palette's colours, the Jatify design's (background, panels, lines, text, accent...).</summary>
-    public static readonly Color BgColor = Color.Parse("#0f0f10"), Panel2Color = Color.Parse("#1a1a1e"), LineColor = Color.Parse("#2a2a30"), Line2Color = Color.Parse("#3a3a42"),
-        TextColor = Color.Parse("#ffffff"), MutedColor = Color.Parse("#a7a7ad"), AccentColor = Color.Parse("#ec8219"), AccentInkColor = Color.Parse("#1a0e03"),
-        WarnColor = Color.Parse("#e0604b"), OkColor = Color.Parse("#7bc47f"), HoverColor = Color.Parse("#232328");
-
-    /// <summary>
-    /// Brushes of the palette's colours; Panel is the cards' slightly see-through background, Live the green tag of
-    /// changes already sent to the running game.
-    /// </summary>
-    public static readonly IBrush Bg = new SolidColorBrush(BgColor), Panel = new SolidColorBrush(Color.FromArgb(242, 26, 26, 30)), Panel2 = new SolidColorBrush(Panel2Color),
-        Line = new SolidColorBrush(LineColor), Line2 = new SolidColorBrush(Line2Color), Text = new SolidColorBrush(TextColor), Muted = new SolidColorBrush(MutedColor),
-        Accent = new SolidColorBrush(AccentColor), AccentInk = new SolidColorBrush(AccentInkColor), Warn = new SolidColorBrush(WarnColor), Ok = new SolidColorBrush(OkColor),
-        Hover = new SolidColorBrush(HoverColor), Live = new SolidColorBrush(Color.Parse("#8ff0b4"));
-
     /// <summary>The space inside every card, the same for all of them (whatever their size).</summary>
-    public static readonly Thickness Pad = new(10);
+    public static readonly Thickness Pad = new(Tokens.S3);
     /// <summary>The space between cards.</summary>
-    public const double Gap = 10;
+    public const double Gap = Tokens.S2;
 
     /// <summary>A floating card (tool options, the View panel...).</summary>
     public static Border Card(Control child) => AsCard(new Border { Child = child });
@@ -41,12 +27,12 @@ public static partial class Ui
     /// <returns>The same border.</returns>
     public static Border AsCard(Border b)
     {
-        b.Background = Panel;
-        b.BorderBrush = Line;
+        b.Background = Tokens.Overlay;
+        b.BorderBrush = Tokens.LineOverlay;
         b.BorderThickness = new Thickness(1);
-        b.CornerRadius = new CornerRadius(10);
+        b.CornerRadius = new CornerRadius(Tokens.RLg);
         b.Padding = Pad;
-        b.BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000");
+        b.BoxShadow = Tokens.Shadow1;
         return b;
     }
 
@@ -56,10 +42,10 @@ public static partial class Ui
     public static TextBlock Heading(string text, double top = 10) => new()
     {
         Text = text.ToUpperInvariant(),
-        FontSize = 11,
+        FontSize = Tokens.FsCaps,
         FontWeight = FontWeight.SemiBold,
-        Foreground = Muted,
-        LetterSpacing = 0.6,
+        Foreground = Tokens.Mute,
+        LetterSpacing = Tokens.CapsLetterSpacing,
         Margin = new Thickness(0, top, 0, 3),
     };
 
@@ -68,7 +54,7 @@ public static partial class Ui
     {
         var g = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
         g.Children.Add(new TextBlock { Text = name });
-        var n = new TextBlock { Text = count.ToString("N0"), Foreground = Muted, FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center };
+        var n = new TextBlock { Text = count.ToString("N0"), Foreground = Tokens.Mute, FontSize = Tokens.FsCaption, VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(n, 1);
         g.Children.Add(n);
         return g;

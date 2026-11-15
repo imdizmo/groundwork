@@ -7,7 +7,7 @@ using Avalonia.Media;
 namespace Groundwork.Desktop;
 
 /// <summary>
-/// The web editor's line icons (24 × 24 SVG paths, drawn with a 1.8 px stroke in the text colour), so
+/// The web editor's line icons (24 × 24 SVG paths, drawn with a 2 px stroke in the text colour), so
 /// both editors look alike.
 /// </summary>
 public static class Icons
@@ -62,13 +62,13 @@ public static class Icons
     /// <param name="name">A key of <c>Paths</c>.</param>
     /// <param name="size">Width and height on screen, in pixels.</param>
     /// <param name="stroke">Line width, in the icon's 24 × 24 units.</param>
-    public static Control Make(string name, double size = 18, double stroke = 1.8) => FromPath(Paths[name], size, stroke);
+    public static Control Make(string name, double size = 18, double stroke = 2) => FromPath(Paths[name], size, stroke);
 
     /// <summary>An icon from SVG path data in a 24 × 24 box (a mod's tool's own), in the colour of the text around it.</summary>
     /// <param name="data">The path data.</param>
     /// <param name="size">Width and height on screen, in pixels.</param>
     /// <param name="stroke">Line width, in the icon's 24 × 24 units.</param>
-    public static Control FromPath(string data, double size = 18, double stroke = 1.8)
+    public static Control FromPath(string data, double size = 18, double stroke = 2)
     {
         var path = new Avalonia.Controls.Shapes.Path
         {

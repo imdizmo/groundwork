@@ -76,7 +76,7 @@ public class HistoryPanelTests
         s.Shape(30, 30, Two, 3, 0, "one");
         s.Shape(60, 60, Two, 3, 0, "two");
         s.Undo();
-        w.HistoryButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+        w.ShowRightPanel("history");
         Assert.True(w.History.Card.IsVisible);
         Assert.Equal(2, w.History.Rows.Children.Count);
         Assert.Equal("1 change(s)", w.History.Count.Text);
@@ -87,6 +87,32 @@ public class HistoryPanelTests
         Assert.Equal("Redo to here", buttons.Single().Content);
         buttons[0].RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
         Assert.Equal(2, s.UndoList.Count);
+    }
+
+    // The History button shows the strip, one box per change after the map as opened: a jump back takes the changes
+    // after that box out, a jump forward puts the undone ones back, box 0 takes them all out; Undo moves along it.
+    [AvaloniaFact]
+    public async Task TheStripStepsThroughTheHistory()
+    {
+        var s = TestScenes.Flat(2);
+        var w = TestWindows.Editing(s);
+        s.Shape(30, 30, Two, 3, 0, "one");
+        s.Shape(60, 60, Two, 3, 0, "two");
+        s.Shape(90, 90, Two, 3, 0, "three");
+        w.HistoryButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+        Assert.True(w.Strip.Card.IsVisible);
+        Assert.False(w.History.Card.IsVisible);
+        await w.Strip.Jump(1);
+        Assert.Equal(["one"], s.UndoList.Select(c => c.Label));
+        await w.Strip.Jump(3);
+        Assert.Equal(3, s.UndoList.Count);
+        await w.Strip.Jump(0);
+        Assert.Empty(s.UndoList);
+        Assert.Equal(3, s.RedoList.Count);
+        await w.Strip.Jump(99);
+        Assert.Equal(3, s.UndoList.Count);
+        w.HistoryButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+        Assert.False(w.Strip.Card.IsVisible);
     }
 
     // A long history: the newest page of rows, then Show older with how many are left, which adds a page; shown

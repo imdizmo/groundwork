@@ -15,7 +15,7 @@ public sealed partial class PastePanel
     /// <summary>The Paste tool the panel drives.</summary>
     private readonly PasteTool _paste;
     /// <summary>What is on the clipboard (size, objects, copies, turn), or how to copy something.</summary>
-    internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap };
     /// <summary>Whether the paste puts down the copied ground shape and paint.</summary>
     internal CheckBox GroundBox { get; } = new() { Content = Lang.T("paste.label.ground"), IsChecked = true, FontSize = 12 };
     /// <summary>Whether the paste puts down the copied objects.</summary>

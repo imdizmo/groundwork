@@ -52,7 +52,7 @@ public sealed class ScriptWindow : Window
         Title = "Script";
         Width = 860;
         Height = 780;
-        Background = Ui.Bg;
+        Background = Tokens.Bg;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         _list.SelectionChanged += (_, _) =>
         {
@@ -84,12 +84,12 @@ public sealed class ScriptWindow : Window
         {
             Text = "Map (MinX…MaxZ, CenterX, Sea, Points, Inside) · Ground (Height, Original, Set, Raise, Lower, Shape, Mountain, Paint, Layers) · Objects (All, Kinds, OfGroup, OfKind, Near, Place, Move, Remove) · Noise.At · Rnd · Print. Metres, x east, z north. The Help's Script page has them all. A script runs with your rights on this computer: run only scripts you wrote or trust.",
             FontSize = 11,
-            Foreground = Ui.Muted,
+            Foreground = Tokens.Dim,
             TextWrapping = TextWrapping.Wrap,
         };
         var grid = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto,140,Auto"), Margin = new Thickness(12), RowSpacing = 8 };
         grid.Children.Add(_list);
-        var code = new Border { Child = Code, BorderBrush = Ui.Line, BorderThickness = new Thickness(1) };
+        var code = new Border { Child = Code, BorderBrush = Tokens.Line, BorderThickness = new Thickness(1) };
         Grid.SetRow(code, 1);
         grid.Children.Add(code);
         Grid.SetRow(bar, 2);

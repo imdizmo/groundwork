@@ -28,7 +28,7 @@ public sealed partial class GroundGraphWindow
         {
             if (Graph.Nodes.FirstOrDefault(n => n.Id == w.From) is { } a && Graph.Nodes.FirstOrDefault(n => n.Id == w.To) is { } b)
             {
-                _wires.Children.Add(new Path { Data = Curve(OutputAt(a), InputAt(b, w.Port)), Stroke = Ui.Line2, StrokeThickness = 2 });
+                _wires.Children.Add(new Path { Data = Curve(OutputAt(a), InputAt(b, w.Port)), Stroke = Tokens.LineStrong, StrokeThickness = 2 });
             }
         }
         foreach (var n in Graph.Nodes)
@@ -75,17 +75,17 @@ public sealed partial class GroundGraphWindow
         var body = new StackPanel { Margin = new Thickness(14, 8, 10, 8), Spacing = 0 };
         foreach (string input in kind.Inputs)
         {
-            body.Children.Add(new TextBlock { Text = input == "in" ? "ground" : input, Height = PortRow, FontSize = 11, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center });
+            body.Children.Add(new TextBlock { Text = input == "in" ? "ground" : input, Height = PortRow, FontSize = 11, Foreground = Tokens.Dim, VerticalAlignment = VerticalAlignment.Center });
         }
         if (kind.Inputs.Length == 0)
         {
-            body.Children.Add(new TextBlock { Text = Summary(n, kind), Height = PortRow, FontSize = 11, Foreground = Ui.Muted, TextTrimming = TextTrimming.CharacterEllipsis });
+            body.Children.Add(new TextBlock { Text = Summary(n, kind), Height = PortRow, FontSize = 11, Foreground = Tokens.Dim, TextTrimming = TextTrimming.CharacterEllipsis });
         }
         var card = new Border
         {
             Width = NodeWidth,
-            Background = Ui.Panel2,
-            BorderBrush = picked ? Ui.Accent : Ui.Line2,
+            Background = Tokens.Raised,
+            BorderBrush = picked ? Tokens.Accent : Tokens.LineStrong,
             BorderThickness = new Thickness(picked ? 2 : 1),
             CornerRadius = new CornerRadius(8),
             Child = new StackPanel { Children = { title, body } },
@@ -141,7 +141,7 @@ public sealed partial class GroundGraphWindow
 
     private static Ellipse Dot(Point at, bool full)
     {
-        var e = new Ellipse { Width = 13, Height = 13, Fill = full ? Ui.Accent : Ui.Panel2, Stroke = Ui.Accent, StrokeThickness = 2 };
+        var e = new Ellipse { Width = 13, Height = 13, Fill = full ? Tokens.Accent : Tokens.Raised, Stroke = Tokens.Accent, StrokeThickness = 2 };
         Canvas.SetLeft(e, at.X - 6.5);
         Canvas.SetTop(e, at.Y - 6.5);
         return e;
@@ -204,7 +204,7 @@ public sealed partial class GroundGraphWindow
         _settings.Children.Clear();
         if (Picked is not int id || Graph.Nodes.FirstOrDefault(n => n.Id == id) is not { } n || GroundNodes.Of(n.Kind) is not { } kind)
         {
-            _settings.Children.Add(new TextBlock { Text = "Click a node to see its numbers and its ground.", FontSize = 12, Foreground = Ui.Muted });
+            _settings.Children.Add(new TextBlock { Text = "Click a node to see its numbers and its ground.", FontSize = 12, Foreground = Tokens.Dim });
             return;
         }
         var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
@@ -213,7 +213,7 @@ public sealed partial class GroundGraphWindow
         remove.Click += (_, _) => Remove(n.Id);
         head.Children.Add(Ui.Col(remove, 1));
         _settings.Children.Add(head);
-        _settings.Children.Add(new TextBlock { Text = kind.Help, FontSize = 11.5, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap });
+        _settings.Children.Add(new TextBlock { Text = kind.Help, FontSize = 11.5, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap });
         if (kind.TextLabel is string label)
         {
             var text = new TextBox { Text = n.Text, FontSize = 12, PlaceholderText = kind.Id == "formula" ? "h * smooth(1 - sqrt(x*x + z*z) / 300)" : "a heightmap file" };
@@ -298,7 +298,7 @@ public sealed partial class GroundGraphWindow
         row.Children.Add(new TextBlock { Text = p.Label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
         row.Children.Add(Ui.Col(slider, 1));
         row.Children.Add(Ui.Col(box, 2));
-        row.Children.Add(Ui.Col(new TextBlock { Text = p.Unit, FontSize = 11, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center }, 3));
+        row.Children.Add(Ui.Col(new TextBlock { Text = p.Unit, FontSize = 11, Foreground = Tokens.Dim, VerticalAlignment = VerticalAlignment.Center }, 3));
         return row;
     }
 

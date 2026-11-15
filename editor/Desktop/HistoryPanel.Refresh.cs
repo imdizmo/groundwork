@@ -39,7 +39,7 @@ public sealed partial class HistoryPanel
         TakeBackClaude.IsVisible = s != null && ClaudesChanges(s).Count > 0;
         if (s == null || undo.Count + redo.Count == 0)
         {
-            Rows.Children.Add(new TextBlock { Text = Lang.T("history.none"), FontSize = 12, Foreground = Ui.Muted });
+            Rows.Children.Add(new TextBlock { Text = Lang.T("history.none"), FontSize = 12, Foreground = Tokens.Dim });
         }
         else
         {

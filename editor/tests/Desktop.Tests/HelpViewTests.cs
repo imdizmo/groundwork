@@ -76,10 +76,10 @@ public class HelpViewTests
         Assert.Equal("The map", ToolTip.GetTip(button));
         Assert.IsType<Bitmap>(((Image)((Border)button.Content!).Child!).Source);
         Assert.Equal("Its caption.", ((TextBlock)withCaption.Children[1]).Inlines!.Text);
-        Assert.Equal(Ui.Muted, ((TextBlock)withCaption.Children[1]).Foreground);
+        Assert.Equal(Tokens.Dim, ((TextBlock)withCaption.Children[1]).Foreground);
         Assert.IsType<Button>(page.Children[1]);
-        Assert.Equal(Ui.Muted, ((TextBlock)page.Children[2]).Foreground);
-        Assert.Equal(Ui.Text, ((TextBlock)page.Children[3]).Foreground);
+        Assert.Equal(Tokens.Dim, ((TextBlock)page.Children[2]).Foreground);
+        Assert.Equal(Tokens.Text, ((TextBlock)page.Children[3]).Foreground);
         button.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
         Assert.Equal(["enlarge images/overview.jpg"], clicks);
     }
@@ -100,7 +100,7 @@ public class HelpViewTests
         Assert.True(grid.ColumnDefinitions[1].Width.Value > grid.ColumnDefinitions[0].Width.Value);
         var cells = grid.Children.Cast<Border>().ToList();
         Assert.Equal(6, cells.Count);
-        Assert.Equal(Ui.Panel2, cells[0].Background);
+        Assert.Equal(Tokens.Raised, cells[0].Background);
         Assert.Null(cells[2].Background);
         Assert.Equal(1, cells[2].BorderThickness.Bottom);
         Assert.Equal(0, cells[5].BorderThickness.Bottom);

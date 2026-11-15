@@ -33,11 +33,19 @@ internal sealed class ObjectsDrawer
     private readonly WrapPanel _wrap = new();
     private readonly StackPanel _tabs = new() { Orientation = Orientation.Horizontal, Spacing = 3 };
     private readonly TextBox _search = new() { PlaceholderText = "Search objects", Width = 170, FontSize = 12 };
-    private readonly TextBlock _pickedText = new() { FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _pickedText = new() { FontSize = 12, Foreground = Tokens.Dim, VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _brushWith = new() { Content = "Brush with these", FontSize = 12 };
     private readonly Button _clear = new() { Content = "Clear", FontSize = 12 };
     private readonly ToggleButton _open = new() { FontSize = 12, FontWeight = FontWeight.SemiBold };
     private readonly ScrollViewer _scroll;
+    private readonly Button _dock = new Button { FontSize = 12, Padding = new Thickness(8, 2) }.Classed("ghost");
+    private readonly DockPanel _head = new() { LastChildFill = true };
+    private readonly StackPanel _middle = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
+    private readonly WrapPanel _right = new() { ItemSpacing = 6, LineSpacing = 6 };
+
+    /// <summary>The edge dragged to make the drawer taller (at the bottom) or wider (on the left).</summary>
+    private readonly Border _grip = new() { Background = Brushes.Transparent, Focusable = true };
+    private double? _gripFrom;
     private string _tab;
     private (int Index, Point From)? _press;
     private bool _dragging;
@@ -50,7 +58,7 @@ internal sealed class ObjectsDrawer
         _tab = w.Prefs.Get("map.drawer.tab", "All");
         var names = w.Prefs.Get(PickedKey, "").Split('|').ToHashSet(StringComparer.Ordinal);
         _picked.AddRange(Enumerable.Range(0, _kinds.Count).Where(i => names.Contains(_kinds[i].Model)));
-        _scroll = new ScrollViewer { Height = 124, Content = _wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        _scroll = new ScrollViewer { Content = _wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         foreach (var (k, i) in _kinds.Select((k, i) => (k, i)))
         {
             _tiles.Add((i, Tile(k, i)));
@@ -63,19 +71,20 @@ internal sealed class ObjectsDrawer
         _open.IsChecked = w.Prefs.Get("map.drawer.open", true);
         _open.IsCheckedChanged += (_, _) => Opened();
         ToolTip.SetTip(_open, "Open or close the objects (Ctrl+Space)");
-        var head = new DockPanel { LastChildFill = true };
-        var right = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { _pickedText, _clear, _brushWith } };
-        DockPanel.SetDock(_open, Dock.Left);
-        DockPanel.SetDock(right, Dock.Right);
-        head.Children.Add(_open);
-        head.Children.Add(right);
-        head.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(10, 0), Children = { _search, new ScrollViewer { HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, Content = _tabs } } });
-        Card = Ui.AsCard(new Border { Child = new StackPanel { Spacing = 8, Children = { head, _scroll } } });
-        Card.VerticalAlignment = VerticalAlignment.Bottom;
-        Card.HorizontalAlignment = HorizontalAlignment.Stretch;
-        Card.Margin = new Thickness(10, 0, 10, 58);
+        _right.Children.AddRange([_pickedText, _clear, _brushWith, _dock]);
+        _pickedText.VerticalAlignment = VerticalAlignment.Center;
+        _middle.Children.AddRange([_search, new ScrollViewer { HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, Content = _tabs }]);
+        _head.Children.AddRange([_open, _right, _middle]);
+        _dock.Click += (_, _) => DockOn(!Left);
+        Left = w.Prefs.Get("map.drawer.side", "bottom") == "left";
+        var body = new DockPanel { Children = { _head, _scroll } };
+        DockPanel.SetDock(_head, Dock.Top);
+        _head.Margin = new Thickness(0, 0, 0, 8);
+        Card = Ui.AsCard(new Border { Child = new Panel { Children = { body, _grip } } });
+        Card.Margin = new Thickness(8, 0, 8, 44);
+        Grip();
         Tabs();
-        Opened();
+        Docked();
         Marked();
         Pictures();
     }
@@ -108,9 +117,96 @@ internal sealed class ObjectsDrawer
     {
         bool open = _open.IsChecked == true;
         _w.Prefs.Set("map.drawer.open", open);
-        _open.Content = (open ? "▾ " : "▴ ") + $"Objects {_kinds.Count}";
-        _scroll.IsVisible = open;
-        _search.IsVisible = _tabs.IsVisible = open;
+        _open.Content = (open ? Left ? "◂ " : "▾ " : Left ? "▸ " : "▴ ") + $"Objects {_kinds.Count}";
+        _scroll.IsVisible = _grip.IsVisible = open;
+        _middle.IsVisible = _right.IsVisible = open;
+        // Shut, it is only its head: on the left, at the top of the column.
+        Card.Height = !open || Left ? double.NaN : Size;
+        Card.Width = open && Left ? Size : double.NaN;
+        Card.VerticalAlignment = Left ? open ? VerticalAlignment.Stretch : VerticalAlignment.Top : VerticalAlignment.Bottom;
+    }
+
+    /// <summary>Whether it is docked on the left of the view (else along the bottom).</summary>
+    public bool Left { get; private set; }
+
+    /// <summary>Docks it on the left or along the bottom, open (remembered).</summary>
+    internal void DockOn(bool left)
+    {
+        Left = left;
+        _w.Prefs.Set("map.drawer.side", left ? "left" : "bottom");
+        _open.IsChecked = true;
+        Docked();
+    }
+
+    /// <summary>Its height at the bottom (110 to 60% of the window), or its width on the left (220 to 560), remembered for each.</summary>
+    internal double Size
+    {
+        get => Left ? Math.Clamp(_w.Prefs.Get("map.drawer.width", 300.0), 220, 560) : Math.Clamp(_w.Prefs.Get("map.drawer.height", 190.0), 110, Math.Max(110, _w.Bounds.Height * 0.6));
+        set
+        {
+            _w.Prefs.Set(Left ? "map.drawer.width" : "map.drawer.height", Math.Round(value));
+            Opened();
+        }
+    }
+
+    /// <summary>Lays it out for its side: along the bottom its head is one row; on the left, rows one under the other.</summary>
+    private void Docked()
+    {
+        Card.HorizontalAlignment = Left ? HorizontalAlignment.Left : HorizontalAlignment.Stretch;
+        DockPanel.SetDock(_open, Left ? Dock.Top : Dock.Left);
+        DockPanel.SetDock(_right, Left ? Dock.Top : Dock.Right);
+        _right.Margin = Left ? new Thickness(0, 6) : default;
+        _middle.Orientation = Left ? Orientation.Vertical : Orientation.Horizontal;
+        _middle.Margin = Left ? default : new Thickness(10, 0);
+        _search.Width = Left ? double.NaN : 170;
+        _dock.Content = Left ? "Dock at the bottom" : "Dock on the left";
+        ToolTip.SetTip(_dock, Left ? "Put the objects back along the bottom of the view" : "Put the objects in a column on the left of the view, beside the tools");
+        _grip.Cursor = new Cursor(Left ? StandardCursorType.SizeWestEast : StandardCursorType.SizeNorthSouth);
+        // On the card's edge, over its padding.
+        double pad = Card.Padding.Left, gripSize = 6;
+        _grip.Margin = Left ? new Thickness(0, -pad, -pad - 1, -pad) : new Thickness(-pad, -pad - 1, -pad, 0);
+        _grip.Width = Left ? gripSize : double.NaN;
+        _grip.Height = Left ? double.NaN : gripSize;
+        _grip.HorizontalAlignment = Left ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
+        _grip.VerticalAlignment = Left ? VerticalAlignment.Stretch : VerticalAlignment.Top;
+        Opened();
+    }
+
+    /// <summary>The edge's drag and keys (arrows: 16 at a time): taller at the bottom, wider on the left.</summary>
+    private void Grip()
+    {
+        ToolTip.SetTip(_grip, "Drag to make the objects bigger or smaller");
+        double At(PointerEventArgs e) => Left ? e.GetPosition(_w).X : -e.GetPosition(_w).Y;
+        _grip.PointerEntered += (_, _) => _grip.Background = Tokens.AccentLine;
+        _grip.PointerExited += (_, _) => _grip.Background = _gripFrom == null ? Brushes.Transparent : Tokens.AccentLine;
+        _grip.PointerPressed += (_, e) =>
+        {
+            _gripFrom = At(e) - Size;
+            e.Pointer.Capture(_grip);
+            e.Handled = true;
+        };
+        _grip.PointerMoved += (_, e) =>
+        {
+            if (_gripFrom is { } from)
+            {
+                Size = At(e) - from;
+            }
+        };
+        _grip.PointerReleased += (_, e) =>
+        {
+            _gripFrom = null;
+            e.Pointer.Capture(null);
+            _grip.Background = Brushes.Transparent;
+        };
+        _grip.KeyDown += (_, e) =>
+        {
+            int d = e.Key switch { Key.Up or Key.Right => 16, Key.Down or Key.Left => -16, _ => 0 };
+            if (d != 0)
+            {
+                Size += d;
+                e.Handled = true;
+            }
+        };
     }
 
     /// <summary>One kind's picture, its name under it (all of it), picked ones outlined.</summary>
@@ -124,7 +220,7 @@ internal sealed class ObjectsDrawer
             _unpictured.Add((k.Model, image));
         }
         content.Children.Add(new TextBlock { Text = k.Label, FontSize = 11, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center });
-        var star = new TextBlock { Text = "★", FontSize = 11, Foreground = Ui.Accent, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, IsVisible = Favourite(k.Model) };
+        var star = new TextBlock { Text = "★", FontSize = 11, Foreground = Tokens.Accent, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, IsVisible = Favourite(k.Model) };
         var tile = new Border
         {
             Child = new Grid { Children = { content, star } },
@@ -132,7 +228,7 @@ internal sealed class ObjectsDrawer
             Margin = new Thickness(2),
             CornerRadius = new CornerRadius(6),
             BorderThickness = new Thickness(2),
-            Background = Ui.Panel2,
+            Background = Tokens.Raised,
             Cursor = new Cursor(StandardCursorType.Hand),
             Tag = star,
         };
@@ -293,7 +389,7 @@ internal sealed class ObjectsDrawer
         foreach (var (i, tile) in _tiles)
         {
             bool on = _picked.Contains(i);
-            tile.BorderBrush = on ? Ui.Accent : Brushes.Transparent;
+            tile.BorderBrush = on ? Tokens.Accent : Brushes.Transparent;
         }
         _pickedText.Text = _picked.Count switch
         {

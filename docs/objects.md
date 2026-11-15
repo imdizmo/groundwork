@@ -4,6 +4,9 @@ The objects drawer along the bottom (`Ctrl+Space`) holds the map's assets, from 
 group. Click one and click the ground to place it, or drag it into the view. A kind with no icon in the catalog gets a
 picture drawn from its model.
 
+Drag the drawer's top edge to make it taller. **Dock on the left** makes it a column between the rail and the tool's
+card; there, drag its right edge to make it wider. It stays where and as big as you left it.
+
 ## Object
 
 **Object** places one kind at a time: pick it, click the ground. `R` turns it 15°, `Shift+R` back.
