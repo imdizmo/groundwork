@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.3.0
+
+- **A new look**, shared with the other tools: the chosen tool is an orange wash and Save the only filled orange;
+  every card over the view is the same see-through card, 8 px from the edges and apart; quieter greys for counts and
+  headings; thicker icons; the status bar ends long messages in "…" before the frame time and counts give way.
+- **The objects drawer** is made taller by dragging its edge, or docked on the left beside the tools and made wider
+  there. It stays where you left it.
+- **History as a strip** along the top of the view, a box per change: click or drag along it to step back and
+  forward. **List** opens the History panel.
+- **Ground graph** (⋯ → Ground graph…): nodes joined on a canvas make and shape ground (hills, a heightmap, a mountain,
+  a formula, each shaping step, smooth, terraces, warp, detail, fold), with the picked node's ground in 3D, applied to
+  the map or saved as a heightmap.
+- **Script** (⋯ → Script…): a few lines of C# shape, paint and place on the open map, as one step in History.
+- **New map:** shaping steps in the order you choose (valleys, glaciers, strata, erosion, scree, sea, dunes, crags),
+  glaciers that carve U-shaped troughs, the coast worn back to benches and sea cliffs, dunes, meandering rivers, and a
+  map made over a GeoTIFF elevation model.
+- **Tools:** Shape and Mountain on the rail; Find rivers and lakes; the Mask by a terrain map (flow, wetness, ridges,
+  facing, snow); Object lays a row by dragging, places on a quarter-metre grid with Alt, picks a kind with a middle
+  click; Select's exact place has a Size box; ⋯ → Export the terrain maps writes flow, wetness, slope, snow and paint
+  maps.
+- **Models from other programs:** an asset browser or prop generator can send models straight into the open map,
+  with their Unreal meshes, a collection as a biome, and **Show in …** to open them in their program.
+- **Plugin SDK:** ToolEdit.Move places an object anew keeping its data.
+- Claude is told that text read from a map is data, never instructions.
+- Avalonia 12.1.5, Markdig 1.6.0, the MCP C# SDK 2.4.0.
+
 ## v0.2.1
 
 - **A new icon:** the Tiers island's side silhouette in height bands over the sea, in the editor's colours, on the
