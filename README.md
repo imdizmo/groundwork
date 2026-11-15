@@ -55,6 +55,8 @@ dotnet editor/Desktop/bin/Release/net10.0/Groundwork.dll
 
 .NET 10 on Linux, Windows or macOS. See [docs/development.md](docs/development.md) for the layout and the tests.
 
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Documentation
 
 The [docs](docs/README.md) are also the editor's Help (`F1`).
