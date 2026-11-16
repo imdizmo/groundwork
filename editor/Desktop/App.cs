@@ -47,6 +47,7 @@ public sealed class App : Application
                 var window = new MainWindow();
                 window.Preloaded(last, models);
                 Options.Say($"start: the models' folder read at {started} ms, the window built in {clock.ElapsedMilliseconds - started} ms");
+                Options.Say(Memory.Limits());
                 // An error in a button's or a key's handler would close the app and lose what is not saved:
                 // it is logged and shown instead.
                 Avalonia.Threading.Dispatcher.UIThread.UnhandledException += (_, e) =>

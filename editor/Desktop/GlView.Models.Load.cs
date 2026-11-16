@@ -36,8 +36,37 @@ public sealed partial class GlView
             {
                 LoadGate.Release();
             }
+            Collect();
             Wake();
         });
+    }
+
+    /// <summary>Models that became boxes since the models were last all read, and the last one's reason.</summary>
+    private int _boxed;
+
+    private string _boxedWhy = "";
+
+    /// <summary>Raised when the models are all read and some became boxes: how many, and why (the last one's reason).</summary>
+    public event Action<int, string>? Boxed;
+
+    /// <summary>What had been allocated at the last collection the loaders asked for.</summary>
+    private static long _collectedAt;
+
+    /// <summary>
+    /// A full collection in the background once the loaders have allocated another GB: reading models leaves large
+    /// arrays behind (decoded pictures, vertex lists) that only a full collection frees, and .NET waits for that until
+    /// near the memory it believes it has. A limit it cannot see (a Windows job set from outside) is otherwise reached
+    /// with most of it garbage.
+    /// </summary>
+    // ponytail: a fixed budget; fewer large arrays made while reading would lower the garbage itself
+    private static void Collect()
+    {
+        long now = GC.GetTotalAllocatedBytes();
+        if (now - Interlocked.Read(ref _collectedAt) > 1L << 30)
+        {
+            Interlocked.Exchange(ref _collectedAt, now);
+            GC.Collect(2, GCCollectionMode.Forced, blocking: false);
+        }
     }
 
     /// <summary>
@@ -101,6 +130,8 @@ public sealed partial class GlView
     private void FallBackToBox(Group g, Exception ex, Dictionary<string, ModelStore.ImageData?> images, List<string> claimed)
     {
         Log.Caught(ex, $"loading the model of {g.Key.Prefab} (drawn as a box)");
+        Interlocked.Increment(ref _boxed);
+        _boxedWhy = ex.Message;
         Status?.Invoke(Said.Of("world.msg.modelFailed", g.Key.Prefab, ex.Message));
         lock (_textures)
         {

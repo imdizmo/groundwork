@@ -21,9 +21,23 @@ public sealed partial class GlView
             _statsAt = now;
             var st = new Stats(_frames.Count, _frames.Average(f => f.Work), Scene?.Things.Count ?? 0, _batches.Count, _batches.Sum(b => b.Instances), _pending);
             LastStats = st;
+            // the models all read: how much memory that took (the peak is the process's whole life's)
+            if (_pending == 0 && _pendingWas > 0)
+            {
+                Options.Say($"models read; {Memory.Now()}");
+                if (Interlocked.Exchange(ref _boxed, 0) is int boxed and > 0)
+                {
+                    string why = _boxedWhy;
+                    Dispatcher.UIThread.Post(() => Boxed?.Invoke(boxed, why));
+                }
+            }
+            _pendingWas = _pending;
             Dispatcher.UIThread.Post(() => StatsChanged?.Invoke(st));
         }
     }
+
+    /// <summary>The models still being read at the last stats.</summary>
+    private int _pendingWas;
 
     /// <summary>Frames drawn over the last second.</summary>
     internal int FramesDrawn => _frames.Count;

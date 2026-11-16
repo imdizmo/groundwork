@@ -171,7 +171,7 @@ public sealed partial class ModelStore
                         }
                     }
                 }
-                return new ImageData(info.Width, info.Height, rgba);
+                return Smaller(new ImageData(info.Width, info.Height, rgba));
             }
             catch (Exception e) when (e is not OutOfMemoryException)
             {
@@ -179,6 +179,38 @@ public sealed partial class ModelStore
                 return null;
             }
         }
+
+        /// <summary>
+        /// A picture at most MaxTexture on its longer side (halved while larger): the view needs no more, and a map of
+        /// 2K and 4K pictures otherwise holds a quarter to a sixteenth more of them in memory and on the card.
+        /// </summary>
+        private static ImageData Smaller(ImageData img)
+        {
+            // ponytail: a 2×2 box filter in managed memory (no native buffers held by the decoder's allocator)
+            while (Math.Max(img.Width, img.Height) > MaxTexture)
+            {
+                int w = Math.Max(1, img.Width / 2), h = Math.Max(1, img.Height / 2);
+                byte[] src = img.Rgba, dst = new byte[w * h * 4];
+                for (int y = 0; y < h; y++)
+                {
+                    int y0 = Math.Min(y * 2, img.Height - 1), y1 = Math.Min((y * 2) + 1, img.Height - 1);
+                    for (int x = 0; x < w; x++)
+                    {
+                        int x0 = Math.Min(x * 2, img.Width - 1), x1 = Math.Min((x * 2) + 1, img.Width - 1);
+                        int a = ((y0 * img.Width) + x0) * 4, b = ((y0 * img.Width) + x1) * 4, c = ((y1 * img.Width) + x0) * 4, d = ((y1 * img.Width) + x1) * 4, o = ((y * w) + x) * 4;
+                        for (int k = 0; k < 4; k++)
+                        {
+                            dst[o + k] = (byte)((src[a + k] + src[b + k] + src[c + k] + src[d + k] + 2) >> 2);
+                        }
+                    }
+                }
+                img = new ImageData(w, h, dst);
+            }
+            return img;
+        }
+
+        /// <summary>The largest side a model's picture is kept at.</summary>
+        internal const int MaxTexture = 1024;
 
         /// <summary>An id's asset and index ("Tree#mesh2": Tree, 2), or null when it is not of that kind.</summary>
         private static (string Name, int Index)? Split(string id, string kind)

@@ -92,6 +92,7 @@ public sealed partial class MainWindow
             GlView.EyeMode.Fly => Lang.T("view.eye.fly"),
             _ => "",
         };
+        View.Boxed += (n, why) => Msg(new Said($"{n} {(n == 1 ? "model" : "models")} could not be read and {(n == 1 ? "is" : "are")} drawn as boxes ({why}). The log has each one (Open log, on the start page).", ""));
         View.Status += t => { Options.Say(t.English); Dispatcher.UIThread.Post(() => LoadedInfo.Text = t.Shown + "\n" + LoadedInfo.Text); };
     }
 
