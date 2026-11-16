@@ -53,19 +53,21 @@ public partial class MainWindow
             return;
         }
         var (_, count, _) = MapPack.Used(map);
-        string again = map.TeamId != null ? $" It is version {map.TeamVersion + 1} of the team's map." : "";
+        // an id from map.json (a teammate's pack, or edited by hand) that is not plain: published as a new map
+        bool known = Team.PlainId(map.TeamId);
+        string again = known ? $" It is version {map.TeamVersion + 1} of the team's map." : "";
         if (!await Ask("Publish to the team", $"{Team.Said(who)}\n\n{map.Name} goes to the team server at {server.Authority} with the {count} models its objects use; everyone on the team can open it.{again}", "Publish", Lang.T("common.cancel")))
         {
             return;
         }
-        string id = map.TeamId ?? Guid.NewGuid().ToString("N");
+        string id = known ? map.TeamId! : Guid.NewGuid().ToString("N");
         string zip = Path.Combine(Directory.CreateDirectory(Path.Combine(AppSettings.DataDir, "team")).FullName, $"{id}.zip");
         try
         {
             Msg(new Said("Packing the map for the team...", ""));
             var packed = await Task.Run(() => MapPack.Write(map, zip, withModels: true));
             Msg(new Said($"Sending {map.Name} to the team ({new FileInfo(zip).Length / 1e6:0.#} MB)...", ""));
-            var (row, error) = await Retrying(() => Team.Publish(server, id, map.Name, zip, map.TeamVersion));
+            var (row, error) = await Retrying(() => Team.Publish(server, id, map.Name, zip, known ? map.TeamVersion : 0));
             if (row == null)
             {
                 Msg(new Said($"Not published: {error}", ""));

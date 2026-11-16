@@ -82,6 +82,10 @@ public static class Team
     /// <param name="had">The version this copy is (0: a new map).</param>
     public static async Task<(MapRow? Map, string? Error)> Publish(Uri server, string id, string name, string zip, int had)
     {
+        if (!PlainId(id))
+        {
+            return (null, "The map's team id is not a plain one.");
+        }
         var (got, error) = await Call(server, "publishing the map", async () =>
         {
             await using var file = File.OpenRead(zip);
@@ -102,6 +106,10 @@ public static class Team
     /// <summary>A map's newest pack down into a file, its hash checked against the server's; null when done, else why not.</summary>
     public static async Task<string?> Download(Uri server, string id, string zip)
     {
+        if (!PlainId(id))
+        {
+            return "The team's map has an id that is not a plain one.";
+        }
         var (got, error) = await Call(server, "taking the team's map", async () =>
         {
             using var r = await Big.GetAsync(new Uri(server, $"maps/{Uri.EscapeDataString(id)}/pack"), HttpCompletionOption.ResponseHeadersRead);
@@ -120,6 +128,9 @@ public static class Team
         });
         return error ?? got;
     }
+
+    /// <summary>A map's id as the server takes it: 1 to 64 of A-Z, a-z, 0-9, '_' and '-' (it is a part of the path).</summary>
+    public static bool PlainId(string? id) => id is { Length: > 0 and <= 64 } && id.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-');
 
     /// <summary>The Launcher's address (empty: none).</summary>
     public static string Launcher => Environment.GetEnvironmentVariable(Variable)?.Trim() ?? "";

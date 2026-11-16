@@ -107,6 +107,10 @@ public sealed class TeamTests : IDisposable
         Assert.Null(Team.Base("a@nas"));
         var s = new Groundwork.App.AppSettings { Team = "" };
         Assert.Null(Team.Address(s));   // saved empty: offline, whatever the Launcher says
+        Assert.True(Team.PlainId("0f3a_b-C"));
+        Assert.False(Team.PlainId("../team/whoami"));
+        Assert.False(Team.PlainId("a?b"));
+        Assert.False(Team.PlainId(new string('a', 65)));
     }
 
     [Fact]
@@ -137,6 +141,8 @@ public sealed class TeamTests : IDisposable
         Assert.Equal(Path.Combine(under, "Isle 2"), folder);
         Assert.True(File.Exists(Path.Combine(folder, MapProject.FileName)));
 
+        Assert.NotNull(await Team.Download(_server, "../maps", down));
+        Assert.NotNull((await Team.Publish(_server, "m1/../x", "Isle", zip, 0)).Error);
         _damaged = true;
         Assert.NotNull(await Team.Download(_server, "m1", down));
         var (none, why) = await Team.Maps(new Uri(_server, "nowhere/"));
