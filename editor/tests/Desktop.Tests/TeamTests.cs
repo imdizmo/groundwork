@@ -100,7 +100,7 @@ public sealed class TeamTests : IDisposable
     [Fact]
     public void TheAddressIsAHostWithThePortAddedWhenNoneIsGiven()
     {
-        Assert.Equal(new Uri($"http://100.90.171.69:{Team.DefaultPort}/"), Team.Base("100.90.171.69"));
+        Assert.Equal(new Uri($"http://100.64.0.1:{Team.DefaultPort}/"), Team.Base("100.64.0.1"));
         Assert.Equal(new Uri("http://nas.tail:9000/"), Team.Base("nas.tail:9000"));
         Assert.Null(Team.Base("http://nas"));
         Assert.Null(Team.Base("nas/path"));
