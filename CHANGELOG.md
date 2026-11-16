@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.4.0
+
+- **Pack the map to share** (⋯): the map as one .zip with only the models its objects use, each with its own
+  files, so it opens complete on another computer. Nothing of your computer goes in (no models path, no Unreal
+  project). With or without the models, for packs you may not pass on.
+- **The team server:** with a team server set (Settings → Team, or given by the Jatify Launcher), ⋯ → **Publish to
+  the team** sends the packed map, and **From the team** on the start page opens a teammate's. People are known by
+  their Tailscale account; with none set, Groundwork works offline as before.
+- **Big maps load in far less memory:** what reading models leaves behind is freed as they load, and model pictures
+  are kept at 1024 px at most. A map with 155 models peaked at about 5.5 GB, now under 3 GB.
+- Models that cannot be read and are drawn as boxes are said in the message bar. The log records the memory .NET
+  sees at start (and on Windows whether a job limits it) and the memory used once the models are read.
+
 ## v0.3.0
 
 - **A new look**, shared with the other tools: the chosen tool is an orange wash and Save the only filled orange;
