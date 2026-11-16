@@ -46,6 +46,11 @@ public sealed partial class AppSettings
     public bool DriverOpenGl { get; set; }
 
     /// <summary>
+    /// The team server (host or host:port) chosen in Settings: null follows the Launcher's JATIFY_TEAM, empty is offline.
+    /// </summary>
+    public string? Team { get; set; }
+
+    /// <summary>
     /// How many steps the editor's history keeps (Settings); 0 or less: no limit (only a memory budget).
     /// </summary>
     public int HistorySteps { get; set; }

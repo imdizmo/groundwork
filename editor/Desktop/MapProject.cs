@@ -115,6 +115,12 @@ public sealed partial class MapProject
     public string? Catalog { get; set; }
     /// <summary>The model folder (glTF files, or ModelStore's Files format).</summary>
     public string? Models { get; set; }
+
+    /// <summary>The map's id on the team server (null: never published) and the version this copy is.</summary>
+    public string? TeamId { get; set; }
+
+    /// <summary>The team server's version of the map this copy is (0: none).</summary>
+    public int TeamVersion { get; set; }
     /// <summary>Where the stamps are kept.</summary>
     public string? Stamps { get; set; }
     /// <summary>The Unreal project Live talks to (its Saved/ has the plugin's address and token).</summary>
@@ -179,6 +185,8 @@ public sealed partial class MapProject
         m.UnrealApply = S(j["unreal"]?["apply"]) is string ua ? m.Abs(ua) : null;
         m.UnrealLayersTexture = S(j["unreal"]?["layersTexture"]);
         m.UnrealWaterPrefix = S(j["unreal"]?["waterPrefix"]) ?? m.UnrealWaterPrefix;
+        m.TeamId = S(j["team"]?["id"]);
+        m.TeamVersion = j["team"]?["version"]?.GetValue<int>() ?? 0;
         m.Generated = ReadGenerated(j["generator"]);
         m.BaseFile = S(j["generator"]?["base"]) is string gb ? m.Inside(gb) : null;
         return m;
@@ -200,6 +208,16 @@ public sealed partial class MapProject
         u["project"] = project;
         File.WriteAllText(json, j.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
         UnrealProject = project;
+    }
+
+    /// <summary>The map's id and version on the team server set in map.json as it is on disk, nothing else in it touched.</summary>
+    public void SetTeam(string id, int version)
+    {
+        string json = Path.Combine(Folder, FileName);
+        var j = JsonNode.Parse(File.ReadAllText(json))!.AsObject();
+        j["team"] = new JsonObject { ["id"] = id, ["version"] = version };
+        File.WriteAllText(json, j.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+        (TeamId, TeamVersion) = (id, version);
     }
 
     /// <summary>
@@ -267,6 +285,10 @@ public sealed partial class MapProject
         if (Generated is { } g)
         {
             j["generator"] = WriteGenerated(g);
+        }
+        if (TeamId != null)
+        {
+            j["team"] = new JsonObject { ["id"] = TeamId, ["version"] = TeamVersion };
         }
         NoLinks(Path.Combine(Folder, FileName));
         File.WriteAllText(Path.Combine(Folder, FileName), j.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));

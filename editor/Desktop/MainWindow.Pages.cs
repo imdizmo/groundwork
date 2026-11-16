@@ -20,6 +20,8 @@ public sealed partial class MainWindow
                     await OpenMap(folder);
                 }
             };
+            StartPage.TeamRequested += async () => await OpenFromTeam();
+            StartPage.TeamShown = Team.Address(Settings) != null;
             StartPage.NewMapRequested += async () => await NewMap();
             StartPage.HeightmapDropped += async path => await NewMap(path);
             StartPage.RemoveRequested += folder =>
@@ -36,6 +38,7 @@ public sealed partial class MainWindow
                 {
                     // Claude's connection, as the settings now say.
                     await ClaudeServer.Apply(Settings, this);
+                    StartPage.TeamShown = Team.Address(Settings) != null;
                 }
             };
         }

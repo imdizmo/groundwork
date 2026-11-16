@@ -314,4 +314,49 @@ public sealed class MapProjectTests : IDisposable
         Assert.Equal(other, again.UnrealProject);
         Assert.Equal("Lake_", again.UnrealWaterPrefix);
     }
+
+    [Fact]
+    public void APackHoldsTheMapAndOnlyTheModelsItUses()
+    {
+        var made = MapProject.Create("Shared", 1, generated: false, height: 2, seed: 1, under: _dir);
+        string models = Directory.CreateDirectory(Path.Combine(_dir, "Kit", "models")).FullName;
+        Directory.CreateDirectory(Path.Combine(models, "tex"));
+        File.WriteAllText(Path.Combine(models, "Tree.gltf"), """{"buffers":[{"uri":"Tree.bin"}],"images":[{"uri":"tex/Bark%20A.png"},{"uri":"../outside.png"},{"uri":"data:,x"}]}""");
+        File.WriteAllText(Path.Combine(models, "Tree.bin"), "b");
+        File.WriteAllText(Path.Combine(models, "tex", "Bark A.png"), "p");
+        File.WriteAllText(Path.Combine(_dir, "Kit", "outside.png"), "o");
+        File.WriteAllText(Path.Combine(models, "Unused.glb"), "u");
+        File.WriteAllText(Path.Combine(models, "catalog.json"), "{\"kinds\": []}");
+        File.WriteAllText(made.ObjectsFile, """[["Tree",0,0,0,0,0,0,1],["Tree@1_2_1",1,0,0,0,0,0,1],["Gone",2,0,0,0,0,0,1]]""");
+        var map = MapProject.Open(made.Folder);
+        map.Models = models;
+        map.WriteJson();
+        map.LinkUnreal(Path.Combine(_dir, "Game"));
+        string zip = Path.Combine(_dir, "Shared.zip");
+
+        var r = MapPack.Write(MapProject.Open(made.Folder), zip, withModels: true);
+
+        string top = Path.GetFileName(made.Folder);
+        using (var z = System.IO.Compression.ZipFile.OpenRead(zip))
+        {
+            var names = z.Entries.Select(e => e.FullName).ToHashSet();
+            Assert.Contains($"{top}/objects.json", names);
+            Assert.Contains($"{top}/models/Tree.gltf", names);
+            Assert.Contains($"{top}/models/Tree.bin", names);
+            Assert.Contains($"{top}/models/tex/Bark A.png", names);
+            Assert.Contains($"{top}/models/catalog.json", names);
+            Assert.Contains($"{top}/picture.png", names);
+            Assert.DoesNotContain($"{top}/models/Unused.glb", names);
+            Assert.DoesNotContain(names, n => n.Contains("outside"));
+            Assert.Equal(1, r.Models);
+            Assert.Equal(2, r.Left.Count);   // Gone, and the picture outside the models folder
+            var j = JsonNode.Parse(z.GetEntry($"{top}/{MapProject.FileName}")!.Open())!.AsObject();
+            Assert.Null(j["models"]);
+            Assert.Null(j["unreal"]?["project"]);
+        }
+
+        MapPack.Write(MapProject.Open(made.Folder), zip, withModels: false);
+        using var bare = System.IO.Compression.ZipFile.OpenRead(zip);
+        Assert.Equal([$"{top}/models/catalog.json"], bare.Entries.Select(e => e.FullName).Where(n => n.Contains("/models/")));
+    }
 }

@@ -55,4 +55,4 @@ ground steeper than its angle red: where a player cannot walk up, where the clif
 ## Settings
 
 **Settings** (from the start page) holds the language, the maps folder, how many steps History keeps, which plugins
-may run, and whether Claude may connect.
+may run, whether Claude may connect, and the team server (see [Sharing with the team](map.md#sharing-with-the-team)).

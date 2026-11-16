@@ -307,6 +307,39 @@ public partial class MainWindow
         Msg(new Said($"Heightmap written: {Path.GetFileName(file)}, {cols} x {rows}, 0 m = 32768, 128 steps a metre (Unreal at Z scale 100).", ""));
     }
 
+    /// <summary>The map as one .zip for someone else (MapPack): with the models its objects use, or without them.</summary>
+    private async Task PackMap()
+    {
+        if (MapProject.Current is not { } map)
+        {
+            return;
+        }
+        if (MapDirty && (!await Ask("Pack the map", "The map has changes not saved; the package holds the map as saved.", "Save and pack", Lang.T("common.cancel")) || !await SaveMap(quiet: true)))
+        {
+            return;
+        }
+        var (_, count, _) = MapPack.Used(map);
+        bool with = await Ask("Pack the map",
+            $"The map's objects use {count} models. Packed with them, the map opens complete on another computer.\n\nGive models only to someone allowed to have them: bought packs usually may not be passed on.",
+            "With the models", "Without them");
+        string? zip = await Pickers.SaveFile(StorageProvider, "Pack the map", map.Name + ".zip", [new("Zip") { Patterns = ["*.zip"] }]);
+        if (zip == null)
+        {
+            return;
+        }
+        Msg(new Said("Packing the map...", ""));
+        try
+        {
+            var r = await Task.Run(() => MapPack.Write(map, zip, with));
+            string left = r.Left.Count == 0 ? "" : $" Left out: {string.Join("; ", r.Left.Take(5))}{(r.Left.Count > 5 ? $" and {r.Left.Count - 5} more" : "")}.";
+            Msg(new Said($"Packed: {Path.GetFileName(zip)}, {new FileInfo(zip).Length / 1e6:0.#} MB{(with ? $", {r.Models} models" : ", no models")}. Unzip it and open the folder.{left}", ""));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            await Tell("The map could not be packed: " + ex.Message);
+        }
+    }
+
     /// <summary>The map's terrain maps (TerrainMaps: flow, wetness, slope and the rest) as 8-bit grey PNGs into a folder the user picks.</summary>
     private async Task ExportTerrainMaps()
     {
@@ -515,6 +548,10 @@ public partial class MainWindow
             };
             var export = new MenuItem { Header = "Export the heightmap (16-bit PNG or .r16)…" };
             export.Click += async (_, _) => await ExportHeightmap();
+            var pack = new MenuItem { Header = "Pack the map to share (one .zip, with its models)…" };
+            pack.Click += async (_, _) => await PackMap();
+            var publish = new MenuItem { Header = "Publish to the team…" };
+            publish.Click += async (_, _) => await PublishMap();
             var graph = new MenuItem { Header = "Ground graph…" };
             graph.Click += (_, _) => OpenGroundGraph();
             var script = new MenuItem { Header = "Script…" };
@@ -540,13 +577,14 @@ public partial class MainWindow
             undoAgain.Click += async (_, _) => await MakeAgain(_madeFrom?.Spec);
             var link = new MenuItem();
             link.Click += async (_, _) => await LinkUnreal(change: true);
-            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, graph, script, export, terrainMaps, link, landscape, models } };
+            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, graph, script, export, terrainMaps, pack, publish, link, landscape, models } };
             more.Opening += (_, _) =>
             {
                 link.Header = MapProject.Current?.UnrealProject is { } up
                     ? $"Unreal project: {Path.GetFileName(up)} (change…)"
                     : "Link to an Unreal project…";
                 again.IsVisible = MapProject.Current is { Untouched: true } && !MapDirty;
+                publish.IsVisible = Team.Address(Settings) != null;
                 undoAgain.IsVisible = again.IsVisible && _madeFrom?.Folder == MapProject.Current?.Folder;
             };
             _moreButton.Flyout = more;

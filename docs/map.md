@@ -143,6 +143,35 @@ first, then opens the bigger map.
 | `Ctrl+Space` | Show or hide the objects drawer. |
 | `F1` | This help, at the page of what you are using. |
 
+## Sharing a map
+
+**⋯ → Pack the map to share** writes the map as one `.zip` to give to someone else. It holds the map's folder as last
+saved (the editor offers to save first) and, if you choose **With the models**, the models its objects use, each with
+the files it reads (a `.gltf`'s `.bin` and pictures), in a `models` folder beside the map. Models the map does not place
+stay out. The package names nothing on your computer: `map.json` loses its models path and its Unreal project.
+
+They unzip it and open the folder; the map finds its models in its own `models` folder. Models that could not go in
+(not found, or a file outside the models folder) are listed in the message bar.
+
+Pack with the models only for someone allowed to have them: bought packs usually may not be passed on. **Without
+them** packs the map and its catalog, and the objects show as boxes until the models are put in `models`.
+
+## Sharing with the team
+
+A team can keep its maps on a team server of its own, reached over Tailscale. The server knows each person by their
+Tailscale account, so there is no password. With no team server set, Groundwork works offline as always.
+
+- **The address:** started from the Jatify Launcher, Groundwork uses the team server the Launcher gives. **Settings →
+  Team** shows it; turn off *Use the Launcher's team server* to type another (a host or `host:port`) or to leave it
+  empty and stay offline. **Check** asks the server who you are.
+- **⋯ → Publish to the team** packs the open map with the models it uses (as **Pack the map to share** does) and
+  sends it. Publishing it again sends a new version. If a teammate published a newer one since your copy, the server
+  refuses, and you open the team's version first.
+- **From the team**, on the start page, lists the maps the team keeps. Choose one and a folder; the map goes in a
+  folder of its own there and opens.
+
+When the server cannot be reached, Groundwork says so and offers to retry or to carry on offline.
+
 ## Exporting the heightmap
 
 **⋯ → Export the heightmap** writes the map's heights as they are now to a 16-bit grey PNG or a raw `.r16` file

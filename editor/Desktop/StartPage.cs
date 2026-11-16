@@ -83,9 +83,13 @@ public sealed partial class StartPage
         add.Click += (_, _) => NewMapRequested?.Invoke();
         var open = new Button { Content = Lang.T("start.label.openMap"), FontSize = 13, Padding = new Thickness(14, 8) }.Tip("start.openMapFolder");
         open.Click += (_, _) => OpenFolderRequested?.Invoke();
+        // from the team server: shown when one is set (TeamShown)
+        _fromTeam = new Button { Content = "From the team", FontSize = 13, Padding = new Thickness(14, 8), IsVisible = false };
+        ToolTip.SetTip(_fromTeam, "Open a map your team published to its team server");
+        _fromTeam.Click += (_, _) => TeamRequested?.Invoke();
         _search = new TextBox { PlaceholderText = Lang.T("start.search"), Width = 240, FontSize = 12.5, IsVisible = false }.Tip("start.search");
         _search.TextChanged += (_, _) => Filter();
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Top, Children = { _search, add, open } };
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Top, Children = { _search, add, open, _fromTeam } };
         Grid.SetColumn(actions, 1);
         var heading = new Grid
         {
@@ -149,6 +153,14 @@ public sealed partial class StartPage
 
     /// <summary>Open map folder clicked.</summary>
     public event Action? OpenFolderRequested;
+
+    /// <summary>Asks for a map from the team server.</summary>
+    public event Action? TeamRequested;
+
+    private readonly Button _fromTeam;
+
+    /// <summary>Whether a team server is set (its button shown).</summary>
+    public bool TeamShown { get => _fromTeam.IsVisible; set => _fromTeam.IsVisible = value; }
 
     /// <summary>A map chosen: its folder.</summary>
     public event Action<string>? MapRequested;

@@ -71,6 +71,41 @@ public static class Dialogs
         return result;
     }
 
+    /// <summary>One of a list (its index; null: cancelled). A double-click or Enter takes the one chosen.</summary>
+    /// <param name="owner">The window it is modal to.</param>
+    /// <param name="title">The dialog's title.</param>
+    /// <param name="text">What to choose.</param>
+    /// <param name="items">The choices, one line each.</param>
+    /// <param name="yes">The button that takes the choice.</param>
+    public static async Task<int?> Choose(Window owner, string title, string text, IReadOnlyList<string> items, string yes)
+    {
+        int? result = null;
+        var dialog = Modal(title, 560);
+        var list = new ListBox { ItemsSource = items, SelectedIndex = items.Count > 0 ? 0 : -1, MaxHeight = 360 };
+        var ok = new Button { Content = yes, IsDefault = true, IsEnabled = items.Count > 0 };
+        void Take()
+        {
+            if (list.SelectedIndex >= 0)
+            {
+                result = list.SelectedIndex;
+                dialog.Close();
+            }
+        }
+        ok.Click += (_, _) => Take();
+        list.DoubleTapped += (_, _) => Take();
+        var cancel = new Button { Content = Lang.T("common.cancel"), IsCancel = true }.Tip("dialog.cancel");
+        cancel.Click += (_, _) => dialog.Close();
+        dialog.Content = new StackPanel
+        {
+            Margin = new Thickness(18),
+            Spacing = 12,
+            Children = { new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 13 }, list, ButtonRow(ok, cancel) },
+        };
+        dialog.Opened += (_, _) => list.Focus();
+        await dialog.ShowDialog(owner);
+        return result;
+    }
+
     /// <summary>A dark modal window as tall as its content.</summary>
     /// <param name="title">Its title.</param>
     /// <param name="width">Its width.</param>

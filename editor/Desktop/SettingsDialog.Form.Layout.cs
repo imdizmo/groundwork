@@ -63,6 +63,7 @@ public static partial class SettingsDialog
                         H2(Lang.T("settings.extensions")),
                         Hint(Lang.T("settings.extensionsHint")),
                         _extensions,
+                        BuildTeam(),
                         BuildHistory(),
                         drawing,
                         _error,
