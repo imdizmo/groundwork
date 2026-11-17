@@ -42,11 +42,67 @@ internal static class MapPack
                 files.Add((Path.GetFullPath(file), entry));
             }
         }
+        // the exporter's layout (pieces/<name>.json, meshes/, tex/, its tables): read first, as the store does
+        JsonObject? materials = null;
+        bool Piece(string name)
+        {
+            string piece = Path.Combine(models, "pieces", name + ".json");
+            JsonArray? parts = null;
+            try
+            {
+                parts = Entry(piece) != null ? (JsonNode.Parse(File.ReadAllText(piece)) as JsonObject)?["parts"] as JsonArray : null;
+            }
+            catch (System.Text.Json.JsonException)
+            {
+            }
+            if (parts == null || Entry(piece) is not { } entry)
+            {
+                return false;
+            }
+            if (materials == null)
+            {
+                foreach (string table in new[] { "meshinfo.json", "materials.json", "objects.json", "names.json" })
+                {
+                    if (Entry(Path.Combine(models, table)) is { } t)
+                    {
+                        Add(Path.Combine(models, table), t);
+                    }
+                }
+                materials = File.Exists(Path.Combine(models, "materials.json")) ? JsonNode.Parse(File.ReadAllText(Path.Combine(models, "materials.json"))) as JsonObject ?? [] : [];
+            }
+            Add(piece, entry);
+            foreach (var part in parts.OfType<JsonObject>())
+            {
+                // ids and file names from the tables: only plain names, inside the models folder (Entry checks)
+                var files = new[] { ("meshes", Value(part["mesh"]) + ".bin"), ("tex", Value((materials[Value(part["mat"])] as JsonObject)?["map"])) };
+                foreach (var (dir, f) in files.Where(x => x.Item2.Length > 0 && x.Item2 != ".bin"))
+                {
+                    if (Entry(Path.Combine(models, dir, f)) is { } e)
+                    {
+                        Add(Path.Combine(models, dir, f), e);
+                    }
+                    else
+                    {
+                        left.Add($"{name}: {dir}/{f} (missing)");
+                    }
+                }
+            }
+            if (Entry(Path.Combine(models, "icons", name + ".png")) is { } icon)
+            {
+                Add(Path.Combine(models, "icons", name + ".png"), icon);
+            }
+            return true;
+        }
         foreach (string name in names)
         {
+            if (Piece(name))
+            {
+                found++;
+                continue;
+            }
             if (!byName.TryGetValue(name, out string? file) || Entry(file) is not { } entry)
             {
-                left.Add($"{name}: no glTF model of that name in the models folder");
+                left.Add($"{name}: no model of that name in the models folder");
                 continue;
             }
             found++;
@@ -85,6 +141,9 @@ internal static class MapPack
         }
         return (files, found, left);
     }
+
+    /// <summary>A JSON string's value, or empty.</summary>
+    private static string Value(JsonNode? n) => n is JsonValue v && v.TryGetValue(out string? s) ? s : "";
 
     /// <summary>Writes the package (a temporary file first, so a failed pack leaves nothing half written).</summary>
     /// <param name="m">The map, as saved.</param>

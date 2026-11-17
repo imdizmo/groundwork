@@ -334,7 +334,7 @@ public partial class MainWindow
             string left = r.Left.Count == 0 ? "" : $" Left out: {string.Join("; ", r.Left.Take(5))}{(r.Left.Count > 5 ? $" and {r.Left.Count - 5} more" : "")}.";
             Msg(new Said($"Packed: {Path.GetFileName(zip)}, {new FileInfo(zip).Length / 1e6:0.#} MB{(with ? $", {r.Models} models" : ", no models")}. Unzip it and open the folder.{left}", ""));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
         {
             await Tell("The map could not be packed: " + ex.Message);
         }

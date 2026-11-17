@@ -77,7 +77,7 @@ public partial class MainWindow
             string left = packed.Left.Count == 0 ? "" : $" Left out: {string.Join("; ", packed.Left.Take(5))}{(packed.Left.Count > 5 ? $" and {packed.Left.Count - 5} more" : "")}.";
             Msg(new Said($"Published to the team: {map.Name}, version {row.Version}, {packed.Models} models.{left}", ""));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
         {
             await Tell("The map could not be published: " + ex.Message);
         }

@@ -359,4 +359,37 @@ public sealed class MapProjectTests : IDisposable
         using var bare = System.IO.Compression.ZipFile.OpenRead(zip);
         Assert.Equal([$"{top}/models/catalog.json"], bare.Entries.Select(e => e.FullName).Where(n => n.Contains("/models/")));
     }
+
+    [Fact]
+    public void APackHoldsModelsInTheExportersLayoutToo()
+    {
+        var made = MapProject.Create("Pieces", 1, generated: false, height: 2, seed: 1, under: _dir);
+        string models = Path.Combine(_dir, "Exported");
+        foreach (string d in new[] { "pieces", "meshes", "tex", "icons" })
+        {
+            Directory.CreateDirectory(Path.Combine(models, d));
+        }
+        File.WriteAllText(Path.Combine(models, "materials.json"), """{"Bark": {"map": "bark.png"}, "Other": {"map": "other.png"}}""");
+        File.WriteAllText(Path.Combine(models, "meshinfo.json"), "{}");
+        File.WriteAllText(Path.Combine(models, "objects.json"), "{}");
+        File.WriteAllText(Path.Combine(models, "pieces", "Log.json"), """{"parts": [{"mesh": "Log", "sub": 0, "mat": "Bark"}]}""");
+        File.WriteAllText(Path.Combine(models, "pieces", "Unused.json"), """{"parts": [{"mesh": "Unused", "sub": 0, "mat": "Other"}]}""");
+        foreach (string f in new[] { "meshes/Log.bin", "meshes/Unused.bin", "tex/bark.png", "tex/other.png", "icons/Log.png" })
+        {
+            File.WriteAllText(Path.Combine(models, f), "x");
+        }
+        File.WriteAllText(made.ObjectsFile, """[["Log",0,0,0,0,0,0,1]]""");
+        var map = MapProject.Open(made.Folder);
+        map.Models = models;
+        map.WriteJson();
+        string zip = Path.Combine(_dir, "Pieces.zip");
+
+        var r = MapPack.Write(MapProject.Open(made.Folder), zip, withModels: true);
+
+        using var z = System.IO.Compression.ZipFile.OpenRead(zip);
+        string top = Path.GetFileName(made.Folder);
+        var inModels = z.Entries.Select(e => e.FullName).Where(n => n.Contains("/models/")).Select(n => n[(top.Length + 8)..]).Order().ToList();
+        Assert.Equal(["icons/Log.png", "materials.json", "meshes/Log.bin", "meshinfo.json", "objects.json", "pieces/Log.json", "tex/bark.png"], inModels);
+        Assert.Equal((1, 0), (r.Models, r.Left.Count));
+    }
 }
