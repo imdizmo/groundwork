@@ -172,6 +172,11 @@ Tailscale account, so there is no password. With no team server set, Groundwork 
 
 When the server cannot be reached, Groundwork says so and offers to retry or to carry on offline.
 
+**Crash reports:** when Groundwork closed unexpectedly (it crashed, was killed, or had an error it could not handle),
+the next start asks whether to send a report to the team, showing exactly what goes: a short note of the run
+(version, system, memory) and that run's log. Nothing is sent without **Send**, and nothing is asked with no team server
+set. The log of that run is kept as `Groundwork.previous.log` in the data folder.
+
 ## Exporting the heightmap
 
 **⋯ → Export the heightmap** writes the map's heights as they are now to a 16-bit grey PNG or a raw `.r16` file

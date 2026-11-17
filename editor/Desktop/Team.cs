@@ -167,6 +167,20 @@ public static class Team
         }
     }
 
+    /// <summary>A crash report (a zip) to the team: its id there, or why it was not taken.</summary>
+    public static async Task<(string? Id, string? Error)> SendCrash(Uri server, string version, byte[] zip)
+    {
+        string os = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "macos" : "linux";
+        var (got, error) = await Call(server, "sending the crash report", async () =>
+        {
+            using var body = new ByteArrayContent(zip);
+            body.Headers.ContentType = new("application/zip");
+            using var r = await Big.PostAsync(new Uri(server, $"team/crashes?tool=groundwork&version={Uri.EscapeDataString(version)}&os={os}"), body);
+            return r.IsSuccessStatusCode ? (S((JsonNode.Parse(await r.Content.ReadAsStringAsync()) as JsonObject)?["id"]), (string?)null) : (null, await Error(r));
+        });
+        return (got.Item1, error ?? got.Item2);
+    }
+
     /// <summary>The answer as a line for a person.</summary>
     public static string Said(Who w) =>
         $"Connected as {(w.Name.Length > 0 ? $"{w.Name} ({w.Login})" : w.Login)}" + (w.Role is { } r ? $", {r} on the team." : ", not on the team yet: ask its owner to add you.");

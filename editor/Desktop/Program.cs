@@ -44,9 +44,22 @@ public static class Program
             return;
         }
         // Everything said also goes to Groundwork.log in the data folder (a window app has no console on Windows).
+        // The last run's marker first (its log kept if it ended badly), before the log starts over.
+        if (!Options.Driver)
+        {
+            CrashReport.Begin();
+        }
         Groundwork.App.Log.Start(BuildInfo.Version);
-        AppDomain.CurrentDomain.UnhandledException += (_, e) => Options.Say($"crash: {Groundwork.App.Log.Scrub(e.ExceptionObject.ToString() ?? "")}");
-        TaskScheduler.UnobservedTaskException += (_, e) => Options.Say($"error in a background task: {Groundwork.App.Log.Scrub(e.Exception.ToString())}");
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            Options.Say($"crash: {Groundwork.App.Log.Scrub(e.ExceptionObject.ToString() ?? "")}");
+            CrashReport.Error(e.ExceptionObject.GetType().Name);
+        };
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            Options.Say($"error in a background task: {Groundwork.App.Log.Scrub(e.Exception.ToString())}");
+            CrashReport.Error(e.Exception.InnerException?.GetType().Name ?? e.Exception.GetType().Name);
+        };
         // Logging out, shutting down or `kill` (SIGTERM, SIGHUP): the tunnel closes,
         // then the app ends (changes not saved are lost, as when the computer turns off).
         using var term = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGTERM, Quit);
@@ -70,6 +83,11 @@ public static class Program
             // macOS: OpenGL (4.1, core), which the 3D view and the map draw with; Metal would leave them blank.
             .With(new AvaloniaNativePlatformOptions { RenderingMode = [AvaloniaNativeRenderingMode.OpenGl, AvaloniaNativeRenderingMode.Software] })
             .StartWithClassicDesktopLifetime(args);
+        // Closed (the window, or SIGTERM through Quit): a clean end, unless the run had an unhandled error.
+        if (!Options.Driver)
+        {
+            CrashReport.End();
+        }
     }
 
     /// <summary>

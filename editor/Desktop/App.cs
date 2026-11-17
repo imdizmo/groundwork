@@ -53,12 +53,17 @@ public sealed class App : Application
                 Avalonia.Threading.Dispatcher.UIThread.UnhandledException += (_, e) =>
                 {
                     Options.Say($"error: {Groundwork.App.Log.Scrub(e.Exception.ToString())}");
+                    CrashReport.Error(e.Exception.GetType().Name);
                     e.Handled = true;
                     window.ShowError(e.Exception);
                 };
                 desktop.MainWindow = window;
                 // The loading window stays until the main one has drawn: no blank moment between them.
-                window.Opened += (_, _) => splash.Close();
+                window.Opened += (_, _) =>
+                {
+                    splash.Close();
+                    _ = CrashReport.Offer(window, window.Settings, window.Tell);
+                };
                 window.Show();
             }, Avalonia.Threading.DispatcherPriority.Background);
         }

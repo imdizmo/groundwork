@@ -131,6 +131,10 @@ public sealed partial class GlView
     {
         Log.Caught(ex, $"loading the model of {g.Key.Prefab} (drawn as a box)");
         Interlocked.Increment(ref _boxed);
+        if (ex is OutOfMemoryException)
+        {
+            CrashReport.Error("out of memory while reading models");
+        }
         _boxedWhy = ex.Message;
         Status?.Invoke(Said.Of("world.msg.modelFailed", g.Key.Prefab, ex.Message));
         lock (_textures)
