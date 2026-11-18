@@ -174,6 +174,10 @@ public sealed class PlayLogTests : IDisposable
         var t = new ClaudeTools(w);
         Assert.StartsWith("2 sessions of 2 players", await t.PlaylogSummary());
         Assert.StartsWith("2 sessions of 2 players", await t.PlaylogSummary([a, b]));
+        // sessions with neither: said so, not an empty list
+        string calm = Write(Head + "\n{\"t\":0,\"e\":\"pos\",\"p\":[0,10,0],\"yaw\":0}\n", "calm.playlog");
+        w.OpenReplay([calm, calm]);
+        Assert.Equal(["No deaths and no stops in these sessions."], w.Replay.Lines);
         // one again: back to playing it
         Assert.StartsWith("Replaying a.playlog", w.OpenReplay([a]));
         Assert.False(w.View.Replay!.Faint);

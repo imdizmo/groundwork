@@ -207,6 +207,10 @@ public sealed class ReplayPanel
             _items.Add((0, s.P, $"{what}, {s.Sessions} sessions, at {s.P.X:0} {s.P.Z:0}"));
             marks.Add((s.P, death ? GlView.ReplayMark.Death : GlView.ReplayMark.Stop, MathF.Min(40, 6 + (4 * s.Count))));
         }
+        if (_items.Count == 0)
+        {
+            _items.Add((0, null, "No deaths and no stops in these sessions."));
+        }
         _list.ItemsSource = _items.Select(i => i.Text).ToList();
         _view.Replay = new GlView.ReplayShown([.. logs.SelectMany(l => l.Legs.Where(g => g.Map == ShownMap).Select(g => g.Points.Select(q => q.P).ToArray()))], marks, Faint: true);
         _view.ReplayPlayer = null;
