@@ -37,5 +37,6 @@ bottom.*
 - [Models from other programs](inbox.md)
 - [Plugins](plugins.md)
 - [Claude](claude.md)
+- [Replaying play sessions](playtest.md)
 - [Keys and mouse](help/shortcuts.md)
 - [Translating](translating.md)

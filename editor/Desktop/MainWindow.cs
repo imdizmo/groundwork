@@ -87,6 +87,8 @@ public sealed partial class MainWindow : Window
     /// The Measure tool's panel.
     /// </summary>
     internal MeasurePanel MeasurePanel { get; }
+    /// <summary>Replay: a recorded play session over the map (⋯ → Replay a play session).</summary>
+    internal ReplayPanel Replay { get; }
 
     /// <summary>The card of a mod's own tool (ToolMode.Mod).</summary>
     internal ModToolPanel ModToolPanel { get; }

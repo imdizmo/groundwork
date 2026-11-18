@@ -30,6 +30,7 @@ public sealed partial class MainWindow
         MaskPanel.PictureButton.Click += async (_, _) => await SaveMaskPicture();
         WireGroundTools();
         MeasurePanel = new MeasurePanel(View);
+        Replay = new ReplayPanel(View);
         ModToolPanel = new ModToolPanel(Prefs);
         WireModTools();
         PastePanel = new PastePanel(View.Paste);
@@ -90,7 +91,7 @@ public sealed partial class MainWindow
             Margin = new Avalonia.Thickness(Edge, PanelsTop, Edge, 44),
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
-            Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ModToolPanel.Card, PastePanel.Card, MaskPanel.Card },
+            Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ModToolPanel.Card, PastePanel.Card, MaskPanel.Card, Replay.Card },
         };
         // Every panel of the column scrolls when the window is too short for it (a bar only then).
         foreach (var card in tools.Children.OfType<Border>())

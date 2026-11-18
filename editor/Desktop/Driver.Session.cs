@@ -55,6 +55,34 @@ public static partial class Driver
         }
     }
 
+    /// <summary>The 'replay' command: replay &lt;file.playlog&gt; | replay seek &lt;seconds&gt; | replay close.</summary>
+    /// <param name="call">The command as given.</param>
+    private static Task<string> CmdReplay(Call call)
+    {
+        MainWindow w = call.W;
+        string[] args = call.Args;
+        string said = args.Length switch
+        {
+            2 when args[0] == "seek" && float.TryParse(args[1], System.Globalization.CultureInfo.InvariantCulture, out float t) => Seek(w, t),
+            1 when args[0] == "close" => Closed(w),
+            > 0 when args[0] is not ("seek" or "close") => w.OpenReplay(Path.GetFullPath(string.Join(' ', args))),
+            _ => throw new InvalidOperationException("replay <file.playlog>|seek <seconds>|close"),
+        };
+        return Task.FromResult(JsonSerializer.Serialize(new { said, time = w.Replay.Time, player = w.View.ReplayPlayer is var (p, yaw) ? new[] { p.X, p.Y, p.Z, yaw } : null, lines = w.Replay.Lines.Count }));
+
+        static string Seek(MainWindow w, float t)
+        {
+            w.Replay.SeekTo(t);
+            return "seeked";
+        }
+
+        static string Closed(MainWindow w)
+        {
+            w.Replay.Close();
+            return "closed";
+        }
+    }
+
     /// <summary>The 'panel' command (see the class summary).</summary>
     /// <param name="call">The command as given.</param>
     private static Task<string> CmdPanel(Call call)

@@ -130,6 +130,7 @@ public partial class MainWindow
         Brush.MapOpen = true;
         Tools.RelabelPaints();
         LayerMaskNames(true);
+        Replay.Close();
         Tools.ChooseSelect();
         _mapGround = (float[])scene.Heights.Clone();
         MapButtons(true);
@@ -326,6 +327,52 @@ public partial class MainWindow
         var (png, passed, w, h) = MaskPicture.Of(test, s.Ground.W, s.Ground.H);
         await File.WriteAllBytesAsync(file, png);
         Msg(new Said($"Mask picture written: {Path.GetFileName(file)}, {w} x {h}, white where it passes ({100.0 * passed / (s.Ground.W * s.Ground.H):0.#}% of the ground).", ""));
+    }
+
+    /// <summary>⋯ → Replay a play session: a .playlog over the open map (ReplayPanel).</summary>
+    private async Task OpenReplay()
+    {
+        if (MapProject.Current is null)
+        {
+            return;
+        }
+        if (await Pickers.File(StorageProvider, "Replay a play session", new("Play session (.playlog)") { Patterns = ["*.playlog"] }) is string file)
+        {
+            Msg(new Said(OpenReplay(file), ""));
+        }
+    }
+
+    /// <summary>Opens a .playlog in Replay over the open map; what happened, in words.</summary>
+    internal string OpenReplay(string file)
+    {
+        if (MapProject.Current is not { } map)
+        {
+            return "Open a map first.";
+        }
+        var (log, problem) = PlayLog.Read(file);
+        if (log == null)
+        {
+            return $"Cannot replay {Path.GetFileName(file)}: {problem}";
+        }
+        Replay.Open(log, map.Name, ReplayWarning(log, map));
+        return $"Replaying {Path.GetFileName(file)}: {log.Events.Count(e => e.E == "death")} deaths, {log.Stops.Count} stops.";
+    }
+
+    /// <summary>Why a session may not fit the open map (recorded on another map, or another version of it), or null.</summary>
+    internal static string? ReplayWarning(PlayLog log, MapProject map)
+    {
+        bool sameTeam = log.MapTeam != null && log.MapTeam == map.TeamId;
+        if (!sameTeam && log.MapName != map.Name)
+        {
+            return $"Recorded on the map {log.MapName}, not this one ({map.Name}): the path may not fit the ground.";
+        }
+        if (log.MapTeam == null || map.TeamId == null)
+        {
+            return log.MapVersion != null || map.TeamId != null ? "The map's version cannot be checked (the session or this map was never published to the team)." : null;
+        }
+        return log.MapVersion is int v && v != map.TeamVersion
+            ? $"Recorded on version {v} of this map; this is version {map.TeamVersion}: the ground may have changed since."
+            : null;
     }
 
     /// <summary>The map as one .zip for someone else (MapPack): with the models its objects use, or without them.</summary>
@@ -573,6 +620,8 @@ public partial class MainWindow
             pack.Click += async (_, _) => await PackMap();
             var publish = new MenuItem { Header = "Publish to the team…" };
             publish.Click += async (_, _) => await PublishMap();
+            var replay = new MenuItem { Header = "Replay a play session…" };
+            replay.Click += async (_, _) => await OpenReplay();
             var graph = new MenuItem { Header = "Ground graph…" };
             graph.Click += (_, _) => OpenGroundGraph();
             var script = new MenuItem { Header = "Script…" };
@@ -607,7 +656,7 @@ public partial class MainWindow
             undoAgain.Click += async (_, _) => await MakeAgain(_madeFrom?.Spec);
             var link = new MenuItem();
             link.Click += async (_, _) => await LinkUnreal(change: true);
-            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, graph, script, export, terrainMaps, pack, publish, link, landscape, models, placeAll } };
+            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, graph, script, export, terrainMaps, pack, publish, replay, link, landscape, models, placeAll } };
             more.Opening += (_, _) =>
             {
                 link.Header = MapProject.Current?.UnrealProject is { } up
@@ -1238,6 +1287,7 @@ public partial class MainWindow
         Brush.MapOpen = false;
         Tools.RelabelPaints();
         LayerMaskNames(false);
+        Replay.Close();
         MapButtons(false);
         Tools.SetMap(false);
         _pendingPill.IsVisible = true;

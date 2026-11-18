@@ -34,6 +34,7 @@ namespace Groundwork.Desktop;
 ///    unreal landscape|paint|models|objects  into the open Unreal level: the landscape made (and painted, its water
 ///                                   made), or only painted and its water made, the models it lacks imported,
 ///                                   every object placed; Unreal's answer
+///    replay &lt;file.playlog&gt;|seek &lt;s&gt;|close  a recorded play session over the open map (Replay)
 ///    docs &lt;page[#anchor]&gt;            the Help window on that place of the documentation ("map.md#controls")
 ///    docs search &lt;words&gt;            the Help window's search: {"hits": what it found}
 ///    docs shot &lt;file.png&gt;            a picture of the Help window
@@ -91,6 +92,7 @@ public static partial class Driver
         ["bench"] = CmdBench,
         ["map"] = CmdMap,
         ["unreal"] = CmdUnreal,
+        ["replay"] = CmdReplay,
         ["bounds"] = CmdBounds,
         ["docs"] = CmdDocs,
         ["state"] = CmdState,

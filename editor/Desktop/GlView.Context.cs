@@ -1,6 +1,6 @@
 using Avalonia.OpenGL;
-using Silk.NET.OpenGL;
 using Groundwork.App;
+using Silk.NET.OpenGL;
 
 namespace Groundwork.Desktop;
 
@@ -51,6 +51,9 @@ public sealed partial class GlView
         // A new context may take the mask's picture: tried again.
         _outlineFailed = false;
         _playersVao = _playersVbo = 0;
+        _replayPathVao = _replayPathVbo = _replayPlayerVao = _replayPlayerVbo = 0;
+        Array.Clear(_replayPostVao);
+        Array.Clear(_replayPostVbo);
         _lowFbo = _lowColor = _lowDepth = 0;
         _lowW = _lowH = 0;
         _lowFailed = null;

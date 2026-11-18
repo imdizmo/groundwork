@@ -78,6 +78,7 @@ public sealed partial class GlView
         DrawGizmo(s, vp);
         DrawMeasure(s, vp);
         DrawPlayers(s, vp);
+        DrawReplay(s, vp);
         DrawRivers(vp);
         DrawModPreview(vp);
         if (ShowNewMarkers)
