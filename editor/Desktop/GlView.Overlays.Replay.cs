@@ -6,8 +6,11 @@ namespace Groundwork.Desktop;
 // replay's time with a line the way they face.
 public sealed partial class GlView
 {
-    /// <summary>What Replay shows, in world metres; null: nothing.</summary>
-    internal sealed record ReplayShown(IReadOnlyList<Vector3[]> Legs, IReadOnlyList<(Vector3 P, ReplayMark Kind)> Marks);
+    /// <summary>What Replay shows, in world metres: the paths, the posts (place, kind, height in metres); null: nothing.</summary>
+    /// <param name="Legs">The paths walked, each without a break.</param>
+    /// <param name="Marks">The posts: where, of what kind, how tall in metres.</param>
+    /// <param name="Faint">The paths thin and half seen (several sessions at once).</param>
+    internal sealed record ReplayShown(IReadOnlyList<Vector3[]> Legs, IReadOnlyList<(Vector3 P, ReplayMark Kind, float Height)> Marks, bool Faint = false);
 
     /// <summary>The kinds of replay posts, each its colour.</summary>
     internal enum ReplayMark
@@ -53,17 +56,24 @@ public sealed partial class GlView
     private uint _replayPathVao, _replayPathVbo, _replayPlayerVao, _replayPlayerVbo;
     private readonly uint[] _replayPostVao = new uint[4], _replayPostVbo = new uint[4];
 
-    /// <summary>The path (segments half a metre over the ground points walked) and the posts (8 m tall, a cross 3 m wide at the top), in view space.</summary>
+    /// <summary>The path (segments half a metre over the ground points walked) and the posts (as tall as given, a cross 3 m wide at the top), in view space.</summary>
     internal static (float[] Path, float[][] Posts) ReplayLines(WorldScene s, ReplayShown r)
     {
         var path = new List<float>();
         foreach (var leg in r.Legs)
         {
+            // a point every 3 m or more (and the last): a second's walk is under 2 m, and every line is drawn each frame
+            int kept = 0;
             for (int i = 1; i < leg.Length; i++)
             {
-                var a = ToView(s, leg[i - 1]) + new Vector3(0, 0.5f, 0);
+                if (i < leg.Length - 1 && Vector3.DistanceSquared(leg[i], leg[kept]) < 9)
+                {
+                    continue;
+                }
+                var a = ToView(s, leg[kept]) + new Vector3(0, 0.5f, 0);
                 var b = ToView(s, leg[i]) + new Vector3(0, 0.5f, 0);
                 path.AddRange([a.X, a.Y, a.Z, b.X, b.Y, b.Z]);
+                kept = i;
             }
         }
         var posts = new List<float>[4];
@@ -71,10 +81,10 @@ public sealed partial class GlView
         {
             posts[k] = [];
         }
-        foreach (var (p, kind) in r.Marks)
+        foreach (var (p, kind, height) in r.Marks)
         {
             var c = ToView(s, p);
-            var top = c + new Vector3(0, 8, 0);
+            var top = c + new Vector3(0, height, 0);
             var list = posts[(int)kind];
             list.AddRange([c.X, c.Y, c.Z, top.X, top.Y, top.Z]);
             list.AddRange([top.X - 1.5f, top.Y, top.Z, top.X + 1.5f, top.Y, top.Z, top.X, top.Y, top.Z - 1.5f, top.X, top.Y, top.Z + 1.5f]);
@@ -107,7 +117,7 @@ public sealed partial class GlView
         }
         if (d.Path.Length > 0)
         {
-            DrawLines(ref _replayPathVao, ref _replayPathVbo, d.Path, vp, new Vector4(1, 0.8f, 0.2f, 1), width: 1.5f);
+            DrawLines(ref _replayPathVao, ref _replayPathVbo, d.Path, vp, new Vector4(1, 0.8f, 0.2f, r.Faint ? 0.3f : 1), blend: r.Faint, width: r.Faint ? 0 : 1.5f);
         }
         for (int k = 0; k < 4; k++)
         {

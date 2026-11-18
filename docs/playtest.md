@@ -2,7 +2,7 @@
 
 A game can record how people play a level made from a map: where they walked, where they died, where they stood
 still, which quests they took. **⋯ → Replay a play session…** opens such a recording (a `.playlog` file) over the map
-it was played on.
+it was played on; pick several at once to see where many players went.
 
 ## The Replay card
 
@@ -15,11 +15,19 @@ it was played on.
 - The list holds the session's events in time order: pick one to go to its time and place.
 - **Close** takes the session off the map. Opening another map closes it too.
 
+## Several sessions at once
+
+Pick several files together (up to 200) and Replay shows them all: every path as a thin, faint line, and where people
+died (red) and stood still (orange) as posts that grow taller where more did. Deaths and stops within 8 m of each other
+count as one place. The list holds those places, most first, with how many sessions they happened in and, for deaths,
+what killed them; pick one to go there.
+
 The card warns when the session was played on another map, or on another version of this one (the map's version on
 the team server): the ground may have changed since.
 
-Claude reads the same facts with its `playlog_summary` tool: the session's length and paused time, how it ended, each
-death with its place and cause, the longest stops and the quest steps.
+Claude reads the same facts with its `playlog_summary` tool: for one session its length and paused time, how it ended,
+each death with its place and cause, the longest stops and the quest steps; for several, a line each and the places
+where most died and stood still.
 
 ## The file
 

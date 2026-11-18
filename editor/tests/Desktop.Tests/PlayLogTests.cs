@@ -106,7 +106,7 @@ public sealed class PlayLogTests : IDisposable
         var s = map.Read().Session!;
         var w = TestWindows.Editing(s);
         string file = Write(Session());
-        Assert.StartsWith("Replaying s.playlog: 1 deaths, 1 stops", w.OpenReplay(file));
+        Assert.StartsWith("Replaying s.playlog: 1 deaths, 1 stops", w.OpenReplay([file]));
         Assert.Equal(["0:40  stood still 0:42", "1:21  quest q_well: accept", "1:22  death, by Wolf", "1:30  respawn", "1:32  teleport", "1:35  end: quit"], w.Replay.Lines);
         Assert.NotNull(w.View.Replay);
         Assert.Equal(3, w.View.Replay!.Legs.Count);
@@ -114,8 +114,8 @@ public sealed class PlayLogTests : IDisposable
         Assert.Equal(10, w.View.ReplayPlayer!.Value.P.X, 3);
         var t = new ClaudeTools(w);
         Assert.Contains("by Wolf", await t.PlaylogSummary());
-        Assert.Contains("by Wolf", await t.PlaylogSummary(file));
-        Assert.StartsWith("Give a .playlog", await t.PlaylogSummary(Path.Combine(_dir, "map.json")));
+        Assert.Contains("by Wolf", await t.PlaylogSummary([file]));
+        Assert.StartsWith("Give 1 to 200 .playlog files", await t.PlaylogSummary([Path.Combine(_dir, "map.json")]));
         w.Replay.Close();
         Assert.Null(w.View.Replay);
         Assert.StartsWith("No play session", await t.PlaylogSummary());
@@ -134,5 +134,48 @@ public sealed class PlayLogTests : IDisposable
         map.SetTeam("t9", 2);
         var other = PlayLog.Read(Write(Session().Replace("\"name\":\"Field\"", "\"name\":\"Hills\""), "o.playlog")).Log!;
         Assert.Contains("Recorded on the map Hills", MainWindow.ReplayWarning(other, map));
+    }
+
+    [Fact]
+    public void SeveralSessionsGatherTheirDeathsAndStopsByPlace()
+    {
+        var a = PlayLog.Read(Write(Session(), "a.playlog")).Log!;
+        // a second player dies 3 m from the first one's death, by a fall
+        var b = PlayLog.Read(Write(Session().Replace("0a1b2c3d", "99999999").Replace("\"p\":[21,5,1],\"by\":\"Wolf\"", "\"p\":[24,5,1],\"by\":\"Fall\""), "b.playlog")).Log!;
+        var spots = PlayLog.Spots([a, b], "Field");
+        var death = Assert.Single(spots, s => s.Kind == "death");
+        Assert.Equal((2, 2), (death.Count, death.Sessions));
+        Assert.Equal(22.5f, death.P.X, 3);
+        Assert.Equal([("Wolf", 1), ("Fall", 1)], death.Causes.OrderByDescending(c => c.By).ToList());
+        var stop = Assert.Single(spots, s => s.Kind == "stop");
+        Assert.Equal((2, 82f), (stop.Count, stop.Seconds));   // the second one's death is 3 m off: its stop ends at 80 s
+        string said = PlayLog.Overview([a, b], "Field");
+        Assert.StartsWith("2 sessions of 2 players on map Field, 3:10 in all.", said);
+        Assert.Contains("- 2 in 2 sessions near x 23, z 1 (height 5): by Wolf 1, Fall 1", said.Replace("Fall 1, Wolf 1", "Wolf 1, Fall 1"));
+        Assert.Contains("- 2 in 2 sessions near x 21, z 1 (height 5): 1:22 in all", said);
+        // a position's line is not kept
+        Assert.Null(a.Events.First(e => e.E == "pos").Text("p"));
+    }
+
+    [AvaloniaFact]
+    public async Task SeveralSessionsShowTogetherWithoutAPlayer()
+    {
+        var map = MapProject.Create("Field", 2, generated: false, height: 10, seed: 1, under: _dir);
+        var w = TestWindows.Editing(map.Read().Session!);
+        string a = Write(Session(), "a.playlog"), b = Write(Session().Replace("0a1b2c3d", "99999999"), "b.playlog");
+        Assert.Equal("Showing 2 sessions: 2 deaths, 2 stops. Not read: none.playlog: No such file.", w.OpenReplay([a, b, Path.Combine(_dir, "none.playlog")]));
+        Assert.Null(w.Replay.Log);
+        Assert.Equal(2, w.Replay.Logs.Count);
+        Assert.True(w.View.Replay!.Faint);
+        Assert.Equal(6, w.View.Replay.Legs.Count);
+        Assert.Null(w.View.ReplayPlayer);
+        Assert.Equal(2, w.Replay.Lines.Count);
+        Assert.StartsWith("2 died (Wolf 2), 2 sessions", w.Replay.Lines[0]);
+        var t = new ClaudeTools(w);
+        Assert.StartsWith("2 sessions of 2 players", await t.PlaylogSummary());
+        Assert.StartsWith("2 sessions of 2 players", await t.PlaylogSummary([a, b]));
+        // one again: back to playing it
+        Assert.StartsWith("Replaying a.playlog", w.OpenReplay([a]));
+        Assert.False(w.View.Replay!.Faint);
     }
 }

@@ -336,26 +336,52 @@ public partial class MainWindow
         {
             return;
         }
-        if (await Pickers.File(StorageProvider, "Replay a play session", new("Play session (.playlog)") { Patterns = ["*.playlog"] }) is string file)
+        var files = await Pickers.Files(StorageProvider, "Replay play sessions (one, or several at once)", new("Play session (.playlog)") { Patterns = ["*.playlog"] });
+        if (files.Count > 0)
         {
-            Msg(new Said(OpenReplay(file), ""));
+            Msg(new Said(OpenReplay(files), ""));
         }
     }
 
-    /// <summary>Opens a .playlog in Replay over the open map; what happened, in words.</summary>
-    internal string OpenReplay(string file)
+    /// <summary>Opens .playlog files in Replay over the open map (one: to play it; several: all at once); what happened, in words.</summary>
+    internal string OpenReplay(IReadOnlyList<string> files)
     {
         if (MapProject.Current is not { } map)
         {
             return "Open a map first.";
         }
-        var (log, problem) = PlayLog.Read(file);
-        if (log == null)
+        var logs = new List<PlayLog>();
+        var problems = new List<string>();
+        foreach (string file in files.Take(ReplayPanel.MostSessions))
         {
-            return $"Cannot replay {Path.GetFileName(file)}: {problem}";
+            var (log, problem) = PlayLog.Read(file);
+            if (log != null)
+            {
+                logs.Add(log);
+            }
+            else
+            {
+                problems.Add($"{Path.GetFileName(file)}: {problem}");
+            }
         }
-        Replay.Open(log, map.Name, ReplayWarning(log, map));
-        return $"Replaying {Path.GetFileName(file)}: {log.Events.Count(e => e.E == "death")} deaths, {log.Stops.Count} stops.";
+        if (files.Count > ReplayPanel.MostSessions)
+        {
+            problems.Add($"only the first {ReplayPanel.MostSessions} of {files.Count} files are shown");
+        }
+        string left = problems.Count > 0 ? $" Not read: {string.Join("; ", problems).TrimEnd('.')}." : "";
+        if (logs.Count == 0)
+        {
+            return $"Nothing to replay.{left}";
+        }
+        var warnings = logs.Select(l => ReplayWarning(l, map)).OfType<string>().Distinct().ToList();
+        string? warning = warnings.Count == 0 ? null : logs.Count == 1 ? warnings[0] : $"Not all fit this map: {string.Join(" ", warnings)}";
+        if (logs.Count == 1)
+        {
+            Replay.Open(logs[0], map.Name, warning);
+            return $"Replaying {Path.GetFileName(files[0])}: {logs[0].Events.Count(e => e.E == "death")} deaths, {logs[0].Stops.Count} stops.{left}";
+        }
+        Replay.OpenMany(logs, map.Name, warning);
+        return $"Showing {logs.Count} sessions: {logs.Sum(l => l.Events.Count(e => e.E == "death"))} deaths, {logs.Sum(l => l.Stops.Count)} stops.{left}";
     }
 
     /// <summary>Why a session may not fit the open map (recorded on another map, or another version of it), or null.</summary>

@@ -29,6 +29,9 @@ internal sealed class PlayLog
         internal string? Text(string key) => Line[key] is JsonValue v && v.TryGetValue(out string? s) ? s : Line[key]?.ToJsonString();
     }
 
+    /// <summary>The line kept for a position (none: only its place and facing are).</summary>
+    private static readonly JsonObject NoLine = [];
+
     /// <summary>A stretch of the path walked without a break, on one map.</summary>
     internal sealed record Leg(string Map, List<(float T, Vector3 P, int? Yaw)> Points);
 
@@ -135,7 +138,8 @@ internal sealed class PlayLog
             {
                 current = Str(o["name"]) ?? current;
             }
-            log.Events.Add(new Event(t, e, Point(o["p"]), Int(o["yaw"]), current, o));
+            // a position's line is not kept (its place and facing are): an hour is 3,600 of them, and many sessions are read at once
+            log.Events.Add(new Event(t, string.Intern(e), Point(o["p"]), Int(o["yaw"]), current, e == "pos" ? NoLine : o));
         }
         // a writer writes in time order; a clock that stepped back is put right rather than drawn as a jump back
         log.Events.Sort((a, b) => a.T.CompareTo(b.T));
@@ -278,6 +282,81 @@ internal sealed class PlayLog
         var counts = Events.Where(e => e.E is not ("pos" or "death" or "quest")).GroupBy(e => e.E).OrderByDescending(g => g.Count()).Select(g => $"{g.Key} {g.Count()}");
         w.Append("Other events: ").Append(string.Join(", ", counts)).Append('.');
         return w.ToString();
+    }
+
+    /// <summary>What several sessions did at one place: deaths or stops, gathered where they are within a few metres.</summary>
+    /// <param name="Kind">"death" or "stop".</param>
+    /// <param name="P">The middle of those in the square.</param>
+    /// <param name="Count">How many.</param>
+    /// <param name="Sessions">In how many sessions.</param>
+    /// <param name="Seconds">The stops' time in all (0 for deaths).</param>
+    /// <param name="Causes">The deaths' causes, most first.</param>
+    internal sealed record Spot(string Kind, Vector3 P, int Count, int Sessions, float Seconds, IReadOnlyList<(string By, int Count)> Causes);
+
+    /// <summary>
+    /// Where several sessions died and stood still on a map, most first: each death or stop joins the first place of its
+    /// kind whose middle is within <paramref name="near"/> metres, else starts one.
+    /// </summary>
+    internal static List<Spot> Spots(IReadOnlyList<PlayLog> logs, string map, float near = 8)
+    {
+        // ponytail: every place is tried for every point (fine for thousands of deaths and stops); a grid of places if it is ever many more
+        var places = new List<(string Kind, Vector3 Sum, int N, HashSet<int> In, float Secs, Dictionary<string, int> By)>();
+        void Add(string kind, Vector3 p, int session, float secs, string? by)
+        {
+            int k = places.FindIndex(q => q.Kind == kind && Vector2.Distance(new(q.Sum.X / q.N, q.Sum.Z / q.N), new(p.X, p.Z)) <= near);
+            var v = k >= 0 ? places[k] : (kind, Vector3.Zero, 0, [], 0, []);
+            v.In.Add(session);
+            if (by != null)
+            {
+                v.By[by] = v.By.GetValueOrDefault(by) + 1;
+            }
+            v = (kind, v.Sum + p, v.N + 1, v.In, v.Secs + secs, v.By);
+            if (k >= 0)
+            {
+                places[k] = v;
+            }
+            else
+            {
+                places.Add(v);
+            }
+        }
+        for (int i = 0; i < logs.Count; i++)
+        {
+            foreach (var e in logs[i].Events.Where(e => e.E == "death" && e.Map == map && e.P != null))
+            {
+                Add("death", e.P!.Value, i, 0, e.Text("by") ?? "?");
+            }
+            foreach (var s in logs[i].Stops.Where(s => s.Map == map))
+            {
+                Add("stop", s.P, i, s.Seconds, null);
+            }
+        }
+        return [.. places.Select(v => new Spot(v.Kind, v.Sum / v.N, v.N, v.In.Count, v.Secs, [.. v.By.OrderByDescending(b => b.Value).Select(b => (b.Key, b.Value))]))
+            .OrderByDescending(s => s.Count).ThenBy(s => s.Kind == "death" ? 0 : 1).ThenByDescending(s => s.Seconds)];
+    }
+
+    /// <summary>Several sessions as text (Claude's playlog_summary of several): each in a line, then where they died and stood still most.</summary>
+    internal static string Overview(IReadOnlyList<PlayLog> logs, string map, int most = 15)
+    {
+        static string T(float s) => TimeSpan.FromSeconds(s).ToString(s >= 3600 ? @"h\:mm\:ss" : @"m\:ss", CultureInfo.InvariantCulture);
+        var w = new System.Text.StringBuilder();
+        w.AppendLine(CultureInfo.InvariantCulture, $"{logs.Count} sessions of {logs.Select(l => l.Player).Distinct().Count()} players on map {map}, {T(logs.Sum(l => l.Length))} in all.");
+        foreach (var l in logs.OrderBy(l => l.Started))
+        {
+            w.AppendLine(CultureInfo.InvariantCulture, $"- player {l.Player}, {l.Started?.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) ?? "no start time"}: {T(l.Length)}, {l.Events.Count(e => e.E == "death")} deaths, {l.Stops.Count} stops, ended {l.Ended ?? "without an end line"}");
+        }
+        var spots = Spots(logs, map);
+        foreach (var (kind, title) in new[] { ("death", "Where they died most"), ("stop", "Where they stood still most") })
+        {
+            var list = spots.Where(s => s.Kind == kind).Take(most).ToList();
+            w.AppendLine(CultureInfo.InvariantCulture, $"{title} (within 8 m): {(list.Count == 0 ? "nowhere" : "")}");
+            foreach (var s in list)
+            {
+                string more = kind == "death" ? $"by {string.Join(", ", s.Causes.Select(c => $"{c.By} {c.Count}"))}" : $"{T(s.Seconds)} in all";
+                w.AppendLine(CultureInfo.InvariantCulture, $"- {s.Count} in {s.Sessions} sessions near x {s.P.X:0}, z {s.P.Z:0} (height {MathF.Round(s.P.Y) + 0:0}): {more}");
+            }
+        }
+        return w.ToString().TrimEnd();
     }
 
     private static string? Str(JsonNode? n) => n is JsonValue v && v.TryGetValue(out string? s) ? s : null;

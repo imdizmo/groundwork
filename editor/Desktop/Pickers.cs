@@ -22,6 +22,13 @@ internal static class Pickers
     internal static async Task<string?> SaveFile(IStorageProvider storage, string title, string name, IReadOnlyList<FilePickerFileType> types) =>
         await storage.SaveFilePickerAsync(new FilePickerSaveOptions { Title = title, SuggestedFileName = name, FileTypeChoices = types }) is { Path.IsFile: true } f ? f.Path.LocalPath : null;
 
+    /// <summary>Files chosen with the system's picker, several at once (none: cancelled; only files on this machine).</summary>
+    /// <param name="storage">The window's storage provider.</param>
+    /// <param name="title">The picker's title.</param>
+    /// <param name="type">The kind of file offered.</param>
+    internal static async Task<List<string>> Files(IStorageProvider storage, string title, FilePickerFileType type) =>
+        [.. (await storage.OpenFilePickerAsync(new FilePickerOpenOptions { Title = title, AllowMultiple = true, FileTypeFilter = [type] })).Where(f => f.Path.IsFile).Select(f => f.Path.LocalPath)];
+
     /// <summary>A folder chosen with the system's picker.</summary>
     /// <param name="storage">The window's storage provider.</param>
     /// <param name="title">The picker's title.</param>
