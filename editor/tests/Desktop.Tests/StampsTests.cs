@@ -126,8 +126,13 @@ public class StampsTests
         Assert.Equal("Mountain", t.Brush.StampLabel);
         Assert.True(t.StampOnceBox.IsEffectivelyVisible);
         Assert.False(t.FalloffBox.IsEffectivelyVisible);
-        t.StampOnceBox.IsChecked = true;
+        // picking a stamp ticks Stamp once, its height a third of the size until one is typed in
+        Assert.True(t.Brush.StampOnce);
+        t.SizeSlider.Value = 30;
+        Assert.Equal(10, t.Brush.StampHeight);
         t.StampHeightBox.Value = 3;
+        t.SizeSlider.Value = 60;
+        Assert.Equal(3, t.Brush.StampHeight);
         w.StampAt(64, 64);
         Assert.Equal(30 + 3 * Stamps.Sample(Stamps.BuiltIn[0].Data, 0, 0), H(s, 64, 64), 2);
         Assert.Equal("Stamp: Mountain", s.UndoLabel);

@@ -21,7 +21,13 @@ public sealed partial class ToolPanel
         int i = Math.Max(0, ShapeBox.SelectedIndex);
         if (i >= 4 && i - 4 < StampList.Count)
         {
+            // a stamp picked after another shape goes in whole at a click (Raise, Lower); unticking it keeps it a brush tip
+            if (Brush.Shape != BrushShape.Stamp)
+            {
+                StampOnceBox.IsChecked = true;
+            }
             Brush.Shape = BrushShape.Stamp;
+            StampHeightFollows();
             Brush.StampData = StampList[i - 4].Data;
             Brush.StampLabel = StampList[i - 4].Shown;
         }
@@ -45,6 +51,20 @@ public sealed partial class ToolPanel
         ForgetStampButton.IsVisible = i >= 0 && i < StampList.Count && StampList[i].Loaded;
         _stampOnceRows.IsVisible = stamp && Tool is BrushTool.Raise or BrushTool.Lower;
         _stampHeightRow.IsVisible = Brush.StampOnce;
+    }
+
+    private bool _stampHeightTyped, _followingSize;
+
+    /// <summary>Stamp once's height a third of the size (at least a metre), until a height is typed in.</summary>
+    private void StampHeightFollows()
+    {
+        if (_stampHeightTyped)
+        {
+            return;
+        }
+        _followingSize = true;
+        StampHeightBox.Value = (decimal)Math.Max(1, Math.Round(Brush.Radius / 3 * 2) / 2);
+        _followingSize = false;
     }
 
     /// <summary>A picture loaded as a stamp: chosen as the Shape, and kept for next time.</summary>

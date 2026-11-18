@@ -24,8 +24,9 @@ ground. Each stroke is one step in History.
 **Erode the whole map** (on Erode's card) weathers all of it at once, at the brush's Strength, where the Mask lets
 it.
 
-A brush can be a circle, a square or a stamp: a picture whose grey makes the height. **Stamp once** puts the whole
-picture down with one click.
+A brush can be a circle, a square or a stamp: a picture whose grey makes the height. Picking a stamp for Raise or
+Lower ticks **Stamp once**: a click puts the whole picture in, its **Height** a third of the brush's size until you
+type one in. Untick it to paint with the stamp as a brush tip instead, held down and built up like the others.
 
 ## Paint brushes
 

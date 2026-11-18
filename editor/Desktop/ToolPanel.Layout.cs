@@ -67,7 +67,7 @@ public sealed partial class ToolPanel
 
         // The options: size and strength, the brush shape, and each tool's own.
         var sizeV = new TextBlock();
-        SizeSlider = Ui.Slide(1, MaxRadius, 0.5, Brush.Radius, sizeV, v => $"{v:0.#} m", v => Brush.Radius = (float)v);
+        SizeSlider = Ui.Slide(1, MaxRadius, 0.5, Brush.Radius, sizeV, v => $"{v:0.#} m", v => { Brush.Radius = (float)v; StampHeightFollows(); });
         var strengthV = new TextBlock();
         StrengthSlider = Ui.Slide(0.05, 1, 0.05, Brush.Strength, strengthV, v => $"{v:0.00}", v => Brush.Strength = (float)v);
         ShapeBox = new ComboBox { SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12, MaxDropDownHeight = 400 };
@@ -102,7 +102,12 @@ public sealed partial class ToolPanel
             ShapeBox.SelectedIndex = 0;
         };
         StampOnceBox.IsCheckedChanged += (_, _) => { Brush.StampOnce = StampOnceBox.IsChecked == true; SyncStamp(); };
-        StampHeightBox.ValueChanged += (_, e) => Brush.StampHeight = (float)(e.NewValue ?? 0);
+        StampHeightBox.ValueChanged += (_, e) =>
+        {
+            Brush.StampHeight = (float)(e.NewValue ?? 0);
+            // a height typed in stays; until then it follows the size
+            _stampHeightTyped |= !_followingSize;
+        };
         _stampHeightRow = Ui.Row(Lang.T("common.height"), StampHeightBox, new TextBlock { Text = Lang.T("common.metres"), Margin = new Thickness(3, 0, 0, 0), FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
         _stampOnceRows = new StackPanel { Spacing = 4, Children = { StampOnceBox, _stampHeightRow } };
         FalloffBox.SelectionChanged += (_, _) => Brush.Falloff = (Falloff)Math.Max(0, FalloffBox.SelectedIndex);
