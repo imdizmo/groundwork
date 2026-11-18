@@ -1,5 +1,6 @@
 using System.Globalization;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Groundwork.App;
@@ -34,7 +35,12 @@ public sealed class ModToolPanel
     public ModToolPanel(Prefs? prefs)
     {
         _prefs = prefs;
-        Card = Ui.AsCard(new Border { VerticalAlignment = VerticalAlignment.Top, Child = _body });
+        // a card taller than its room (a long list over the minimap) scrolls inside its own frame
+        Card = Ui.AsCard(new Border
+        {
+            VerticalAlignment = VerticalAlignment.Top,
+            Child = new ScrollViewer { Content = _body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled },
+        });
     }
 
     /// <summary>The card.</summary>
@@ -177,11 +183,11 @@ public sealed class ModToolPanel
             var tagText = new TextBlock { Text = tag, FontSize = 10.5, Foreground = Tokens.Dim, VerticalAlignment = VerticalAlignment.Center };
             Grid.SetColumn(tagText, 1);
             face.Children.Add(tagText);
-            var card = new Avalonia.Controls.Primitives.ToggleButton { Content = face, IsChecked = i == picked, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Avalonia.Thickness(10, 5) };
+            var card = new ToggleButton { Content = face, IsChecked = i == picked, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Avalonia.Thickness(10, 5) };
             card.Click += (_, _) =>
             {
                 _choices[id] = i;
-                foreach (var (c, j) in list.Cards.Children.OfType<Avalonia.Controls.Primitives.ToggleButton>().Select((c, j) => (c, j)))
+                foreach (var (c, j) in list.Cards.Children.OfType<ToggleButton>().Select((c, j) => (c, j)))
                 {
                     c.IsChecked = j == i;
                 }
@@ -403,8 +409,8 @@ public sealed class ModToolPanel
         var wrap = new WrapPanel();
         var tabs = new WrapPanel();
         var chips = new WrapPanel();
-        var buttons = new List<(int Index, string Group, Avalonia.Controls.Primitives.ToggleButton Button)>();
-        var tabButtons = new List<(string Group, Avalonia.Controls.Primitives.ToggleButton Button)>();
+        var buttons = new List<(int Index, string Group, ToggleButton Button)>();
+        var tabButtons = new List<(string Group, ToggleButton Button)>();
         string tab = _prefs?.Get(Key(p.Id) + ".tab", "All") ?? "All";
         void Pick(int i)
         {
@@ -465,7 +471,7 @@ public sealed class ModToolPanel
         }
         foreach (string g in groupNames.Count > 1 ? ["All", .. groupNames] : groupNames)
         {
-            var b = new Avalonia.Controls.Primitives.ToggleButton { Content = g == "All" ? "All" : $"{g} {p.Items.Count(x => x.Group == g)}", FontSize = 11, Padding = new Avalonia.Thickness(8, 2), Margin = new Avalonia.Thickness(0, 0, 3, 3) };
+            var b = new ToggleButton { Content = g == "All" ? "All" : $"{g} {p.Items.Count(x => x.Group == g)}", FontSize = 11, Padding = new Avalonia.Thickness(8, 2), Margin = new Avalonia.Thickness(0, 0, 3, 3) };
             b.Click += (_, _) =>
             {
                 tab = g;
@@ -484,7 +490,7 @@ public sealed class ModToolPanel
                 content.Children.Add(new Image { Source = bmp, Width = 48, Height = 48 });
             }
             content.Children.Add(new TextBlock { Text = item.Name, FontSize = 9.5, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxHeight = 26 });
-            var b = new Avalonia.Controls.Primitives.ToggleButton { Content = content, Padding = new Avalonia.Thickness(2), Margin = new Avalonia.Thickness(1), Tag = item.Name };
+            var b = new ToggleButton { Content = content, Padding = new Avalonia.Thickness(2), Margin = new Avalonia.Thickness(1), Tag = item.Name };
             ToolTip.SetTip(b, item.Name + " (" + item.Group + ")");
             b.Click += (_, _) => Pick(i);
             buttons.Add((i, item.Group, b));

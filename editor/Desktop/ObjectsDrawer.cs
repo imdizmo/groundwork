@@ -31,7 +31,9 @@ internal sealed class ObjectsDrawer
     /// <summary>The kinds with no icon, and where their own picture goes once it is drawn.</summary>
     private readonly List<(string Model, Image Image)> _unpictured = [];
     private readonly WrapPanel _wrap = new();
-    private readonly StackPanel _tabs = new() { Orientation = Orientation.Horizontal, Spacing = 3 };
+    // one row scrolled sideways at the bottom; wrapped onto more rows on the left, where it is narrow
+    private readonly WrapPanel _tabs = new() { Orientation = Orientation.Horizontal, ItemSpacing = 3, LineSpacing = 3 };
+    private readonly ScrollViewer _tabScroll = new() { VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };
     private readonly TextBox _search = new() { PlaceholderText = "Search objects", Width = 170, FontSize = 12 };
     private readonly TextBlock _pickedText = new() { FontSize = 12, Foreground = Tokens.Dim, VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _brushWith = new() { Content = "Brush with these", FontSize = 12 };
@@ -73,7 +75,8 @@ internal sealed class ObjectsDrawer
         ToolTip.SetTip(_open, "Open or close the objects (Ctrl+Space)");
         _right.Children.AddRange([_pickedText, _clear, _brushWith, _dock]);
         _pickedText.VerticalAlignment = VerticalAlignment.Center;
-        _middle.Children.AddRange([_search, new ScrollViewer { HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, Content = _tabs }]);
+        _middle.Children.AddRange([_search, _tabScroll]);
+        _tabScroll.Content = _tabs;
         _head.Children.AddRange([_open, _right, _middle]);
         _dock.Click += (_, _) => DockOn(!Left);
         Left = w.Prefs.Get("map.drawer.side", "bottom") == "left";
@@ -159,6 +162,7 @@ internal sealed class ObjectsDrawer
         _middle.Orientation = Left ? Orientation.Vertical : Orientation.Horizontal;
         _middle.Margin = Left ? default : new Thickness(10, 0);
         _search.Width = Left ? double.NaN : 170;
+        _tabScroll.HorizontalScrollBarVisibility = Left ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
         _dock.Content = Left ? "Dock at the bottom" : "Dock on the left";
         ToolTip.SetTip(_dock, Left ? "Put the objects back along the bottom of the view" : "Put the objects in a column on the left of the view, beside the tools");
         _grip.Cursor = new Cursor(Left ? StandardCursorType.SizeWestEast : StandardCursorType.SizeNorthSouth);
