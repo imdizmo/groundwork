@@ -37,7 +37,18 @@ public sealed class UnrealLayersTests : IDisposable
     {
         var map = MapProject.Create("Sea", 2, generated: false, height: 10, seed: 1, under: _dir);
         _ = map.Read();
+        var scene = map.Read();
+        // the ground's highest point, in Unreal metres (Y = -z): where the ocean leaves its small dry loop
+        int top = 0;
+        for (int p = 1; p < scene.Heights.Length; p++)
+        {
+            top = scene.Heights[p] > scene.Heights[top] ? p : top;
+        }
+        var inside = UnrealLive.WaterBody(map, scene)["sea"]!["inside"]!.AsArray();
+        Assert.Equal(scene.OriginX + (top % scene.W), inside[0]!.GetValue<float>());
+        Assert.Equal(-(scene.OriginZ + (top / scene.W)), inside[1]!.GetValue<float>());
         var body = UnrealLive.WaterBody(map);
+        Assert.Null(body["sea"]!["inside"]);
         Assert.Equal(map.UnrealWaterPrefix, body["prefix"]!.GetValue<string>());
         Assert.Equal(map.SeaLevel, body["sea"]!["level"]!.GetValue<float>());
         Assert.Equal(map.ReadRaster().Cols, body["sea"]!["cols"]!.GetValue<int>());

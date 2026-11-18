@@ -183,7 +183,7 @@ public sealed partial class UnrealLive
             string cut = holes.Any(v => v > 0)
                 ? "; " + await Post("/groundwork/holes", new JsonObject { ["x0"] = map.X0, ["y0"] = map.Y0, ["col"] = 0, ["row"] = 0, ["w"] = cols, ["h"] = rows, ["weights"] = Convert.ToBase64String(holes) })
                 : "";
-            string water = await Post("/groundwork/water", WaterBody(map));
+            string water = await Post("/groundwork/water", WaterBody(map, scene));
             return $"{made}; {map.Layers.Count} layers painted" + cut + "; " + water;
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
@@ -196,14 +196,28 @@ public sealed partial class UnrealLive
     /// What /groundwork/water is sent for the map: its rivers and lakes (MapWater's), the water prefix, and its sea at
     /// its sea level over its extent (none for a map whose sea is far below everything: a dry world's edge).
     /// </summary>
-    internal static JsonObject WaterBody(MapProject map)
+    /// <param name="map">The map.</param>
+    /// <param name="scene">Its ground now, for the sea's "inside" (its highest point, where Unreal's ocean leaves its one
+    /// small dry loop: the ocean is drawn everywhere outside its spline); null: the bridge puts it in the middle.</param>
+    internal static JsonObject WaterBody(MapProject map, WorldScene? scene = null)
     {
         var body = JsonNode.Parse(MapWater.Snapshot())!.AsObject();
         body["prefix"] = map.UnrealWaterPrefix;
         if (map.SeaLevel > -500)
         {
             var raster = map.ReadRaster();
-            body["sea"] = new JsonObject { ["level"] = map.SeaLevel, ["x0"] = map.X0, ["y0"] = map.Y0, ["cols"] = raster.Cols, ["rows"] = raster.Rows };
+            var sea = new JsonObject { ["level"] = map.SeaLevel, ["x0"] = map.X0, ["y0"] = map.Y0, ["cols"] = raster.Cols, ["rows"] = raster.Rows };
+            if (scene is { Heights: { Length: > 0 } heights })
+            {
+                // the open ground's highest point, in Unreal metres (Y = -z)
+                int top = 0;
+                for (int p = 1; p < heights.Length; p++)
+                {
+                    top = heights[p] > heights[top] ? p : top;
+                }
+                sea["inside"] = new JsonArray(scene.OriginX + (top % scene.W), -(scene.OriginZ + (top / scene.W)));
+            }
+            body["sea"] = sea;
         }
         return body;
     }

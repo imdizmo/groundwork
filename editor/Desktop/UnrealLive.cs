@@ -315,7 +315,7 @@ public sealed partial class UnrealLive
         // rivers and lakes: the water bodies prefix + name rebuilt in Unreal (the map's file is written by Save)
         if (MapWater.Snapshot() is var water && water != _water)
         {
-            said.Add(await Post("/groundwork/water", WaterBody(_project)));
+            said.Add(await Post("/groundwork/water", WaterBody(_project, _scene)));
             _water = water;
         }
         // holes: the landscape's visibility over the rectangle of changed points

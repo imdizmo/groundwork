@@ -26,8 +26,9 @@ plugin speak a numbered protocol: **Live** refuses a plugin of another version a
   `channel` of that texture (the one texture the landscape material reads whose name starts so: when several do,
   nothing is written; the layers of a second or third layers file go by name); without it, into the
   landscape's paint layer of the same name. Layers the level does not have are named on the status bar.
-- **Objects**: added and taken away, as instances of the mesh the models folder's `names.json` names for the asset
-  (a new mesh is placed as an actor in the `Groundwork/Objects` folder). A marker becomes an actor of its catalog
+- **Objects**: added and taken away, as instances of the mesh the models folder's `names.json` names for the asset:
+  of the level's instanced component of that mesh, or of one the bridge makes for it (an actor `GW_<mesh>` in the
+  `Groundwork/Objects` folder holding all of that mesh's objects), never an actor for each. A marker becomes an actor of its catalog
   class, tagged `gw_marker:<id>`.
 - **Holes**: the landscape's visibility where the Hole brush took the ground away. The landscape material needs a
   *Landscape Visibility Mask* node (into Opacity Mask, Masked blend mode) for Unreal to show them.
@@ -67,11 +68,14 @@ player on the ground the camera looks at (in **Walk**: where you stand), facing 
 **⋯ → Make the Unreal landscape** also paints it: the bridge makes a landscape material of the map's layers (each
 layer's texture repeated every `size` metres, or its colour; holes cut), a paint layer per map layer and the textures,
 saved under `/Game/Groundwork/Maps/<map>`, then every layer is painted as the map has it, the holes are cut, and the rivers, lakes and the map's sea (an
-ocean at its sea level, when the map has one) are made.
+ocean at its sea level, when the map has one, drawn over the map and round it) are made. A material the landscape
+already has that Groundwork did not make (one made by hand for the level) is kept: only the paint layers are added, so
+its own nodes must read them by the map's layer names.
 
 **⋯ → Bring the models into Unreal** imports the glTF models the map places that Unreal has no mesh for yet (the models
 folder's `names.json` lists those it has) through Unreal's own importer, each into its own folder under
-`/Game/Groundwork/Models`, saved in the project, and adds their meshes to `names.json`. From then on Live and Send
+`/Game/Groundwork/Models`, saved in the project, and adds their meshes to `names.json`. A model made of several meshes
+(a house's walls, roof and door) comes in as one mesh. From then on Live and Send
 place those objects like any others. It needs the Groundwork Bridge plugin with the import route.
 
 **Send to Unreal** saves the map, then runs the script `unreal.apply` names, its last line shown on the status bar.
