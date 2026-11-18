@@ -112,9 +112,15 @@ public static partial class MapTools
             ModExtensions.BuiltIn(Own, new NotesTool(w)),
         };
         tools.Insert(1, ModExtensions.BuiltIn(Own, new ScatterTool(w, kinds, groups, null)));
+        // with no biomes in the catalog, one for each of the map's layers
+        bool own = biomes.Count == 0;
+        if (own && MapProject.Current is { Layers.Count: > 0 } map)
+        {
+            biomes = MapBiomes.FromLayers(map.Layers, kinds);
+        }
         if (biomes.Count > 0)
         {
-            tools.Insert(2, ModExtensions.BuiltIn(Own, new ScatterTool(w, kinds, groups, biomes)));
+            tools.Insert(2, ModExtensions.BuiltIn(Own, new ScatterTool(w, kinds, groups, biomes, own)));
         }
         return tools;
     }
@@ -474,7 +480,7 @@ public static partial class MapTools
     }
 
     /// <summary>A brush: scatters its kinds round the pointer up to its density (Shift: takes them away).</summary>
-    public sealed class ScatterTool(MainWindow w, List<Kind> kinds, Dictionary<string, Group> groups, List<Biome>? biomes) : Base(w)
+    public sealed class ScatterTool(MainWindow w, List<Kind> kinds, Dictionary<string, Group> groups, List<Biome>? biomes, bool fromLayers = false) : Base(w)
     {
         private readonly List<(Vector3 At, float Radius)> _dabs = [];
         private Func<int, float>? _mask;
@@ -491,14 +497,15 @@ public static partial class MapTools
         /// <inheritdoc/>
         public override ToolInfo Info { get; } = biomes == null
             ? new("brush", "Brush", "Pick any kinds, then hold and drag. Each group (Trees, Bushes, Plants, Rocks...) fills to its own density and spacing (the catalog's categories) times the sliders, each kind at its own size times Size; it fills that far and no further. Patchy leaves clearings, Soft edge thins the rim; the Mask panel limits where. Shift takes the picked kinds away. Fill the whole map does it everywhere at once.") { Icon = "M5 8a2 2 0 1 0 4 0a2 2 0 1 0-4 0M14 6a2 2 0 1 0 4 0a2 2 0 1 0-4 0M10 14a2 2 0 1 0 4 0a2 2 0 1 0-4 0M4 18a2 2 0 1 0 4 0a2 2 0 1 0-4 0M16 17a2 2 0 1 0 4 0a2 2 0 1 0-4 0" }
-            : new("biome", "Biome", "Paint a biome (the catalog's biomes): its ground colour and its kinds, in one stroke. Same density, spacing, patches and mask as the Brush. Shift takes the biome's kinds away.") { Icon = "M3 20h18M6 20l4-9 3 5 2-3 3 7M15 6a2 2 0 1 0 4 0a2 2 0 1 0-4 0" };
+            : new("biome", "Biome", "Paint a biome: its ground and its kinds, in one stroke (the catalog's biomes, else one for each of the map's layers with the kinds that belong on it). Same density, spacing, patches and mask as the Brush. Shift takes the biome's kinds away.") { Icon = "M3 20h18M6 20l4-9 3 5 2-3 3 7M15 6a2 2 0 1 0 4 0a2 2 0 1 0-4 0" };
 
         /// <inheritdoc/>
         public override IReadOnlyList<ToolControl> Controls { get; } =
         [
             biomes == null
                 ? new PaletteControl("kinds", "Kinds", [.. kinds.Select(k => (k.Category, k.Label, k.Icon))]) { Multi = true }
-                : new ChoiceControl("biome", "Biome", [.. biomes.Select(b => b.Name)]),
+                : new PaletteControl("biome", "Biome", [.. biomes.Select(b => (fromLayers ? "From the map's layers" : "The catalog's biomes", b.Name,
+                    MapBiomes.Swatch(b, MapProject.Current?.Layers.FirstOrDefault(l => l.Name == b.Paint)?.Colour, kinds)))]) { Picked = [0] },
             .. (biomes == null ? new ToolControl[] { new ButtonControl("saveBiome", "Save the picked kinds as a biome") } : []),
             new SliderControl("radius", "Radius", 1, 250, biomes == null ? 8 : 16) { Step = 0.5f, Unit = "m" },
             new SliderControl("density", "Density ×", 0.05f, 5, 1) { Step = 0.05f },

@@ -107,7 +107,7 @@ internal sealed class ObjectsDrawer
     /// <summary>A tool's card shown: its palettes take the drawer's picks (one for a one-pick palette).</summary>
     public void Apply(ModExtensions.Tool tool, ModToolPanel panel)
     {
-        foreach (var p in tool.Controls.OfType<PaletteControl>())
+        foreach (var p in tool.Controls.OfType<PaletteControl>().Where(ModToolPanel.OfObjects))
         {
             panel.SetPicked(p.Id, p.Multi ? _picked : [.. _picked.Take(1)], quiet: true);
         }
@@ -377,7 +377,7 @@ internal sealed class ObjectsDrawer
         Marked();
         if (_w.Tools.ModTool is { } tool && tool.Info.Id is "object" or "brush")
         {
-            foreach (var p in tool.Controls.OfType<PaletteControl>())
+            foreach (var p in tool.Controls.OfType<PaletteControl>().Where(ModToolPanel.OfObjects))
             {
                 _w.ModToolPanel.SetPicked(p.Id, p.Multi ? _picked : [.. _picked.Take(1)]);
             }

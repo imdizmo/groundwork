@@ -1030,11 +1030,13 @@ public partial class MainWindow
             Msg(new Said("Pick the kinds for the biome first.", ""));
             return;
         }
-        if (await Dialogs.AskText(this, "Save as biome", $"A name for the biome of {models.Count} kinds (its ground is the first layer; the map's catalog changes it):", "My biome") is not { Length: > 0 } name)
+        if (await Dialogs.AskText(this, "Save as biome", $"A name for the biome of {models.Count} kinds:", "My biome") is not { Length: > 0 } name)
         {
             return;
         }
-        if (MapTools.SaveBiome(name, MapProject.Current?.Layers.FirstOrDefault()?.Name ?? "grass", models) is string why)
+        var layers = MapProject.Current?.Layers ?? [];
+        int ground = layers.Count > 1 && await Dialogs.Choose(this, "Save as biome", $"The ground {name} paints:", [.. layers.Select(l => l.Name)], "Save") is int picked ? picked : 0;
+        if (MapTools.SaveBiome(name, layers.ElementAtOrDefault(ground)?.Name ?? "grass", models) is string why)
         {
             Msg(new Said(why, ""));
             return;

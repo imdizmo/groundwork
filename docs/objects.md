@@ -27,8 +27,12 @@ lets (rocks on every steep slope, reeds by every shore).
 
 ## Biome
 
-**Biome** paints a biome: its ground layer and its mix of kinds together. **Save biome** keeps the kinds selected as a
-new biome in the catalog.
+**Biome** paints a biome: its ground layer and its mix of kinds together, in one stroke. Pick it in the swatches at the
+top of the card (each shows its ground and some of its kinds). The biomes are the catalog's; a catalog without any
+gives one for each of the map's layers, with the kinds that belong on such ground: trees and bushes on a layer named
+like a forest or wood, plants on grass, meadow or marsh, rocks on rock, stone or scree, the ground alone on the rest.
+**Save the picked kinds as a biome** (on the Brush) keeps the kinds picked as a new biome in the catalog, on the layer
+you choose.
 
 ## Models
 

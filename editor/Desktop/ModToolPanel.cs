@@ -90,8 +90,11 @@ public sealed class ModToolPanel
         _body.Children.Add(tail);
     }
 
-    /// <summary>Palettes are picked elsewhere (the map's drawer): kept, not shown on the card.</summary>
+    /// <summary>The objects' palettes are picked elsewhere (the map's drawer): kept, not shown on the card.</summary>
     public bool PalettesElsewhere { get; set; }
+
+    /// <summary>Whether a palette lists the map's kinds of object (the drawer stands in for it), not other things (biomes).</summary>
+    internal static bool OfObjects(PaletteControl p) => p.Id is "kind" or "kinds";
 
     /// <summary>Picks a palette's items from outside the card (raising Changed unless quiet; nothing for one it does not have).</summary>
     public void SetPicked(string id, IReadOnlyList<int> picked, bool quiet = false)
@@ -392,7 +395,7 @@ public sealed class ModToolPanel
             picked.Add(0);
         }
         _picked[p.Id] = picked;
-        if (PalettesElsewhere)
+        if (PalettesElsewhere && OfObjects(p))
         {
             return new StackPanel { IsVisible = false };
         }

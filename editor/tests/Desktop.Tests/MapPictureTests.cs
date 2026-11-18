@@ -62,4 +62,17 @@ public class MapPictureTests
         // the sea's band where the ground is under it
         Assert.Contains(south.Colors!, c => c.Z > c.X * 3);
     }
+
+    [Fact]
+    public void WithoutCatalogBiomesEachLayerIsABiomeWithTheKindsThatBelongOnIt()
+    {
+        static MapProject.Layer L(string name) => new(name, new Vector3(0.3f, 0.5f, 0.2f), 0);
+        List<MapTools.Kind> kinds = [new("Oak", "Oak", "Trees", 1, 1, null), new("Fern", "Fern", "Plants", 1, 1, null), new("Boulder", "Boulder", "Rocks", 1, 1, null)];
+        var biomes = MapBiomes.FromLayers([L("Pine forest"), L("Meadow grass"), L("Scree"), L("Sand")], kinds);
+        Assert.Equal(["Pine forest", "Meadow grass", "Scree", "Sand"], biomes.Select(b => b.Paint));
+        Assert.Equal(["Oak"], biomes[0].Kinds.Keys);
+        Assert.Equal(["Fern"], biomes[1].Kinds.Keys);
+        Assert.Equal(["Boulder"], biomes[2].Kinds.Keys);
+        Assert.Empty(biomes[3].Kinds);
+    }
 }
