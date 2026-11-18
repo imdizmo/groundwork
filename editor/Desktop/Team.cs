@@ -7,7 +7,7 @@ namespace Groundwork.Desktop;
 /// The team server: its address (Settings, else the Launcher's JATIFY_TEAM; none: offline) and who it says this
 /// person is (GET /team/whoami, answered from their Tailscale account). Plain http: Tailscale encrypts the way.
 /// </summary>
-public static class Team
+public static partial class Team
 {
     /// <summary>The port when the address names none.</summary>
     // the team's library service (Questlog has 8780)

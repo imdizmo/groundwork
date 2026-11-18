@@ -55,9 +55,9 @@ public static partial class Driver
         }
     }
 
-    /// <summary>The 'replay' command: replay &lt;file.playlog&gt;[|&lt;file&gt;...] | replay seek &lt;seconds&gt; | replay close.</summary>
+    /// <summary>The 'replay' command: replay &lt;file.playlog&gt;[|&lt;file&gt;...] | replay team all|&lt;n&gt; | replay seek &lt;seconds&gt; | replay close.</summary>
     /// <param name="call">The command as given.</param>
-    private static Task<string> CmdReplay(Call call)
+    private static async Task<string> CmdReplay(Call call)
     {
         MainWindow w = call.W;
         string[] args = call.Args;
@@ -65,10 +65,26 @@ public static partial class Driver
         {
             2 when args[0] == "seek" && float.TryParse(args[1], System.Globalization.CultureInfo.InvariantCulture, out float t) => Seek(w, t),
             1 when args[0] == "close" => Closed(w),
+            2 when args[0] == "team" => await FromTeam(w, args[1]),
             > 0 when args[0] is not ("seek" or "close") => w.OpenReplay([.. string.Join(' ', args).Split('|').Select(Path.GetFullPath)]),
             _ => throw new InvalidOperationException("replay <file.playlog>[|<file>...]|seek <seconds>|close"),
         };
-        return Task.FromResult(JsonSerializer.Serialize(new { said, time = w.Replay.Time, player = w.View.ReplayPlayer is var (p, yaw) ? new[] { p.X, p.Y, p.Z, yaw } : null, lines = w.Replay.Lines.Count }));
+        return JsonSerializer.Serialize(new { said, time = w.Replay.Time, player = w.View.ReplayPlayer is var (p, yaw) ? new[] { p.X, p.Y, p.Z, yaw } : null, lines = w.Replay.Lines.Count });
+
+        // the team's sessions of the open map, as the picker lists them: all, or the n-th (1 the newest)
+        static async Task<string> FromTeam(MainWindow w, string which)
+        {
+            if (MapProject.Current is not { } map || Team.Address(w.Settings) is not { } a || Team.Base(a) is not { } server)
+            {
+                throw new InvalidOperationException("no map open, or no team server set");
+            }
+            var (rows, error) = await Team.Playlogs(server);
+            var mine = rows == null ? throw new InvalidOperationException(error) : MainWindow.TeamPlaylogsOf(rows, map);
+            IReadOnlyList<Team.PlaylogRow> chosen = which == "all" ? mine
+                : int.TryParse(which, System.Globalization.CultureInfo.InvariantCulture, out int n) && n >= 1 && n <= mine.Count ? [mine[n - 1]]
+                : throw new InvalidOperationException($"replay team all|1..{mine.Count}");
+            return await w.ReplayTeamPlaylogs(server, chosen);
+        }
 
         static string Seek(MainWindow w, float t)
         {

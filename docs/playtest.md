@@ -15,6 +15,13 @@ it was played on; pick several at once to see where many players went.
 - The list holds the session's events in time order: pick one to go to its time and place.
 - **Close** takes the session off the map. Opening another map closes it too.
 
+## From the team
+
+When a game sends its play sessions to the team server (Settings → Team), **⋯ → Replay play sessions from the team…**
+lists those played on the open map, newest first: by the map's team id when it was published to the team, else by its
+name. Pick one to replay it, or all of them to see them together. Each one taken down is checked against the hash its
+id holds and kept in the editor's data folder (the last 300), so it is not taken again.
+
 ## Several sessions at once
 
 Pick several files together (up to 200) and Replay shows them all: every path as a thin, faint line, and where people

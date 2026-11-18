@@ -648,6 +648,8 @@ public partial class MainWindow
             publish.Click += async (_, _) => await PublishMap();
             var replay = new MenuItem { Header = "Replay a play session…" };
             replay.Click += async (_, _) => await OpenReplay();
+            var replayTeam = new MenuItem { Header = "Replay play sessions from the team…" };
+            replayTeam.Click += async (_, _) => await ReplayFromTeam();
             var graph = new MenuItem { Header = "Ground graph…" };
             graph.Click += (_, _) => OpenGroundGraph();
             var script = new MenuItem { Header = "Script…" };
@@ -682,7 +684,7 @@ public partial class MainWindow
             undoAgain.Click += async (_, _) => await MakeAgain(_madeFrom?.Spec);
             var link = new MenuItem();
             link.Click += async (_, _) => await LinkUnreal(change: true);
-            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, graph, script, export, terrainMaps, pack, publish, replay, link, landscape, models, placeAll } };
+            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, graph, script, export, terrainMaps, pack, publish, replay, replayTeam, link, landscape, models, placeAll } };
             more.Opening += (_, _) =>
             {
                 link.Header = MapProject.Current?.UnrealProject is { } up

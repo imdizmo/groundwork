@@ -20,6 +20,20 @@ public sealed class TeamTests : IDisposable
     private string? _ifMatch;
     private bool _damaged;
 
+    /// <summary>A play session as the team server keeps it (gzipped), and its id (the hash of those bytes in it).</summary>
+    private static readonly byte[] PlaylogGz = Gzip("""{"playlog":1,"game":"test","build":"t1","map":{"name":"Isle","team":"m1","version":2},"player":"0a1b2c3d","started":"2026-11-18T01:40:00Z"}""" + "\n" + """{"t":4,"e":"death","p":[1,0,1],"by":"wolf"}""" + "\n");
+    private static readonly string PlaylogIdOk = $"test/20261118-013743-0a1b2c3d-{Convert.ToHexStringLower(SHA256.HashData(PlaylogGz))[..8]}.playlog.gz";
+
+    private static byte[] Gzip(string text)
+    {
+        using var ms = new MemoryStream();
+        using (var z = new System.IO.Compression.GZipStream(ms, System.IO.Compression.CompressionLevel.Optimal))
+        {
+            z.Write(Encoding.UTF8.GetBytes(text));
+        }
+        return ms.ToArray();
+    }
+
     public TeamTests()
     {
         int port = 0;
@@ -84,6 +98,15 @@ public sealed class TeamTests : IDisposable
                 c.Response.StatusCode = zip ? 201 : 415;
                 body = Encoding.UTF8.GetBytes(zip ? """{"id":"c1"}""" : """{"error":"A crash report is a zip."}""");
             }
+            else if (path == "/team/playlogs")
+            {
+                string Pl(string id, string team) => new JsonObject { ["id"] = id, ["game"] = "test", ["map"] = new JsonObject { ["name"] = "Isle", ["team"] = team, ["version"] = 2 }, ["player"] = "0a1b2c3d", ["started"] = "2026-11-18T01:40:00Z", ["length"] = 4, ["ended"] = null, ["counts"] = new JsonObject { ["death"] = 1 }, ["size"] = PlaylogGz.Length }.ToJsonString();
+                body = Encoding.UTF8.GetBytes($"[{Pl(PlaylogIdOk, "m1")},{Pl("../maps/m1/pack", "m1")},{Pl("test/20261118-013743-0a1b2c3d-00000000.playlog.gz", "other")}]");
+            }
+            else if (path == "/team/playlogs/" + PlaylogIdOk)
+            {
+                body = _damaged ? [.. PlaylogGz[..^1], 1] : PlaylogGz;   // the last byte (the size's highest) is 0 in a small file
+            }
             else if (path == "/maps")
             {
                 body = Encoding.UTF8.GetBytes($"[{Row()}]");
@@ -118,6 +141,33 @@ public sealed class TeamTests : IDisposable
         Assert.False(Team.PlainId("../team/whoami"));
         Assert.False(Team.PlainId("a?b"));
         Assert.False(Team.PlainId(new string('a', 65)));
+    }
+
+    [Fact]
+    public async Task ThePlaySessionsOfTheMapComeDownCheckedAndUnpacked()
+    {
+        var (rows, error) = await Team.Playlogs(_server);
+        Assert.Null(error);
+        // the row whose id the server never makes is dropped
+        Assert.Equal(2, rows!.Count);
+        Assert.Equal((1, 4f, "", 2), (rows[0].Deaths, rows[0].Length, rows[0].Ended, rows[0].MapVersion));
+        var map = MapProject.Create("Isle", 1, generated: false, height: 2, seed: 1, under: _dir);
+        map.SetTeam("m1", 2);
+        var mine = Assert.Single(MainWindow.TeamPlaylogsOf(rows, map));
+        Assert.Equal(PlaylogIdOk, mine.Id);
+
+        string file = Path.Combine(_dir, "got.playlog");
+        Assert.Null(await Team.DownloadPlaylog(_server, PlaylogIdOk, file));
+        var log = PlayLog.Read(file).Log!;
+        Assert.Equal(("Isle", "wolf"), (log.MapName, log.Events[0].Text("by")));
+
+        _damaged = true;
+        Assert.Contains("damaged", await Team.DownloadPlaylog(_server, PlaylogIdOk, Path.Combine(_dir, "bad.playlog")));
+        Assert.False(File.Exists(Path.Combine(_dir, "bad.playlog")));
+        _damaged = false;
+        Assert.Contains("not one the team server makes", await Team.DownloadPlaylog(_server, "../maps/m1/pack", file));
+        Assert.False(Team.PlaylogId("test/20261118-013743-0a1b2c3d-00000000.playlog.gz/../x"));
+        Assert.False(Team.PlaylogId("Test/20261118-013743-0a1b2c3d-00000000.playlog.gz"));
     }
 
     [Fact]
