@@ -174,6 +174,16 @@ public sealed partial class UnrealLive
 
     private static byte Byte(float v) => (byte)Math.Clamp((int)MathF.Round(v * 255f), 0, 255);
 
+    /// <summary>
+    /// Every object of the map added to the open level, as if it had none yet (a new level; one that has them gets them
+    /// twice): what Unreal answered.
+    /// </summary>
+    public async Task<string?> SendAllObjects()
+    {
+        _count = 0;
+        return await Sync();
+    }
+
     /// <summary>Sends what changed since the last sync (one at a time; a change during a send is sent after it).</summary>
     public async Task<string?> Sync()
     {

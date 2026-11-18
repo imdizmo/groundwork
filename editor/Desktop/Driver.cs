@@ -30,6 +30,10 @@ namespace Groundwork.Desktop;
 ///    wheel &lt;x&gt; &lt;z&gt; &lt;steps&gt;          the wheel there (positive: zoom in)
 ///    key &lt;name&gt; [shift|ctrl|alt ...] a key pressed in the window (Avalonia key names: E, Escape, Enter, D1...)
 ///    map [folder]                   a map opened (the last one, or the one in that folder); how long it took
+///    unreal link &lt;project folder&gt;  the open map linked to that Unreal project (map.json's unreal.project)
+///    unreal landscape|paint|models|objects  into the open Unreal level: the landscape made (and painted, its water
+///                                   made), or only painted and its water made, the models it lacks imported,
+///                                   every object placed; Unreal's answer
 ///    docs &lt;page[#anchor]&gt;            the Help window on that place of the documentation ("map.md#controls")
 ///    docs search &lt;words&gt;            the Help window's search: {"hits": what it found}
 ///    docs shot &lt;file.png&gt;            a picture of the Help window
@@ -86,6 +90,7 @@ public static partial class Driver
         ["choose"] = CmdChoose,
         ["bench"] = CmdBench,
         ["map"] = CmdMap,
+        ["unreal"] = CmdUnreal,
         ["bounds"] = CmdBounds,
         ["docs"] = CmdDocs,
         ["state"] = CmdState,

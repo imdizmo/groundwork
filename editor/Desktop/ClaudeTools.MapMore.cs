@@ -311,7 +311,7 @@ public sealed partial class ClaudeTools
         {
             return "The user said no: nothing imported.";
         }
-        return await UnrealLive.ImportModels(ModelStore.MapModels);
+        return await UnrealLive.ImportModels(ModelStore.MapModels, _w.View.Scene is { } scene ? UnrealLive.Placed(scene) : null);
     });
 
     /// <inheritdoc/>
@@ -338,9 +338,9 @@ public sealed partial class ClaudeTools
         }
         if (layer >= 1)
         {
-            found.AddRange(RoadsUnderWater(s.Ground, Ground.ChannelOf(layer), s.Scene.Water).Select(r => (-1, $"road under water {r.Depth:0.0} m", new System.Numerics.Vector3(r.X, 0, r.Z))));
+            found.AddRange(RoadsUnderWater(s.Ground, Ground.ChannelOf(layer), s.Scene.Water).Select(r => (-1, $"road under water {r.Depth:0.0} m", new Vector3(r.X, 0, r.Z))));
         }
-        var listed = near is { Length: >= 2 } ? found.OrderBy(f => System.Numerics.Vector2.Distance(new(f.At.X, f.At.Z), new(near[0], near[1]))) : found.AsEnumerable();
+        var listed = near is { Length: >= 2 } ? found.OrderBy(f => Vector2.Distance(new(f.At.X, f.At.Z), new(near[0], near[1]))) : found.AsEnumerable();
         return ToJson(new
         {
             problems = found.Count,
@@ -387,10 +387,10 @@ public sealed partial class ClaudeTools
             return why;
         }
         var things = _w.Session!.Scene.Things;
-        var inside = new List<(System.Numerics.Vector3 At, int Prefab, string Group)>();
+        var inside = new List<(Vector3 At, int Prefab, string Group)>();
         lock (things)
         {
-            foreach (var t in things.Where(t => !t.Gone && System.Numerics.Vector2.Distance(new(t.Position.X, t.Position.Z), new(x, z)) <= radius))
+            foreach (var t in things.Where(t => !t.Gone && Vector2.Distance(new(t.Position.X, t.Position.Z), new(x, z)) <= radius))
             {
                 var (group, label) = MapTools.GroupOf(t.Prefab);
                 if (kind is not { Length: > 0 } || string.Equals(kind, label, StringComparison.OrdinalIgnoreCase) || string.Equals(kind, group, StringComparison.OrdinalIgnoreCase) || t.Prefab == Groundwork.App.AssetIds.Of(kind))
@@ -400,7 +400,7 @@ public sealed partial class ClaudeTools
             }
         }
         // ponytail: O(n²) nearest neighbours; fine for a circle's worth, a grid if radius covers thousands.
-        var nearest = inside.Select(a => inside.Where(b => b.Prefab == a.Prefab && b.At != a.At).Select(b => System.Numerics.Vector2.Distance(new(a.At.X, a.At.Z), new(b.At.X, b.At.Z))).DefaultIfEmpty(float.NaN).Min()).Where(d => !float.IsNaN(d)).ToList();
+        var nearest = inside.Select(a => inside.Where(b => b.Prefab == a.Prefab && b.At != a.At).Select(b => Vector2.Distance(new(a.At.X, a.At.Z), new(b.At.X, b.At.Z))).DefaultIfEmpty(float.NaN).Min()).Where(d => !float.IsNaN(d)).ToList();
         return ToJson(new
         {
             count = inside.Count,

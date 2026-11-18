@@ -24,11 +24,20 @@ public sealed partial class UnrealLive
         }
     }
 
-    /// <summary>The glTF models under a models folder that names.json has no Unreal mesh for.</summary>
-    internal static List<string> ModelsToImport(string models)
+    /// <summary>The glTF models under a models folder that names.json has no Unreal mesh for (of those named in placed, when given).</summary>
+    internal static List<string> ModelsToImport(string models, IReadOnlySet<string>? placed = null)
     {
         var names = Names(models);
-        return [.. ModelStore.ModelFiles(models).Where(f => !names.ContainsKey(Path.GetFileNameWithoutExtension(f))).Order(StringComparer.Ordinal)];
+        return [.. ModelStore.ModelFiles(models).Where(f => Path.GetFileNameWithoutExtension(f) is var n && !names.ContainsKey(n) && (placed == null || placed.Contains(n))).Order(StringComparer.Ordinal)];
+    }
+
+    /// <summary>The models a scene's objects use (scaled copies by their model's name).</summary>
+    internal static HashSet<string> Placed(WorldScene scene)
+    {
+        lock (scene.Things)
+        {
+            return [.. scene.Things.Where(t => !t.Gone).Select(t => ModelStore.ModelName(t.Prefab)).OfType<string>().Select(n => n.Split('@')[0])];
+        }
     }
 
     /// <summary>Unreal's meshes for models (name to mesh path) added to names.json.</summary>
@@ -49,14 +58,16 @@ public sealed partial class UnrealLive
     /// The map's glTF models that Unreal has no mesh for, imported into the open Unreal project (saved there, under
     /// /Game/Groundwork/Models) and kept in names.json: what was done, or why not.
     /// </summary>
-    public static async Task<string> ImportModels(string models)
+    /// <param name="models">The models folder.</param>
+    /// <param name="placed">Only these models (the map's objects'); null: every one in the folder.</param>
+    public static async Task<string> ImportModels(string models, IReadOnlySet<string>? placed = null)
     {
         string file = Path.Combine(Project, "Saved/GroundworkBridge.json");
         if (Project.Length == 0 || !File.Exists(file))
         {
             return "Unreal is not running with the Groundwork Bridge plugin (no Saved/GroundworkBridge.json).";
         }
-        var send = ModelsToImport(models);
+        var send = ModelsToImport(models, placed);
         if (send.Count == 0)
         {
             return "Every model already has its Unreal mesh.";

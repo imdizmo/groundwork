@@ -560,6 +560,15 @@ public partial class MainWindow
             terrainMaps.Click += async (_, _) => await ExportTerrainMaps();
             var landscape = new MenuItem { Header = "Make the Unreal landscape from this map…" };
             landscape.Click += async (_, _) => await MakeLandscape();
+            var placeAll = new MenuItem { Header = "Place all objects in the open Unreal level…" };
+            placeAll.Click += async (_, _) =>
+            {
+                if (await Ask("Place all objects in Unreal", "Every object of the map goes into the open Unreal level, as instances of their meshes (Bring the models first, for the meshes Unreal lacks). For a level that has none of them yet: one that has them gets them twice. Nothing is saved in Unreal until you save the level.", "Place them", Lang.T("common.cancel")))
+                {
+                    Msg(new Said("Placing every object in Unreal...", ""));
+                    Msg(new Said(await PlaceAllObjects(), ""));
+                }
+            };
             var models = new MenuItem { Header = "Bring the models into Unreal" };
             models.Click += async (_, _) =>
             {
@@ -568,7 +577,7 @@ public partial class MainWindow
                     return;
                 }
                 Msg(new Said("Bringing the models into Unreal...", ""));
-                Msg(new Said(await UnrealLive.ImportModels(ModelStore.MapModels), ""));
+                Msg(new Said(await UnrealLive.ImportModels(ModelStore.MapModels, View.Scene is { } sc ? UnrealLive.Placed(sc) : null), ""));
             };
             // a generated map not worked on yet: made again from new numbers, or back to the last ones
             var again = new MenuItem { Header = "Make it again with other numbers…" };
@@ -577,7 +586,7 @@ public partial class MainWindow
             undoAgain.Click += async (_, _) => await MakeAgain(_madeFrom?.Spec);
             var link = new MenuItem();
             link.Click += async (_, _) => await LinkUnreal(change: true);
-            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, graph, script, export, terrainMaps, pack, publish, link, landscape, models } };
+            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, graph, script, export, terrainMaps, pack, publish, link, landscape, models, placeAll } };
             more.Opening += (_, _) =>
             {
                 link.Header = MapProject.Current?.UnrealProject is { } up
@@ -906,6 +915,17 @@ public partial class MainWindow
         }
         MapRailTools();
         Msg(new Said($"Saved the biome \"{name}\" ({models.Count} kinds): the Biome tool has it.", ""));
+    }
+
+    /// <summary>Every object of the map into the open Unreal level (UnrealLive.SendAllObjects): what Unreal answered, or why not.</summary>
+    internal async Task<string> PlaceAllObjects()
+    {
+        if (Session is not { Scene.IsMap: true } s || !await LinkUnreal())
+        {
+            return "No map is open, or it has no Unreal project.";
+        }
+        var (live, why) = _live is { } l ? (l, null) : await UnrealLive.Connect(s.Scene);
+        return live == null ? why ?? "Unreal does not answer." : await live.SendAllObjects() ?? "Placed.";
     }
 
     /// <summary>Live on (after sending what Unreal does not have yet, when anything is unsaved) or off.</summary>

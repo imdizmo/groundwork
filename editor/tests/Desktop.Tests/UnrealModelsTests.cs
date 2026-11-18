@@ -20,6 +20,7 @@ public sealed class UnrealModelsTests : IDisposable
 
         var send = UnrealLive.ModelsToImport(_dir);
         Assert.Equal([Path.Combine(_dir, "pack", "Hut.glb")], send);
+        Assert.Empty(UnrealLive.ModelsToImport(_dir, new HashSet<string> { "Oak", "Barn" }));   // only those the map places
 
         UnrealLive.KeepMeshes(_dir, new JsonObject { ["Hut"] = "/Game/Groundwork/Models/Hut/Hut.Hut" });
         var names = JsonNode.Parse(File.ReadAllText(Path.Combine(_dir, "names.json")))!.AsObject();
