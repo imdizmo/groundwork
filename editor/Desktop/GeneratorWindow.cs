@@ -205,7 +205,7 @@ public sealed partial class GeneratorWindow : Window
             }
             if (k.Label == "Sea depth")
             {
-                var side = new ComboBox { ItemsSource = new[] { "west", "east", "north", "south" }, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+                var side = new ComboBox { ItemsSource = new[] { "west", "east", "north", "south", "south-west", "all round", "islands" }, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
                 side.SelectionChanged += (_, _) => { if (!_setting && side.SelectedItem is string v) { _spec = _spec with { CoastSide = v }; Changed(); } };
                 _show.Add(() => side.SelectedItem = _spec.CoastSide);
                 _knobs.Children.Add(Ui.Row("Coast side", side, null, "150,*"));

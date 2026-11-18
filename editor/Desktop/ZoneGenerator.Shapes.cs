@@ -52,23 +52,36 @@ public static partial class ZoneGenerator
     /// <summary>How far a point is from the coast's edge, wandering in and out (metres).</summary>
     private static float FromCoast(Spec spec, int c, int r, int cols, int rows, float x, float y)
     {
+        float edges = MathF.Min(MathF.Min(c, cols - 1 - c), MathF.Min(r, rows - 1 - r));
         float d = spec.CoastSide switch
         {
             "east" => cols - 1 - c,
             "north" => r,
             "south" => rows - 1 - r,
+            // an island: the sea all round
+            "all round" => (1 - MathF.Sqrt(MathF.Pow((c - (cols / 2f)) / (cols / 2f), 2) + MathF.Pow((r - (rows / 2f)) / (rows / 2f), 2))) * MathF.Min(cols, rows) / 2,
+            // a continent's corner: the sea to the west and the south
+            "south-west" => MathF.Min(c, rows - 1 - r),
+            // an archipelago: land where a broad, slow field is high, and the sea at every edge
+            "islands" => MathF.Min(edges, spec.Coast * 4 * (Fbm(x / (MathF.Max(cols, rows) / 6f), y / (MathF.Max(cols, rows) / 6f), spec.Seed + 91, 4) + 0.04f)),
             _ => c,
         };
         // bays and headlands a few hundred metres across, however wide the coast is
         float across = MathF.Min(spec.Coast * 2.5f, 700), deep = MathF.Min(spec.Coast * 0.35f, 220);
-        return d + (deep * Fbm(x / across, y / across, spec.Seed + 83, 3) / 0.4f);
+        d += deep * Fbm(x / across, y / across, spec.Seed + 83, 3) / 0.4f;
+        // an island's bays wander, but its land never reaches the map's edge
+        return spec.CoastSide is "all round" or "islands" ? MathF.Min(d, edges * 2) : d;
     }
 
     /// <summary>The distance to the nearest edge that is not the coast's (the rim stands only there).</summary>
     private static float FarEdge(Spec spec, int c, int r, int cols, int rows)
     {
         float d = float.MaxValue;
-        if (spec.CoastSide != "west")
+        if (spec.CoastSide is "all round" or "islands")
+        {
+            return d;
+        }
+        if (spec.CoastSide is not ("west" or "south-west"))
         {
             d = MathF.Min(d, c);
         }
@@ -80,7 +93,7 @@ public static partial class ZoneGenerator
         {
             d = MathF.Min(d, r);
         }
-        if (spec.CoastSide != "south")
+        if (spec.CoastSide is not ("south" or "south-west"))
         {
             d = MathF.Min(d, rows - 1 - r);
         }

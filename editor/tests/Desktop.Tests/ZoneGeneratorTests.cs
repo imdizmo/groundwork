@@ -12,6 +12,33 @@ public class ZoneGeneratorTests
 
     private static ZoneGenerator.Zone Make(ZoneGenerator.Spec spec, int n = 400) => ZoneGenerator.Generate(spec, n, n, -200, -200, Kinds);
 
+    [Theory]
+    [InlineData("Island")]
+    [InlineData("Archipelago")]
+    [InlineData("Continent's corner")]
+    public void TheIslandArchipelagoAndContinentStylesHaveTheSeaWhereTheySay(string style)
+    {
+        var spec = ZoneGenerator.Styles.First(s => s.Name == style).Spec with { Rivers = 0, Camps = 0 };
+        const int N = 1200;
+        var z = ZoneGenerator.Generate(spec, N, N, -600, -600, Kinds);
+        float At(int c, int r) => z.Heights[(r * N) + c];
+        float landShare = z.Heights.Count(h => h > 0) / (float)z.Heights.Length;
+        // every edge under the sea for an island and islands; the west and south only for the corner of a continent
+        bool west = At(5, N / 2) < 0, east = At(N - 6, N / 2) < 0, northOrSouthRow0 = At(N / 2, 5) < 0, otherRow = At(N / 2, N - 6) < 0;
+        if (style == "Continent's corner")
+        {
+            Assert.True(west, "west under the sea");
+            Assert.False(east, "east is land");
+            Assert.True(northOrSouthRow0 != otherRow, "the sea on one of north and south");
+            Assert.InRange(landShare, 0.4f, 0.95f);
+        }
+        else
+        {
+            Assert.True(west && east && northOrSouthRow0 && otherRow, "the sea at every edge");
+            Assert.InRange(landShare, style == "Island" ? 0.2f : 0.1f, style == "Island" ? 0.8f : 0.6f);
+        }
+    }
+
     [Fact]
     public void TheRollingGroundStaysBetweenItsHeights()
     {
