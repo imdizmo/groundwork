@@ -77,4 +77,18 @@ public class MapRoadsTests
             Directory.Delete(dir, recursive: true);
         }
     }
+
+    [Fact]
+    public void APaintedStrokeKeepsItsBendsAsDotsAndADotAtLeastEverySoOften()
+    {
+        // an L: 100 m east, then 50 m north, a point every metre with a little wobble
+        var stroke = Enumerable.Range(0, 101).Select(i => new Vector2(i, (i % 2) * 0.2f))
+            .Concat(Enumerable.Range(1, 50).Select(i => new Vector2(100, i))).ToList();
+        var dots = MapTools.StrokeDots(stroke, 1, 30);
+        Assert.Equal(stroke[0], dots[0]);
+        Assert.Equal(stroke[^1], dots[^1]);
+        Assert.Contains(dots, d => Vector2.Distance(d, new Vector2(100, 0)) < 1.5f);   // the corner
+        Assert.All(dots.Zip(dots.Skip(1)), p => Assert.True(Vector2.Distance(p.First, p.Second) <= 30.01f));
+        Assert.InRange(dots.Count, 6, 12);   // far fewer than the stroke's 151
+    }
 }

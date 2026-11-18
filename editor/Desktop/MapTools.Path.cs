@@ -6,6 +6,61 @@ namespace Groundwork.Desktop;
 public static partial class MapTools
 {
     /// <summary>
+    /// A painted stroke as the few points that keep its shape (Douglas-Peucker, within <paramref name="within"/> metres),
+    /// with a point at least every <paramref name="most"/> metres so a long straight stretch can be nudged too.
+    /// </summary>
+    internal static List<Vector2> StrokeDots(IReadOnlyList<Vector2> stroke, float within, float most)
+    {
+        if (stroke.Count < 3)
+        {
+            return [.. stroke];
+        }
+        bool[] keep = new bool[stroke.Count];
+        keep[0] = keep[^1] = true;
+        var todo = new Stack<(int A, int B)>();
+        todo.Push((0, stroke.Count - 1));
+        while (todo.Count > 0)
+        {
+            var (a, b) = todo.Pop();
+            int far = -1;
+            float worst = within;
+            for (int i = a + 1; i < b; i++)
+            {
+                float d = MapRoads.Distance(stroke[i], stroke[a], stroke[b]);
+                if (d > worst)
+                {
+                    (worst, far) = (d, i);
+                }
+            }
+            if (far >= 0)
+            {
+                keep[far] = true;
+                todo.Push((a, far));
+                todo.Push((far, b));
+            }
+        }
+        var dots = new List<Vector2>();
+        for (int i = 0; i < stroke.Count; i++)
+        {
+            if (!keep[i])
+            {
+                continue;
+            }
+            if (dots.Count > 0 && Vector2.Distance(dots[^1], stroke[i]) is float gap && gap > most)
+            {
+                var from = dots[^1];
+                int n = (int)MathF.Ceiling(gap / most);
+                for (int k = 1; k < n; k++)
+                {
+                    dots.Add(Vector2.Lerp(from, stroke[i], k / (float)n));
+                }
+            }
+            dots.Add(stroke[i]);
+        }
+        return dots;
+    }
+
+    /// <summary>
     /// Path: click points along a path, road or ramp, then Make it: the ground levelled along it (Paths), a layer
     /// painted on it, objects along its edges, a bridge where it crosses a river, as one step. Kept as a road
     /// (MapRoads), it can be picked again, changed and made again (its old ground put back first), or taken away.
@@ -14,12 +69,13 @@ public static partial class MapTools
     {
         private readonly List<Vector2> _points = [];
         private int _drag = -1;
+        private List<Vector2>? _stroke;
         private Vector2? _hover;
         private MapRoads.Road? _road;
         private Action? _refresh;
 
         /// <inheritdoc/>
-        public override ToolInfo Info { get; } = new("path", "Path", "Click points along a path, road or ramp (drag one to move it, Shift+click to delete it), then Make it (Enter): the ground under it levelled, its shoulders blended into the ground round it, a layer painted on it, objects along its edges and a bridge over each river it crosses, in one step. Kept as a road, pick it in the list to change it and make it again, or take it away. Esc clears the line.") { Icon = "M8 21L11 3M16 21L13 3M12 6v2M12 11v2M12 16v2" };
+        public override ToolInfo Info { get; } = new("path", "Path", "Paint a path, road or ramp: drag along the ground (or click point by point). Dots stay along it: drag one to nudge it, click the line to add one, Shift+click one to delete it. Then Make it (Enter): the ground under it levelled, its shoulders blended into the ground round it, a layer painted on it, objects along its edges and a bridge over each river it crosses, in one step. Kept as a road, pick it in the list to change it and make it again, or take it away. Esc clears the line.") { Icon = "M8 21L11 3M16 21L13 3M12 6v2M12 11v2M12 16v2" };
 
         /// <inheritdoc/>
         public override IReadOnlyList<ToolControl> Controls { get; } =
@@ -35,7 +91,7 @@ public static partial class MapTools
             new ButtonControl("make", "Make it"),
             new ButtonControl("clear", "Clear the line"),
             new ButtonControl("delete", "Take this road away"),
-            new TextControl("status", "Click the ground to start a line."),
+            new TextControl("status", "Drag along the ground to paint a line, or click point by point."),
             // what follows a section is folded with it: the buttons stay above
             new SectionControl("secEdge", "Along the edges") { Folded = true },
             new ChoiceControl("edge", "Objects", ["Nothing", .. kinds.Select(k => k.Label.Length > 0 ? k.Label : k.Model)]),
@@ -72,7 +128,7 @@ public static partial class MapTools
         /// <inheritdoc/>
         public override void OnLeft(IToolContext ctx) => MapRoads.Changed -= _refresh;
 
-        private void List(IToolContext ctx) => ctx.SetList("roads", [("New road", "click the ground to draw one", ""), .. MapRoads.All.Select(r => (r.Name, $"{r.Length:0} m, {r.Width:0.#} m wide", r.Bridge != null ? "bridges" : ""))],
+        private void List(IToolContext ctx) => ctx.SetList("roads", [("New road", "paint one on the ground", ""), .. MapRoads.All.Select(r => (r.Name, $"{r.Length:0} m, {r.Width:0.#} m wide", r.Bridge != null ? "bridges" : ""))],
             _road is { } r ? MapRoads.All.IndexOf(r) + 1 : 0);
 
         /// <summary>A kept road picked: its line and its settings on the card.</summary>
@@ -154,7 +210,8 @@ public static partial class MapTools
             }
             var at = new Vector2(p.X, p.Z);
             _hover = at;
-            int near = _points.FindIndex(q => Vector2.Distance(q, at) < MathF.Max(1.5f, ctx.Number("width") / 2));
+            float width = ctx.Number("width");
+            int near = _points.FindIndex(q => Vector2.Distance(q, at) < MathF.Max(1.5f, width / 2));
             switch (input.Action)
             {
                 case PointerAction.Press when near >= 0 && input.Modifiers.HasFlag(KeyModifiers.Shift):
@@ -163,12 +220,23 @@ public static partial class MapTools
                 case PointerAction.Press when near >= 0:
                     _drag = near;
                     break;
+                case PointerAction.Press when OnLine(at, MathF.Max(2, width / 2)) is int seg:
+                    // on the line between two dots: a dot there, to nudge
+                    _points.Insert(seg + 1, at);
+                    _drag = seg + 1;
+                    break;
                 case PointerAction.Press:
-                    _points.Add(at);
-                    _drag = _points.Count - 1;
+                    _stroke = [at];
                     break;
                 case PointerAction.Drag when _drag >= 0 && _drag < _points.Count:
                     _points[_drag] = at;
+                    break;
+                case PointerAction.Drag when _stroke != null && Vector2.Distance(_stroke[^1], at) > 1:
+                    _stroke.Add(at);
+                    break;
+                case PointerAction.Release when _stroke != null:
+                    Join(_stroke.Zip(_stroke.Skip(1), Vector2.Distance).Sum() < 2 ? [at] : StrokeDots(_stroke, MathF.Max(0.5f, width / 4), MathF.Max(10, width * 4)));
+                    _stroke = null;
                     break;
                 case PointerAction.Release:
                     _drag = -1;
@@ -177,6 +245,33 @@ public static partial class MapTools
                     break;
             }
             Show(ctx);
+        }
+
+        /// <summary>The stretch of the line a point is on (within so many metres), or null.</summary>
+        private int? OnLine(Vector2 at, float within)
+        {
+            for (int i = 0; i + 1 < _points.Count; i++)
+            {
+                if (MapRoads.Distance(at, _points[i], _points[i + 1]) < within)
+                {
+                    return i;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>Painted dots joined to the line: at its nearer end (a stroke from its start goes before it).</summary>
+        private void Join(List<Vector2> dots)
+        {
+            if (_points.Count > 1 && Vector2.Distance(dots[0], _points[0]) < Vector2.Distance(dots[0], _points[^1]))
+            {
+                dots.Reverse();
+                _points.InsertRange(0, dots);
+            }
+            else
+            {
+                _points.AddRange(dots);
+            }
         }
 
         /// <summary>The scene's objects that belong to a road (its edge objects and bridges).</summary>
@@ -314,8 +409,12 @@ public static partial class MapTools
             {
                 shapes.Add(Discs(_points.Select(q => new Vector3(q.X, area.GroundHeight(q.X, q.Y) + 0.3f, q.Y)), mark, new Vector4(1, 0.85f, 0.2f, 0.9f)));
             }
+            if (_stroke is { Count: > 1 })
+            {
+                shapes.Add(Band([.. _stroke.Select(q => new Vector3(q.X, area.GroundHeight(q.X, q.Y) + 0.15f, q.Y))], ctx.Number("width"), new Vector4(1, 0.85f, 0.4f, 0.4f)));
+            }
             // where the next point goes, and the stretch to it from the last one
-            if (_hover is Vector2 h && _drag < 0)
+            else if (_hover is Vector2 h && _drag < 0)
             {
                 shapes.Add(Ring(area, new Vector3(h.X, area.GroundHeight(h.X, h.Y), h.Y), mark, new Vector4(1, 0.85f, 0.2f, 0.9f)));
                 if (_points.Count > 0)
@@ -340,7 +439,7 @@ public static partial class MapTools
             ctx.Preview(shapes);
             ctx.SetText("status", _road != null ? $"{_road.Name}: move its points, then Make it again; or take it away." : _points.Count switch
             {
-                0 => "Click the ground to start a line.",
+                0 => "Drag along the ground to paint a line, or click point by point.",
                 1 => "Click the next point.",
                 _ => $"{_points.Count} points, {_points.Zip(_points.Skip(1), Vector2.Distance).Sum():0} m: Make it (Enter), or add more.",
             });

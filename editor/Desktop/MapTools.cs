@@ -1002,6 +1002,7 @@ public static partial class MapTools
     {
         private int _point = -1;
         private bool _dragging;
+        private List<Vector2>? _stroke;
         private string? _before, _action;
         private (EditSession.Change Change, StepState State, string Label, DateTime At)? _lastStep;
 
@@ -1042,7 +1043,7 @@ public static partial class MapTools
         }
 
         /// <inheritdoc/>
-        public override ToolInfo Info { get; } = new("river", "Rivers", "Pick a river or lake, then click to add a point, drag a point to move it, Shift+click a point to delete it. The sliders change the picked point and the river or lake. Carve cuts the bed into the ground. Every change is a step in History (Ctrl+Z).") { Icon = "M4 6c3 0 3 3 6 3s3-3 6-3 3 3 4 3M4 12c3 0 3 3 6 3s3-3 6-3 3 3 4 3M4 18c3 0 3 3 6 3s3-3 6-3" };
+        public override ToolInfo Info { get; } = new("river", "Rivers", "Pick a river or lake, then paint it: drag along the ground, from the source down (a click adds one point). Dots stay along it: drag one to nudge it, click the line to add one, Shift+click one to delete it. The sliders change the picked point and the river or lake. Carve cuts the bed into the ground. Every change is a step in History (Ctrl+Z).") { Icon = "M4 6c3 0 3 3 6 3s3-3 6-3 3 3 4 3M4 12c3 0 3 3 6 3s3-3 6-3 3 3 4 3M4 18c3 0 3 3 6 3s3-3 6-3" };
 
         /// <inheritdoc/>
         public override IReadOnlyList<ToolControl> Controls { get; } =
@@ -1144,12 +1145,12 @@ public static partial class MapTools
                 case "newLake":
                     MapWater.Lakes.Add(new MapWater.Lake { Name = $"Lake {MapWater.Lakes.Count + 1}", Level = ctx.Number("top"), Depth = ctx.Number("depth") });
                     List(ctx, MapWater.Rivers.Count + MapWater.Lakes.Count - 1);
-                    ctx.Status($"{MapWater.Lakes[^1].Name}: click its outline.");
+                    ctx.Status($"{MapWater.Lakes[^1].Name}: paint its outline.");
                     break;
                 case "new":
                     MapWater.Rivers.Add(new MapWater.River { Name = $"River {MapWater.Rivers.Count + 1}", Top = ctx.Number("top"), End = ctx.Number("end") });
                     List(ctx, MapWater.Rivers.Count - 1);
-                    ctx.Status($"{MapWater.Rivers[^1].Name}: click its points, source first.");
+                    ctx.Status($"{MapWater.Rivers[^1].Name}: paint it from its source down.");
                     break;
                 case "delete" when Lake(ctx) is { } gone:
                     _ = MapWater.Lakes.Remove(gone);
@@ -1286,11 +1287,32 @@ public static partial class MapTools
                         }
                         else
                         {
-                            _point = Add(ctx, u, points);
-                            _dragging = true;
-                            MapWater.Touch();
+                            // painted: the dots come when the stroke ends (a click is one dot)
+                            _action = "Paint";
+                            _stroke = [u];
                         }
                         Fields(ctx);
+                        break;
+                    case PointerAction.Drag when _stroke != null:
+                        if (Vector2.Distance(_stroke[^1], u) > 1)
+                        {
+                            _stroke.Add(u);
+                        }
+                        break;
+                    case PointerAction.Release when _stroke != null && points != null:
+                        if (_stroke.Zip(_stroke.Skip(1), Vector2.Distance).Sum() < 2)
+                        {
+                            _point = Add(ctx, u, points);
+                            _action = "Add point";
+                        }
+                        else
+                        {
+                            Paint(ctx, _stroke);
+                        }
+                        _stroke = null;
+                        MapWater.Touch();
+                        Fields(ctx);
+                        Record((Lakes(ctx) ? "Lake: " : "River: ") + _action);
                         break;
                     case PointerAction.Drag when _dragging && _point >= 0:
                         if (lakes && Lake(ctx) is { } l && _point < l.Outline.Count)
@@ -1312,6 +1334,37 @@ public static partial class MapTools
                 }
             }
             Show(ctx, at);
+        }
+
+        /// <summary>
+        /// A painted stroke as dots: a river's joined at its nearer end (painted from its source, they go before it), a
+        /// lake's outline added to.
+        /// </summary>
+        private static void Paint(IToolContext ctx, List<Vector2> stroke)
+        {
+            float half = ctx.Number("width");
+            var dots = StrokeDots(stroke, MathF.Max(0.5f, half / 3), MathF.Max(15, half * 3));
+            if (Lake(ctx) is { } lake)
+            {
+                lake.Outline.AddRange(dots);
+                return;
+            }
+            if (River(ctx) is not { } river)
+            {
+                return;
+            }
+            var made = dots.ConvertAll(q => new MapWater.Point(q.X, q.Y, half, ctx.Number("depth"), ctx.Number("current")));
+            var first = river.Points.Count > 1 ? new Vector2(river.Points[0].X, river.Points[0].Y) : (Vector2?)null;
+            var last = river.Points.Count > 0 ? new Vector2(river.Points[^1].X, river.Points[^1].Y) : (Vector2?)null;
+            if (first is Vector2 f && last is Vector2 l && Vector2.Distance(dots[0], f) < Vector2.Distance(dots[0], l))
+            {
+                made.Reverse();
+                river.Points.InsertRange(0, made);
+            }
+            else
+            {
+                river.Points.AddRange(made);
+            }
         }
 
         /// <summary>A new point where it fits: inserted in the nearest stretch, or added at the nearer end.</summary>
@@ -1406,6 +1459,10 @@ public static partial class MapTools
                         shapes.Add(Band(e, 0.25f, edge));
                     }
                 }
+            }
+            if (_stroke is { Count: > 1 })
+            {
+                shapes.Add(Band([.. _stroke.Select(q => Lift(q.X, q.Y, float.MinValue))], MathF.Max(0.5f, ctx.Number("width") * 2), edge));
             }
             shapes.Add(Discs(pts, 1.1f, white));
             if (_point >= 0 && _point < pts.Count)

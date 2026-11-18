@@ -5,8 +5,9 @@
 A river is a line of points, each with a width, a depth and a current; its surface runs from its first point's height
 to its last. A lake is an outline with a surface height and a depth.
 
-Pick a river or lake (or make one), then click to add a point, drag a point to move it, `Shift`+click a point to
-delete it. The sliders change the picked point and the whole river or lake. **Carve** cuts the bed into the ground.
+Pick a river or lake (or make one), then paint it: drag along the ground like a brush, a river from its source down.
+When you let go, it becomes a row of dots: drag one to nudge it, click the line to add one, `Shift`+click one to
+delete it. Painting on from either end of a river makes it longer, and a click adds a single point. The sliders change the picked point and the whole river or lake. **Carve** cuts the bed into the ground.
 Every change is a step in History.
 
 ## Finding them in the ground

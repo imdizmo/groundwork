@@ -48,7 +48,7 @@ public sealed partial class MainWindow
                 "brush" or "biome" => "Hold and drag · Ctrl+wheel radius · Ctrl+Shift+wheel density · Shift takes away",
                 "stamp" => "Click places the stamp",
                 "shape" or "mountain" => "Click puts it in the ground · Ctrl+Z takes it back",
-                "river" => "Click adds a point · drag moves · Shift+click deletes",
+                "river" or "path" => "Drag paints · drag a dot nudges it · click the line adds a dot · Shift+click deletes one",
                 _ => "",
             },
             _ => "Right drag turns · wheel zooms · middle drag slides",
