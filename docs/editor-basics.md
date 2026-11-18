@@ -51,7 +51,10 @@ removes them all.
 **View** (`V`) shows or hides each kind of object (from the map's catalog: Trees, Rocks, Bushes, Plants, Props,
 Buildings, Markers, Other) and the water. Hidden objects cannot be picked. Plants and Markers start hidden. **Slopes over** draws the
 ground steeper than its angle red: where a player cannot walk up, where the cliffs are. **Names and regions** shows the
-map's [names](names.md).
+map's [names](names.md). **Map as a block** draws the map as a block cut out of the earth, its sides showing
+layers of soil and rock and the sea stopping at its edge: a look for pictures, nothing of it is saved.
+
+![The sample map as a block](images/block-look.jpg)
 
 ## Settings
 

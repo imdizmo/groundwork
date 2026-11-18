@@ -245,9 +245,10 @@ public sealed partial class GlView
 
     /// <summary>
     /// A name drawn as the map shows it: a serif face, light with a dark edge so it reads on any ground; a region's in
-    /// spaced capitals. Made at <paramref name="scale"/> times its size in screen pixels.
+    /// spaced capitals. Made at <paramref name="scale"/> times its size in screen pixels; <paramref name="ink"/>: dark
+    /// with a pale edge instead (on paper).
     /// </summary>
-    internal static SKBitmap NamePicture(string text, MapNames.Size size, float scale)
+    internal static SKBitmap NamePicture(string text, MapNames.Size size, float scale, bool ink = false)
     {
         float px = size switch { MapNames.Size.Region => 26, MapNames.Size.Place => 17, _ => 13 } * scale;
         string shown = size == MapNames.Size.Region ? text.ToUpperInvariant() : text;
@@ -265,8 +266,8 @@ public sealed partial class GlView
         var bmp = new SKBitmap(new SKImageInfo(bw, bh, SKColorType.Rgba8888, SKAlphaType.Unpremul));
         using var g = new SKCanvas(bmp);
         g.Clear(SKColors.Transparent);
-        using var outline = new SKPaint { Color = new SKColor(25, 22, 18, 210), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = edge, StrokeJoin = SKStrokeJoin.Round };
-        using var fill = new SKPaint { Color = size == MapNames.Size.Region ? new SKColor(250, 236, 200) : new SKColor(255, 250, 240), IsAntialias = true };
+        using var outline = new SKPaint { Color = ink ? new SKColor(245, 235, 210, 200) : new SKColor(25, 22, 18, 210), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = edge, StrokeJoin = SKStrokeJoin.Round };
+        using var fill = new SKPaint { Color = ink ? new SKColor(75, 42, 22) : size == MapNames.Size.Region ? new SKColor(250, 236, 200) : new SKColor(255, 250, 240), IsAntialias = true };
         float baseline = edge + (px * 1.02f);
         foreach (var paint in new[] { outline, fill })
         {

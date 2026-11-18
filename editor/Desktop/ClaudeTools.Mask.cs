@@ -119,4 +119,28 @@ public sealed partial class ClaudeTools
             },
         };
     });
+
+    /// <summary>map_picture: the whole map from above, drawn as a map.</summary>
+    [McpServerTool(Name = "map_picture", ReadOnly = true, Title = "See the whole map as a map")]
+    [Description("A picture of the whole map from straight above, north up, drawn as a map: the ground's colours shaded by its hills, the sea, lakes and rivers, the regions and names, a scale bar. Style colour or parchment. Changes nothing.")]
+    public Task<ModelContextProtocol.Protocol.CallToolResult> MapPictureTool(
+        [Description("colour or parchment")] string style = "colour",
+        [Description("The picture's longest side in pixels (256..2048; default 1024).")] int size = 1024) => OnUi(() =>
+    {
+        if (NoMap() is string why)
+        {
+            return new ModelContextProtocol.Protocol.CallToolResult { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = why } } };
+        }
+        var s = _w.Session!;
+        var area = new SceneLayers.AreaView(s.Scene);
+        var (png, pw, ph) = MapPicture.Of(area, s.Scene.Water, style.StartsWith("parch", StringComparison.OrdinalIgnoreCase) ? MapPicture.Style.Parchment : MapPicture.Style.Colour, Math.Clamp(size, 256, 2048));
+        return new ModelContextProtocol.Protocol.CallToolResult
+        {
+            Content =
+            {
+                new ModelContextProtocol.Protocol.TextContentBlock { Text = $"The picture is {pw} x {ph}: its left edge x {area.MinX:0}, right x {area.MaxX:0}, top z {area.MaxZ:0} (north), bottom z {area.MinZ:0}." },
+                ModelContextProtocol.Protocol.ImageContentBlock.FromBytes(png, "image/png"),
+            },
+        };
+    });
 }

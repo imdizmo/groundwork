@@ -11,7 +11,7 @@ namespace Groundwork.Desktop;
 ///    stroke &lt;tool&gt; &lt;x&gt; &lt;z&gt; &lt;steps&gt;  a brush stroke at world x, z (tool: raise, lower, smooth...)
 ///    picture &lt;file.png&gt;             a picture of the 3D view, once it is drawn
 ///    shot &lt;file.png&gt;                a picture of the whole window, panels and view (documentation)
-///    look &lt;models|seethrough&gt; &lt;on|off&gt;, look res &lt;sharp|balanced|fast&gt;
+///    look &lt;models|seethrough|block|names&gt; &lt;on|off&gt;, look res &lt;sharp|balanced|fast&gt;
 ///                                   the View panel's Look switches
 ///    camera &lt;x&gt; &lt;z&gt; &lt;yaw°&gt; &lt;pitch°&gt; &lt;distance&gt; [y]  the 3D view's camera on world x, z (at height y:
 ///                                               inside a dungeon)
@@ -34,6 +34,7 @@ namespace Groundwork.Desktop;
 ///    unreal landscape|paint|models|objects  into the open Unreal level: the landscape made (and painted, its water
 ///                                   made), or only painted and its water made, the models it lacks imported,
 ///                                   every object placed; Unreal's answer
+///    mappicture &lt;file.png&gt; [colour|parchment] [pixels]  the open map's picture from above (⋯ → Save a picture of the map)
 ///    replay &lt;file&gt;[|&lt;file&gt;...]|team all|&lt;n&gt;|seek &lt;s&gt;|close  recorded play sessions over the open map
 ///                                   (Replay; team: the team server's sessions of the map, all or the n-th newest)
 ///    docs &lt;page[#anchor]&gt;            the Help window on that place of the documentation ("map.md#controls")
@@ -92,6 +93,7 @@ public static partial class Driver
         ["choose"] = CmdChoose,
         ["bench"] = CmdBench,
         ["map"] = CmdMap,
+        ["mappicture"] = CmdMapPicture,
         ["unreal"] = CmdUnreal,
         ["replay"] = CmdReplay,
         ["bounds"] = CmdBounds,

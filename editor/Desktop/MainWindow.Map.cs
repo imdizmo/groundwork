@@ -329,6 +329,32 @@ public partial class MainWindow
         Msg(new Said($"Mask picture written: {Path.GetFileName(file)}, {w} x {h}, white where it passes ({100.0 * passed / (s.Ground.W * s.Ground.H):0.#}% of the ground).", ""));
     }
 
+    /// <summary>⋯ → Save a picture of the map: in colour or on parchment, as a PNG (MapPicture).</summary>
+    private async Task SaveMapPicture()
+    {
+        if (MapProject.Current is not { } map || Session is not { } s)
+        {
+            return;
+        }
+        if (await Dialogs.Choose(this, "Save a picture of the map", "The whole map from straight above, north up, with its water, regions and names, a scale bar and a north arrow:", ["In colour", "On parchment"], "Next") is not int style)
+        {
+            return;
+        }
+        if (await Pickers.SaveFile(StorageProvider, "Save the picture of the map", map.Name + "_map.png", [new("PNG") { Patterns = ["*.png"] }]) is not string file)
+        {
+            return;
+        }
+        Msg(new Said(SaveMapPicture(s, file, (MapPicture.Style)style), ""));
+    }
+
+    /// <summary>The map's picture written to a file (the driver's mappicture too); what to say.</summary>
+    internal static string SaveMapPicture(EditSession s, string file, MapPicture.Style style, int longSide = 2048)
+    {
+        var (png, w, h) = MapPicture.Of(new SceneLayers.AreaView(s.Scene), s.Scene.Water, style, longSide);
+        File.WriteAllBytes(file, png);
+        return $"Map picture written: {Path.GetFileName(file)}, {w} x {h}.";
+    }
+
     /// <summary>⋯ → Replay a play session: a .playlog over the open map (ReplayPanel).</summary>
     private async Task OpenReplay()
     {
@@ -648,6 +674,8 @@ public partial class MainWindow
             publish.Click += async (_, _) => await PublishMap();
             var replay = new MenuItem { Header = "Replay a play session…" };
             replay.Click += async (_, _) => await OpenReplay();
+            var mapPicture = new MenuItem { Header = "Save a picture of the map (from above, with its names)…" };
+            mapPicture.Click += async (_, _) => await SaveMapPicture();
             var replayTeam = new MenuItem { Header = "Replay play sessions from the team…" };
             replayTeam.Click += async (_, _) => await ReplayFromTeam();
             var graph = new MenuItem { Header = "Ground graph…" };
@@ -684,7 +712,7 @@ public partial class MainWindow
             undoAgain.Click += async (_, _) => await MakeAgain(_madeFrom?.Spec);
             var link = new MenuItem();
             link.Click += async (_, _) => await LinkUnreal(change: true);
-            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, graph, script, export, terrainMaps, pack, publish, replay, replayTeam, link, landscape, models, placeAll } };
+            var more = new MenuFlyout { Items = { again, undoAgain, send, settle, grow, graph, script, export, terrainMaps, mapPicture, pack, publish, replay, replayTeam, link, landscape, models, placeAll } };
             more.Opening += (_, _) =>
             {
                 link.Header = MapProject.Current?.UnrealProject is { } up

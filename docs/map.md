@@ -184,6 +184,15 @@ set. The log of that run is kept as `Groundwork.previous.log` in the data folder
 (Unreal's landscape import formats, and most terrain tools'): 32768 is 0 m, 128 steps a metre, as an Unreal landscape
 at Z scale 100 reads them. The first row is the map's first (its origin's) row.
 
+## A picture of the map
+
+**⋯ → Save a picture of the map** writes the whole map seen from straight above, north up, as a PNG 2048 pixels on its
+longer side: the ground's colours shaded by its hills (lit from the north-west), the sea, lakes and rivers, the regions'
+outlines and the [names](names.md), a scale bar and a north arrow. Pick **In colour** or **On parchment** (browns on old
+paper). Use it as a game's own world map, a design page or a picture for the team.
+
+![The sample map on parchment](images/map-picture.jpg)
+
 ## Exporting the terrain maps
 
 **⋯ → Export the terrain maps and paint weights** writes grey 8-bit PNGs, the map's size, read off its ground as it is now, into a folder

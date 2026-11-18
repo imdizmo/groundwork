@@ -59,7 +59,7 @@ public sealed partial class GlView
         _gl.UseProgram(_waterProg);
         _gl.UniformMatrix4(_u.At(_waterProg, "uViewProj"), 1, false, (float*)&vp);
         _gl.BindVertexArray(_waterVao);
-        _gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
+        _gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)(MapBlock.On ? 6 * sizeof(uint) : 0));
         _gl.DepthMask(true);
         _gl.Disable(EnableCap.Blend);
     }

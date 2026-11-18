@@ -17,6 +17,8 @@ public static partial class Driver
         {
             case "models": w.ModelsBox.IsChecked = args[1] == "on"; break;
             case "seethrough": w.SeeThroughBox.IsChecked = args[1] == "on"; break;
+            case "block": w.BlockBox.IsChecked = args[1] == "on"; break;
+            case "names": w.NamesBox.IsChecked = args[1] == "on"; break;
             case "res": w.ResolutionBox.SelectedIndex = Array.IndexOf(Resolutions, args[1]); break;
             default: throw new InvalidOperationException("unknown look " + args[0]);
         }

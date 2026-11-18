@@ -43,10 +43,10 @@ public sealed partial class GlView
         _gl.VertexAttribPointer(7, 1, VertexAttribPointerType.Float, false, 4, (void*)0);
         BuildGroundTextures(s);
         _terrainIndexCount = (uint)idx.Length;
-        // The sea: one quad over the area, at the water level.
-        float hw = w / 2f + 400, hh = h / 2f + 400, y = s.Water;
-        float[] q = [-hw, y, -hh, hw, y, -hh, hw, y, hh, -hw, y, hh];
-        uint[] qi = [0, 2, 1, 0, 3, 2];
+        // The sea: one quad over the area and 400 m past it, at the water level; then one over the area only (the block look).
+        float hw = w / 2f + 400, hh = h / 2f + 400, bw = w / 2f, bh = h / 2f, y = s.Water;
+        float[] q = [-hw, y, -hh, hw, y, -hh, hw, y, hh, -hw, y, hh, -bw, y, -bh, bw, y, -bh, bw, y, bh, -bw, y, bh];
+        uint[] qi = [0, 2, 1, 0, 3, 2, 4, 6, 5, 4, 7, 6];
         (_waterVao, _waterVbo, _waterEbo) = _own.PositionMesh(q, qi);
     }
 }

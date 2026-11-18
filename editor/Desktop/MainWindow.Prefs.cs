@@ -22,6 +22,7 @@ public sealed partial class MainWindow
         p.Bind(ModelsBox, "view.models");
         p.Bind(SeeThroughBox, "view.seeThrough");
         p.Bind(NamesBox, "view.names");
+        p.Bind(BlockBox, "view.block");
         p.Bind(ResolutionBox, "view.res3d");
         // The brush's shape and falloff, Select's options.
         p.Bind(Tools.ShapeBox, "brush.shape");

@@ -85,6 +85,7 @@ public static partial class MapTools
     private static readonly Lazy<bool> SceneRegistered = new(() =>
     {
         ModExtensions.AddBuiltInScene(new MapCaves.Scene());
+        ModExtensions.AddBuiltInScene(new MapBlock.Scene());
         return true;
     });
 

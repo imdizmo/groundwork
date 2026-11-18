@@ -55,6 +55,20 @@ public static partial class Driver
         }
     }
 
+    /// <summary>The 'mappicture' command: mappicture &lt;file.png&gt; [colour|parchment] [pixels].</summary>
+    /// <param name="call">The command as given.</param>
+    private static Task<string> CmdMapPicture(Call call)
+    {
+        string[] args = call.Args;
+        if (args.Length == 0 || call.W.Session is not { } s)
+        {
+            throw new InvalidOperationException("mappicture <file.png> [colour|parchment] [pixels], with a map open");
+        }
+        var style = args.Length > 1 && args[1] == "parchment" ? MapPicture.Style.Parchment : MapPicture.Style.Colour;
+        int side = args.Length > 2 ? int.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture) : 2048;
+        return Task.FromResult(JsonSerializer.Serialize(new { said = MainWindow.SaveMapPicture(s, Path.GetFullPath(args[0]), style, side) }));
+    }
+
     /// <summary>The 'replay' command: replay &lt;file.playlog&gt;[|&lt;file&gt;...] | replay team all|&lt;n&gt; | replay seek &lt;seconds&gt; | replay close.</summary>
     /// <param name="call">The command as given.</param>
     private static async Task<string> CmdReplay(Call call)
