@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.5.0
+
+- **Replay a play session** (⋯): a game's recording of how someone played (a .playlog) opens over its map. The path
+  walked is drawn on the ground, broken at respawns and teleports, with deaths, stops and quest steps as posts and
+  the player at the slider's time; Play runs it at up to 64 times. The list of events moves the view to each, and
+  it warns when the session is from another map or version. The help has the file's format.
+- **Several sessions at once:** every path thin and faint, and where people died and stood still as posts that grow
+  with how many did, listed most first with their sessions and causes. Twenty two-hour sessions draw in a fraction
+  of a millisecond.
+- **Replay play sessions from the team** (⋯): the team server's sessions of the open map, newest first; one or all
+  of them are taken down, checked against the hash their id holds, kept (the last 300) and replayed.
+- **The Mask as a picture:** Save as picture… in the Mask panel shows the whole map north up, white where the ground
+  passes.
+- **Crash reports:** a run that ended badly is offered to the team at the next start, showing exactly what is sent;
+  nothing is sent without Send, and nothing is asked with no team server set.
+- **Unreal:** Place all objects sends every object of the map to the level Live is linked to, after asking; Bring the
+  models imports only the models the map places. The Unreal page says how the editor's coordinates become Unreal's.
+- Pack the map to share also packs models in the exporter's layout (pieces, meshes, pictures, icons and tables),
+  only those the map places, so such a map no longer arrives as boxes.
+- **Claude:** map_mask_picture, playlog_summary (one session or several), pick (what is at pixels of a screenshot)
+  and where_drawn (where world points are on it); screenshot now says its camera.
+- The Windows package is built but was not tried on Windows for this release.
+
 ## v0.4.0
 
 - **Pack the map to share** (⋯): the map as one .zip with only the models its objects use, each with its own
