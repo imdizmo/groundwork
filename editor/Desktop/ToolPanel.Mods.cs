@@ -150,6 +150,25 @@ public sealed partial class ToolPanel
         _capSelect.IsVisible = on;
     }
 
+    /// <summary>
+    /// The letter that picks an own tool (by its id), or null: letters no other key takes (W A S D C move the camera, F
+    /// turns the eye, R and F turn and mirror while placing or pasting, V and L open panels, E M O T H pick tools).
+    /// </summary>
+    internal static string? OwnKey(string id) => id switch
+    {
+        "object" => "P",
+        "brush" => "U",
+        "biome" => "B",
+        "stamp" => "K",
+        "shape" => "G",
+        "mountain" => "N",
+        "river" => "I",
+        "path" => "J",
+        "areas" => "Z",
+        "names" => "Q",
+        _ => null,
+    };
+
     /// <summary>An own tool's rail section (by its id).</summary>
     private static string OwnSection(string id) => id switch
     {
@@ -189,8 +208,9 @@ public sealed partial class ToolPanel
         foreach (var t in tools)
         {
             Control picture = TryIcon(t.Info.Icon) ?? new TextBlock { Text = t.Info.Name[..1].ToUpperInvariant(), FontSize = 13, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center };
-            var b = RailButton(t.Info.Name, "", picture);
-            ToolTip.SetTip(b, t.Info.Name + " (" + t.Mod + ")\n" + t.Info.Help);
+            string key = t.Mod == MapTools.Own ? OwnKey(t.Info.Id) ?? "" : "";
+            var b = RailButton(t.Info.Name, key, picture);
+            ToolTip.SetTip(b, t.Info.Name + (key.Length > 0 ? $" ({key})" : "") + " (" + t.Mod + ")\n" + t.Info.Help);
             b.Click += (_, _) => ChooseMod(t);
             if (t.Mod == MapTools.Own && OwnSection(t.Info.Id) != section)
             {

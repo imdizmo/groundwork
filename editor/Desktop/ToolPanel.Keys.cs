@@ -21,6 +21,11 @@ public sealed partial class ToolPanel
             ChooseMode(ToolMode.Measure);
             return true;
         }
+        if (ModTools.FirstOrDefault(t => t.Mod == MapTools.Own && OwnKey(t.Info.Id) == key) is { } own)
+        {
+            ChooseMod(own);
+            return true;
+        }
         foreach (var (t, k) in Keys)
         {
             if (k == key)

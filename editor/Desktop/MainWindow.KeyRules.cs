@@ -57,6 +57,8 @@ public partial class MainWindow
             // The rail's keys: the tool panel acts on them, and they stay unhandled.
             Pass([Key.Escape], KeyMods.NoCtrl, null, _ => Tools.Key("Escape")),
             Pass([Key.E, Key.M, Key.O, Key.T, Key.H], KeyMods.NoCtrl, null, p => Tools.Key(p.Key.ToString())),
+            // the map's own tools (ToolPanel.OwnKey); Alt + Z stays Select through
+            Pass([Key.P, Key.U, Key.B, Key.K, Key.G, Key.N, Key.I, Key.J, Key.Z, Key.Q], KeyMods.NoCtrl, p => !p.Alt, p => Tools.Key(p.Key.ToString())),
             Pass(Digits(Key.D0), KeyMods.NoCtrl, null, p => Tools.Key((p.Key - Key.D0).ToString())),
             Pass(Digits(Key.NumPad0), KeyMods.NoCtrl, null, p => Tools.Key((p.Key - Key.NumPad0).ToString())),
         ];

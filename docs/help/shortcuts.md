@@ -35,6 +35,10 @@ and `Option` for `Alt`.
 | `6` `7` `8` `9` | Paint layer 2, 3, 4, and layer 1 (take paint off) |
 | `M` | Measure |
 | `H` or `Esc` | View |
+| `P` `U` `B` `K` | Object, Brush, Biome, Stamp |
+| `G` `N` | Shape, Mountain |
+| `I` `J` | Rivers, Path |
+| `Z` `Q` | Areas, Names |
 
 ## Undo, copy and paste
 
