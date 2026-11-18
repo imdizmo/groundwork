@@ -2,10 +2,11 @@
 
 **Path** on the rail makes a path, a road or a ramp along a line you paint.
 
-Drag along the ground to paint the line, like a brush. When you let go, it becomes a row of dots that keep its shape:
-drag a dot to nudge that part of the line, click the line between two dots to add one there, and `Shift`+click a dot
-to delete it. Painting on from either end makes the line longer. A click away from the line adds one point, so a
-straight ramp is two clicks. `Backspace` takes the last point off and `Esc` clears the line. **Make it** (`Enter`) then does, in one step of History:
+Drag along the ground to paint the line, like a brush. When you let go, the path is made, and a row of dots that keep
+its shape stays on it: drag a dot to nudge that part of the path, click the path between two dots to add one there,
+and `Shift`+click a dot to delete it. Each time you let go it is made again, its old ground put back first. Painting
+on from either end makes it longer; painting away from its ends starts a new one. A click away from the line adds one
+point, so a straight ramp is two clicks. `Backspace` takes the last point off and `Esc` lets go of the path. **Make it** (`Enter`) then does, in one step of History:
 
 - **The ground**: levelled across the path's **Width**, cut where it is higher and filled where it is lower. Its
   **Shoulder** on each side blends it into the ground round it.

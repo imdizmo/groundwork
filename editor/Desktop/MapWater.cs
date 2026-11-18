@@ -318,9 +318,11 @@ public static class MapWater
     }
 
     /// <summary>
-    /// The ground cut down to a river's or lake's bed (never raised; one undo step), over its bounds.
+    /// The ground cut down to a river's or lake's bed (never raised; one undo step), over its bounds. With
+    /// <paramref name="before"/> (the ground it cut last time, by grid point), that is put back first, and it is left
+    /// holding the ground this cut.
     /// </summary>
-    public static int Carve(EditSession session, string label, Func<Vector2, float?> bed, (float MinX, float MinY, float MaxX, float MaxY) bounds)
+    public static int Carve(EditSession session, string label, Func<Vector2, float?> bed, (float MinX, float MinY, float MaxX, float MaxY) bounds, Dictionary<int, float>? before = null)
     {
         var g = session.Ground;
         return session.EditGround(label, ground =>
@@ -329,6 +331,18 @@ public static class MapWater
             // Unreal (X, Y) -> editor (x, z = -Y) -> grid.
             int x0 = Math.Max(1, (int)MathF.Floor(bounds.MinX - g.OriginX)), x1 = Math.Min(g.W - 2, (int)MathF.Ceiling(bounds.MaxX - g.OriginX));
             int z0 = Math.Max(1, (int)MathF.Floor(-bounds.MaxY - g.OriginZ)), z1 = Math.Min(g.H - 2, (int)MathF.Ceiling(-bounds.MinY - g.OriginZ));
+            var (bx0, bz0, bx1, bz1) = (x0, z0, x1, z1);
+            var cut = new Dictionary<int, float>();
+            // carved before: that ground put back first, so a moved bed leaves no old trench
+            foreach (var (p, h) in before ?? [])
+            {
+                if (p >= 0 && p < g.W * g.H)
+                {
+                    ground.SetHeight(p, h);
+                    touched.Add(p);
+                    (bx0, bz0, bx1, bz1) = (Math.Min(bx0, p % g.W), Math.Min(bz0, p / g.W), Math.Max(bx1, p % g.W), Math.Max(bz1, p / g.W));
+                }
+            }
             for (int gz = z0; gz <= z1; gz++)
             {
                 for (int gx = x0; gx <= x1; gx++)
@@ -336,12 +350,21 @@ public static class MapWater
                     int p = (gz * g.W) + gx;
                     if (bed(new Vector2(g.OriginX + gx, -(g.OriginZ + gz))) is float b && b < ground.HeightOf(p) - 0.005f)
                     {
+                        cut[p] = ground.HeightOf(p);
                         ground.SetHeight(p, b);
                         touched.Add(p);
                     }
                 }
             }
-            return (touched, (x0, z0, x1, z1));
+            if (before != null)
+            {
+                before.Clear();
+                foreach (var (p, h) in cut)
+                {
+                    before[p] = h;
+                }
+            }
+            return (touched, (bx0, bz0, bx1, bz1));
         }).Count;
     }
 }

@@ -1004,6 +1004,13 @@ public static partial class MapTools
         private bool _dragging;
         private List<Vector2>? _stroke;
         private string? _before, _action;
+
+        /// <summary>
+        /// The ground each river's bed was cut from, by its name: put back when it is carved again, so a nudged river
+        /// leaves no old trench.
+        /// </summary>
+        // ponytail: kept while the map is open, not saved; a river carved before the map was opened again keeps its old bed when nudged
+        private readonly Dictionary<string, Dictionary<int, float>> _cut = [];
         private (EditSession.Change Change, StepState State, string Label, DateTime At)? _lastStep;
 
         /// <summary>The rivers before and after one step (a slider dragged on keeps updating its step's after).</summary>
@@ -1242,7 +1249,7 @@ public static partial class MapTools
                 float[] h = MapWater.Surfaces(r);
                 float m = (r.Points.Max(p => p.HalfWidth) * 2) + 1;
                 n += MapWater.Carve(s, "Carve " + r.Name, p => MapWater.RiverBed(r, h, p),
-                    (r.Points.Min(p => p.X) - m, r.Points.Min(p => p.Y) - m, r.Points.Max(p => p.X) + m, r.Points.Max(p => p.Y) + m));
+                    (r.Points.Min(p => p.X) - m, r.Points.Min(p => p.Y) - m, r.Points.Max(p => p.X) + m, r.Points.Max(p => p.Y) + m), Cut(r));
             }
             foreach (var l in lakes.Where(l => l.Outline.Count > 2))
             {
@@ -1313,6 +1320,7 @@ public static partial class MapTools
                         MapWater.Touch();
                         Fields(ctx);
                         Record((Lakes(ctx) ? "Lake: " : "River: ") + _action);
+                        CarveRiver(ctx);
                         break;
                     case PointerAction.Drag when _dragging && _point >= 0:
                         if (lakes && Lake(ctx) is { } l && _point < l.Outline.Count)
@@ -1328,12 +1336,35 @@ public static partial class MapTools
                     case PointerAction.Release:
                         _dragging = false;
                         Record((Lakes(ctx) ? "Lake: " : "River: ") + (_action ?? "edit"));
+                        if (_action is "Move point" or "Delete point")
+                        {
+                            CarveRiver(ctx);
+                        }
                         break;
                     default:
                         break;
                 }
             }
             Show(ctx, at);
+        }
+
+        /// <summary>The ground a river's bed was cut from (empty before its first carve here).</summary>
+        private Dictionary<int, float> Cut(MapWater.River r)
+        {
+            if (!_cut.TryGetValue(r.Name, out var cut))
+            {
+                _cut[r.Name] = cut = [];
+            }
+            return cut;
+        }
+
+        /// <summary>The picked river carved as it is now, on letting go of a stroke or a dot (its old bed put back first).</summary>
+        private void CarveRiver(IToolContext ctx)
+        {
+            if (River(ctx) is { Points.Count: > 1 } r)
+            {
+                Carve(ctx, [], [r]);
+            }
         }
 
         /// <summary>
@@ -1354,6 +1385,13 @@ public static partial class MapTools
                 return;
             }
             var made = dots.ConvertAll(q => new MapWater.Point(q.X, q.Y, half, ctx.Number("depth"), ctx.Number("current")));
+            if (river.Points.Count == 0)
+            {
+                // a new river: its surface from just under the ground at its source to its mouth, never running uphill
+                float Under(Vector2 q) => ctx.Area.GroundHeight(q.X, -q.Y) - 0.3f;
+                river.Top = Under(dots[0]);
+                river.End = MathF.Min(river.Top, Under(dots[^1]));
+            }
             var first = river.Points.Count > 1 ? new Vector2(river.Points[0].X, river.Points[0].Y) : (Vector2?)null;
             var last = river.Points.Count > 0 ? new Vector2(river.Points[^1].X, river.Points[^1].Y) : (Vector2?)null;
             if (first is Vector2 f && last is Vector2 l && Vector2.Distance(dots[0], f) < Vector2.Distance(dots[0], l))

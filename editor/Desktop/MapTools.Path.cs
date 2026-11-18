@@ -69,13 +69,14 @@ public static partial class MapTools
     {
         private readonly List<Vector2> _points = [];
         private int _drag = -1;
+        private bool _moved;
         private List<Vector2>? _stroke;
         private Vector2? _hover;
         private MapRoads.Road? _road;
         private Action? _refresh;
 
         /// <inheritdoc/>
-        public override ToolInfo Info { get; } = new("path", "Path", "Paint a path, road or ramp: drag along the ground (or click point by point). Dots stay along it: drag one to nudge it, click the line to add one, Shift+click one to delete it. Then Make it (Enter): the ground under it levelled, its shoulders blended into the ground round it, a layer painted on it, objects along its edges and a bridge over each river it crosses, in one step. Kept as a road, pick it in the list to change it and make it again, or take it away. Esc clears the line.") { Icon = "M8 21L11 3M16 21L13 3M12 6v2M12 11v2M12 16v2" };
+        public override ToolInfo Info { get; } = new("path", "Path", "Paint a path, road or ramp: drag along the ground (or click point by point); it is made when you let go. Dots stay along it: drag one to nudge it, click the line to add one, Shift+click one to delete it, and it is made again. Making it levels the ground under it, blends its shoulders into the ground round it, paints a layer on it and puts objects along its edges and a bridge over each river it crosses, in one step. After a slider change, Make it (Enter). Pick a kept road in the list to change it, or take it away; Esc lets go of it, and painting away from its ends starts a new one.") { Icon = "M8 21L11 3M16 21L13 3M12 6v2M12 11v2M12 16v2" };
 
         /// <inheritdoc/>
         public override IReadOnlyList<ToolControl> Controls { get; } =
@@ -116,6 +117,9 @@ public static partial class MapTools
                 if (_road != null && !MapRoads.All.Contains(_road))
                 {
                     _road = MapRoads.All.FirstOrDefault(r => r.Name == _road.Name);
+                    // undone or redone: the dots are the road's as it is now
+                    _points.Clear();
+                    _points.AddRange(_road?.Points ?? []);
                 }
                 List(ctx);
                 Show(ctx);
@@ -193,6 +197,10 @@ public static partial class MapTools
                     break;
                 case "Back" when _points.Count > 0:
                     _points.RemoveAt(_points.Count - 1);
+                    if (_road != null)
+                    {
+                        Remake(ctx);
+                    }
                     break;
                 default:
                     return false;
@@ -216,35 +224,57 @@ public static partial class MapTools
             {
                 case PointerAction.Press when near >= 0 && input.Modifiers.HasFlag(KeyModifiers.Shift):
                     _points.RemoveAt(near);
+                    Remake(ctx);
                     break;
                 case PointerAction.Press when near >= 0:
-                    _drag = near;
+                    (_drag, _moved) = (near, false);
                     break;
                 case PointerAction.Press when OnLine(at, MathF.Max(2, width / 2)) is int seg:
                     // on the line between two dots: a dot there, to nudge
                     _points.Insert(seg + 1, at);
-                    _drag = seg + 1;
+                    (_drag, _moved) = (seg + 1, true);
                     break;
                 case PointerAction.Press:
                     _stroke = [at];
                     break;
                 case PointerAction.Drag when _drag >= 0 && _drag < _points.Count:
                     _points[_drag] = at;
+                    _moved = true;
                     break;
                 case PointerAction.Drag when _stroke != null && Vector2.Distance(_stroke[^1], at) > 1:
                     _stroke.Add(at);
                     break;
                 case PointerAction.Release when _stroke != null:
+                    // a stroke away from the picked road's ends starts a new road
+                    if (_road != null && _points.Count > 0 && Vector2.Distance(_stroke[0], _points[0]) > width + 5 && Vector2.Distance(_stroke[0], _points[^1]) > width + 5)
+                    {
+                        Pick(ctx, null);
+                        List(ctx);
+                    }
                     Join(_stroke.Zip(_stroke.Skip(1), Vector2.Distance).Sum() < 2 ? [at] : StrokeDots(_stroke, MathF.Max(0.5f, width / 4), MathF.Max(10, width * 4)));
                     _stroke = null;
+                    Remake(ctx);
                     break;
                 case PointerAction.Release:
+                    if (_drag >= 0 && _moved)
+                    {
+                        Remake(ctx);
+                    }
                     _drag = -1;
                     break;
                 default:
                     break;
             }
             Show(ctx);
+        }
+
+        /// <summary>Made on letting go: the line as it is now, when it has two points or more (a kept road is made again).</summary>
+        private void Remake(IToolContext ctx)
+        {
+            if (_points.Count >= 2)
+            {
+                Make(ctx);
+            }
         }
 
         /// <summary>The stretch of the line a point is on (within so many metres), or null.</summary>
@@ -371,10 +401,14 @@ public static partial class MapTools
                     now = [.. was.Select(r => r == old ? road : r)];
                 }
                 MapRoads.Restore(now);
-                _road = null;
+                // it stays picked, its dots there to nudge
+                _road = road;
+            }
+            else
+            {
+                _points.Clear();
             }
             ctx.Status($"{label} made" + (n > 0 ? $", {n} objects" : "") + (crossings.Count > 0 ? $", {crossings.Count} bridges." : "."));
-            _points.Clear();
             List(ctx);
         }
 
@@ -437,7 +471,7 @@ public static partial class MapTools
                 shapes.Add(Band([.. kept.Where((_, i) => i % 4 == 0).Select(q => new Vector3(q.X, area.GroundHeight(q.X, q.Y) + 0.2f, q.Y))], r.Width, new Vector4(0.3f, 0.75f, 1, 0.3f)));
             }
             ctx.Preview(shapes);
-            ctx.SetText("status", _road != null ? $"{_road.Name}: move its points, then Make it again; or take it away." : _points.Count switch
+            ctx.SetText("status", _road != null ? $"{_road.Name}: drag a dot to nudge it, paint on from an end, or take it away. Esc lets go of it." : _points.Count switch
             {
                 0 => "Drag along the ground to paint a line, or click point by point.",
                 1 => "Click the next point.",
