@@ -27,6 +27,7 @@ public sealed partial class MainWindow
         History.Message += t => { Msg(t); UpdateSaveBar(); };
         History.ShowAsked += (x, z) => View.Orbit(x, z, View.WorldCamera is { } c ? c.Yaw * 180 / MathF.PI : 30, 55, 70);
         MaskPanel = new MaskPanel(Mask);
+        MaskPanel.PictureButton.Click += async (_, _) => await SaveMaskPicture();
         WireGroundTools();
         MeasurePanel = new MeasurePanel(View);
         ModToolPanel = new ModToolPanel(Prefs);

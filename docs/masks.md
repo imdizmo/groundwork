@@ -12,6 +12,10 @@ The Mask limits the ground tools to ground that matches it. Turn it on in the br
 An empty box means no limit. The Mask is judged on the ground as it was when the stroke began, so a stroke does not
 stop itself.
 
+**Save as picture…** writes the Mask over the whole map as a black-and-white PNG, north up, one pixel a metre: white
+where the ground passes, black where it does not. Check a slope or height band with it before painting the whole map
+by it ([Paint the whole map](terrain.md)); the status bar says how much of the ground passes.
+
 ## Placing by the terrain
 
 With a map in the Mask, the brushes, **Brush**, **Biome** and the area actions follow the ground's shape:

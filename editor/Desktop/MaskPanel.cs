@@ -69,6 +69,8 @@ public sealed class MaskPanel
     };
     internal NumericUpDown TerrainMin { get; } = Num(0.05m, 0, 1);
     internal NumericUpDown TerrainMax { get; } = Num(0.05m, 0, 1);
+    /// <summary>Save as picture…: the mask as a black-and-white picture of the map (the window saves it).</summary>
+    internal Button PictureButton { get; } = new Button { Content = Lang.T("mask.picture"), FontSize = 12 }.Tip("mask.picture");
     internal TextBlock WarningText { get; } = new() { FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(240, 150, 90)), TextWrapping = TextWrapping.Wrap };
 
     /// <summary>
@@ -124,6 +126,7 @@ public sealed class MaskPanel
                 new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,14"), ColumnSpacing = 4, Children = { new TextBlock { Text = Lang.T("mask.label.terrain"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(TerrainBox, 1) } },
                 Pair("", TerrainMin, TerrainMax, ""),
                 WarningText,
+                PictureButton,
                 new TextBlock { Text = Lang.T("mask.hint.limits"), FontSize = 11, Foreground = Tokens.Dim, TextWrapping = TextWrapping.Wrap },
             },
         };

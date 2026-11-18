@@ -36,6 +36,9 @@ plugin speak a numbered protocol: **Live** refuses a plugin of another version a
   place; a new one is made like the first of its kind already there
   (materials, falloff), one the map no longer has is deleted. Other water (an ocean) is never touched.
 
+**⋯ → Place all objects in the open Unreal level…** sends every object of the map at once, as Live sends a new one;
+use it on a level that has none of the map's objects yet, after **Bring the models into Unreal**.
+
 Changes made in Unreal by hand come back as a step of their own ("From Unreal"): ground, objects of the meshes in
 `names.json`, markers, and the rivers and lakes with the prefix.
 
@@ -60,7 +63,7 @@ layer's texture repeated every `size` metres, or its colour; holes cut), a paint
 saved under `/Game/Groundwork/Maps/<map>`, then every layer is painted as the map has it, the holes are cut, and the rivers, lakes and the map's sea (an
 ocean at its sea level, when the map has one) are made.
 
-**⋯ → Bring the models into Unreal** imports the map's glTF models that Unreal has no mesh for yet (the models
+**⋯ → Bring the models into Unreal** imports the glTF models the map places that Unreal has no mesh for yet (the models
 folder's `names.json` lists those it has) through Unreal's own importer, each into its own folder under
 `/Game/Groundwork/Models`, saved in the project, and adds their meshes to `names.json`. From then on Live and Send
 place those objects like any others. It needs the Groundwork Bridge plugin with the import route.
@@ -68,3 +71,22 @@ place those objects like any others. It needs the Groundwork Bridge plugin with 
 **Send to Unreal** saves the map, then runs the script `unreal.apply` names, its last line shown on the status bar.
 The first time a map's script runs, the editor asks: run it only when you know where the map came from. It asks again
 whenever the script changes.
+
+## Coordinates
+
+The editor works in metres: x runs east, z north, and the height up. Unreal works in centimetres with Z up, so a point
+of the map goes into the level as:
+
+| Editor | Unreal |
+|---|---|
+| x | X = x × 100 |
+| z (north) | Y = −z × 100 (north is −Y) |
+| height | Z = height × 100 |
+
+There is no offset: the editor's point (0, 0) is Unreal's (0, 0), and the ground's heights are those of the
+landscape. `editor_state`'s bounds, `ground_at` and `list_objects` give editor coordinates; turn them so before using
+them in Unreal, and back (X / 100, −Y / 100, Z / 100) for a point read in Unreal.
+
+Models are glTF, which has Y up and metres; the editor and Unreal's glTF import both turn them to their own axes, so a
+model made in a program with Z up (Blender) is exported to glTF with its usual *+Y Up* setting, standing on its origin.
+An object's turn (yaw) is the editor's in Live and Send; the editor turns it for Unreal.

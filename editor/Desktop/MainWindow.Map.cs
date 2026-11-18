@@ -307,6 +307,27 @@ public partial class MainWindow
         Msg(new Said($"Heightmap written: {Path.GetFileName(file)}, {cols} x {rows}, 0 m = 32768, 128 steps a metre (Unreal at Z scale 100).", ""));
     }
 
+    /// <summary>Save as picture… in the Mask panel: the mask over the map as a black-and-white PNG (white passes).</summary>
+    private async Task SaveMaskPicture()
+    {
+        if (MapProject.Current is not { } map || Session is not { } s)
+        {
+            return;
+        }
+        if (Mask.For(s.Ground, s.Scene.LayerAt, sea: s.Scene.Water) is not { } test)
+        {
+            Msg(new Said("Turn the Mask on to save its picture.", ""));
+            return;
+        }
+        if (await Pickers.SaveFile(StorageProvider, "Save the mask as a picture", map.Name + "_mask.png", [new("PNG") { Patterns = ["*.png"] }]) is not string file)
+        {
+            return;
+        }
+        var (png, passed, w, h) = MaskPicture.Of(test, s.Ground.W, s.Ground.H);
+        await File.WriteAllBytesAsync(file, png);
+        Msg(new Said($"Mask picture written: {Path.GetFileName(file)}, {w} x {h}, white where it passes ({100.0 * passed / (s.Ground.W * s.Ground.H):0.#}% of the ground).", ""));
+    }
+
     /// <summary>The map as one .zip for someone else (MapPack): with the models its objects use, or without them.</summary>
     private async Task PackMap()
     {

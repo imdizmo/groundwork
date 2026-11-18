@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using ModelContextProtocol.Server;
 
 namespace Groundwork.Desktop;
 
@@ -87,4 +88,35 @@ public sealed partial class ClaudeTools
         mask.Paint = rule;
         return null;
     }
+
+    /// <summary>map_mask_picture: which ground a mask lets through, as a black-and-white picture of the map.</summary>
+    [McpServerTool(Name = "map_mask_picture", ReadOnly = true, Title = "See where a mask passes")]
+    [Description("A black-and-white picture of the whole map, north up: white where the mask lets the ground through, black where not (grey: some of the ground a pixel covers). Check a rule (a slope or height band, a terrain map) before painting or placing with it, e.g. map_paint_whole's limits. Says how much of the ground passes. Changes nothing.")]
+    public Task<ModelContextProtocol.Protocol.CallToolResult> MapMaskPicture(
+        [Description("The mask to see.")] MaskSpec mask,
+        [Description("The picture's longest side in pixels (64..2048; default 1024).")] int size = 1024) => OnUi(() =>
+    {
+        static ModelContextProtocol.Protocol.CallToolResult Error(string t) => new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = t } } };
+        if (NoMap() is string why)
+        {
+            return Error(why);
+        }
+        var s = _w.Session!;
+        var (test, problem) = MaskOf(mask, s);
+        if (problem != null)
+        {
+            return Error(problem);
+        }
+        int w = s.Ground.W, h = s.Ground.H;
+        var (png, passed, pw, ph) = MaskPicture.Of(test ?? (_ => 1), w, h, Math.Clamp(size, 64, 2048));
+        float x0 = s.Scene.OriginX, z0 = s.Scene.OriginZ, x1 = x0 + w - 1, z1 = z0 + h - 1;
+        return new()
+        {
+            Content =
+            {
+                new ModelContextProtocol.Protocol.TextContentBlock { Text = $"{100.0 * passed / (w * h):0.#}% of the ground passes ({passed} of {w * h} points). The picture is {pw} x {ph}: its left edge x {x0:0}, right x {x1:0}, top z {z1:0} (north), bottom z {z0:0}." },
+                ModelContextProtocol.Protocol.ImageContentBlock.FromBytes(png, "image/png"),
+            },
+        };
+    });
 }

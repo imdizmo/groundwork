@@ -29,9 +29,11 @@ public sealed partial class ClaudeTools
         }
         if (views >= 4)
         {
+            _shot = null;
             return await FourViews(x, z, distance, height);
         }
         string path = Path.Combine(Path.GetTempPath(), $"gw-claude-{Guid.NewGuid():N}.png");
+        _shot = null;
         try
         {
             string? problem = await WithCamera(async () =>
@@ -42,14 +44,16 @@ public sealed partial class ClaudeTools
                 }
                 // A read-only look: the user's camera is put back once the picture is taken (ShootView).
                 Action? orbit = x is float cx && z is float cz ? () => _w.View.Orbit(cx, cz, yaw, pitch, distance, height) : null;
-                await ShootView(path, orbit);
+                _shot = await ShootView(path, orbit);
                 return null;
             });
             if (problem != null)
             {
                 return new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = problem } } };
             }
-            return new() { Content = { ModelContextProtocol.Protocol.ImageContentBlock.FromBytes(Shrink(await File.ReadAllBytesAsync(path)), "image/jpeg") } };
+            byte[] jpeg = Shrink(await File.ReadAllBytesAsync(path), out int pw, out int ph);
+            _shot = _shot is { } shot ? shot with { Width = pw, Height = ph } : null;
+            return new() { Content = { ModelContextProtocol.Protocol.ImageContentBlock.FromBytes(jpeg, "image/jpeg"), new ModelContextProtocol.Protocol.TextContentBlock { Text = CameraSays(_shot) } } };
         }
         finally
         {
@@ -78,13 +82,17 @@ public sealed partial class ClaudeTools
     /// </summary>
     /// <param name="path">The PNG file to write.</param>
     /// <param name="orbit">Points the camera, or null to keep it as it is.</param>
-    internal async Task ShootView(string path, Action? orbit)
+    /// <returns>The camera the picture was taken with (for pick and where_drawn), or null without an area.</returns>
+    internal async Task<Shot?> ShootView(string path, Action? orbit)
     {
         var kept = _w.View.WorldCamera;
         try
         {
             orbit?.Invoke();
             await ViewPicture(path).WaitAsync(TimeSpan.FromSeconds(60));
+            return _w.Session is { } s && _w.View.LastCamera is var (vp, eye) && _w.View.WorldCamera is var (yaw, pitch, distance, target)
+                ? new Shot(s.Scene, vp, eye, target, yaw * 180 / MathF.PI, pitch * 180 / MathF.PI, distance, 0, 0)
+                : null;
         }
         finally
         {
@@ -93,11 +101,15 @@ public sealed partial class ClaudeTools
     }
 
     /// <summary>A picture no wider than 1280 pixels, as a JPEG (smaller to send and to look at).</summary>
-    internal static byte[] Shrink(byte[] png)
+    internal static byte[] Shrink(byte[] png) => Shrink(png, out _, out _);
+
+    /// <summary>A picture no wider than 1280 pixels, as a JPEG, and its size.</summary>
+    internal static byte[] Shrink(byte[] png, out int width, out int height)
     {
         using var bitmap = SkiaSharp.SKBitmap.Decode(png);
         float k = Math.Min(1f, 1280f / bitmap.Width);
         using var scaled = k < 1 ? bitmap.Resize(new SkiaSharp.SKImageInfo((int)(bitmap.Width * k), (int)(bitmap.Height * k)), new SkiaSharp.SKSamplingOptions(SkiaSharp.SKFilterMode.Linear)) : bitmap.Copy();
+        (width, height) = (scaled.Width, scaled.Height);
         using var image = SkiaSharp.SKImage.FromBitmap(scaled);
         return image.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 82).ToArray();
     }
