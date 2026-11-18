@@ -119,6 +119,7 @@ third on steep ground.
 | `files.objects` | The objects: a JSON list of `[asset, x, y, z, turn x, y, z, scale]`, and an object of [plugin data](plugins.md) when there is any. |
 | `files.water` | The rivers and lakes ([Rivers and lakes](water.md)). |
 | `files.areas` | The areas ([Areas](areas.md)). |
+| `files.roads` | The kept roads ([Paths and ramps](paths.md#kept-roads)), and `roads.bin` beside it; written once the map has one. |
 | `files.names` | The names on places and the regions ([Names and regions](names.md)); written once the map has one. |
 | `files.holes` | The holes: a grey `.png` the size of the heightmap, white where the ground is taken away; written once there is a hole. |
 | `files.beds` | The ground kept under the beds of bedded objects (the catalog's `bed` kinds, [Objects](objects.md#the-catalog)): a count, then grid index and height pairs (int32, float32, little-endian); written once there is a bed. |

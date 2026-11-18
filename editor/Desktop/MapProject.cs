@@ -60,6 +60,9 @@ public sealed partial class MapProject
     /// <summary>The tunnels and caves (MapCaves); written once there is one.</summary>
     public string CavesFile { get; private set; } = "";
 
+    /// <summary>The roads file: the kept roads (MapRoads), with roads.bin beside it; written once there is one.</summary>
+    public string RoadsFile { get; private set; } = "";
+
     /// <summary>The names file: names on places and named regions (MapNames); written once there is one.</summary>
     public string NamesFile { get; private set; } = "";
     /// <summary>The holes: a grey picture the heightmap's size, white where the ground is taken away (written once there are any).</summary>
@@ -168,6 +171,7 @@ public sealed partial class MapProject
         m.AreasFile = m.Inside(S(f?["areas"]) ?? "areas.json");
         m.CavesFile = m.Inside(S(f?["caves"]) ?? "caves.json");
         m.NamesFile = m.Inside(S(f?["names"]) ?? "names.json");
+        m.RoadsFile = m.Inside(S(f?["roads"]) ?? "roads.json");
         m.HolesFile = m.Inside(S(f?["holes"]) ?? "holes.png");
         m.BedsFile = m.Inside(S(f?["beds"]) ?? "beds.bin");
         m.WornFile = m.Inside(S(f?["worn"]) ?? "worn.npy");
@@ -251,7 +255,7 @@ public sealed partial class MapProject
             ["name"] = Name,
             ["origin"] = new JsonArray(X0, Y0),
             ["seaLevel"] = SeaLevel,
-            ["files"] = new JsonObject { ["heights"] = Rel(HeightsFile), ["layers"] = LayersFiles.Count == 1 ? Rel(LayersFile) : new JsonArray([.. LayersFiles.Select(l => (JsonNode)Rel(l))]), ["objects"] = Rel(ObjectsFile), ["water"] = Rel(WaterFile), ["areas"] = Rel(AreasFile), ["holes"] = Rel(HolesFile), ["beds"] = Rel(BedsFile), ["caves"] = Rel(CavesFile), ["names"] = Rel(NamesFile), ["worn"] = Rel(WornFile) },
+            ["files"] = new JsonObject { ["heights"] = Rel(HeightsFile), ["layers"] = LayersFiles.Count == 1 ? Rel(LayersFile) : new JsonArray([.. LayersFiles.Select(l => (JsonNode)Rel(l))]), ["objects"] = Rel(ObjectsFile), ["water"] = Rel(WaterFile), ["areas"] = Rel(AreasFile), ["holes"] = Rel(HolesFile), ["beds"] = Rel(BedsFile), ["caves"] = Rel(CavesFile), ["names"] = Rel(NamesFile), ["roads"] = Rel(RoadsFile), ["worn"] = Rel(WornFile) },
         };
         j["layers"] = new JsonArray([.. Layers.Select(l => (JsonNode)new JsonObject
         {
@@ -438,6 +442,7 @@ public sealed partial class MapProject
         }
         (m.HeightsFile, m.LayersFile, m.ObjectsFile, m.WaterFile, m.AreasFile, m.HolesFile, m.BedsFile, m.CavesFile, m.WornFile) = (m.Abs("height.npy"), m.Abs("layers.png"), m.Abs("objects.json"), m.Abs("water.json"), m.Abs("areas.json"), m.Abs("holes.png"), m.Abs("beds.bin"), m.Abs("caves.json"), m.Abs("worn.npy"));
         m.NamesFile = m.Abs("names.json");
+        m.RoadsFile = m.Abs("roads.json");
         var raster = new Raster(n, rows, x0, y0);
         float[] heights = new float[n * rows];
         byte[] mask = new byte[n * rows * 4];
@@ -565,6 +570,7 @@ public sealed partial class MapProject
         MapAreas.Load(AreasFile);
         MapCaves.Load(CavesFile);
         MapNames.Load(NamesFile);
+        MapRoads.Load(RoadsFile);
         MapNotes.Load(Path.Combine(Folder, "notes"));
     }
 
@@ -740,6 +746,7 @@ public sealed partial class MapProject
             MapCaves.Save(CavesFile);
         }
         MapNames.Save(NamesFile);
+        MapRoads.Save(RoadsFile);
         WriteJson();
         return objects.Count;
     }

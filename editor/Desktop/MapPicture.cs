@@ -6,7 +6,7 @@ namespace Groundwork.Desktop;
 
 /// <summary>
 /// A picture of the whole map seen from straight above, north up, drawn as a map: the ground's colours shaded by its
-/// hills (the light from the north-west), the sea and lakes, the rivers, the regions' outlines and the
+/// hills (the light from the north-west), the sea and lakes, the rivers, the kept roads, the regions' outlines and the
 /// names; a scale bar and a north arrow. In colour, or on parchment. For a game's own world map, a design page, a
 /// team's wall.
 /// </summary>
@@ -39,6 +39,7 @@ internal static class MapPicture
             float k = longSide / 1400f;   // the lettering's and the lines' scale
             bool old = style == Style.Parchment;
             Water(g, ToPx, px, old);
+            Roads(g, ToPx, px, k, old);
             Regions(g, ToPx, k, old);
             Names(g, ToPx, k, old, w, h);
             Furniture(g, w, h, px, k, old);
@@ -143,6 +144,33 @@ internal static class MapPicture
                 river.StrokeWidth = MathF.Max(1.5f, (a.HalfWidth + b.HalfWidth) * px);
                 g.DrawLine(pa.X, pa.Y, pb.X, pb.Y, river);
             }
+        }
+    }
+
+    /// <summary>The kept roads (MapRoads): a pale middle with a dark edge, dashed on parchment.</summary>
+    private static void Roads(SKCanvas g, Func<Vector2, Vector2> toPx, float px, float k, bool old)
+    {
+        foreach (var road in MapRoads.All.Where(r => r.Points.Count >= 2))
+        {
+            using var path = new SKPath();
+            var pts = road.Points.Select(toPx).ToArray();
+            path.MoveTo(pts[0].X, pts[0].Y);
+            foreach (var p in pts.Skip(1))
+            {
+                path.LineTo(p.X, p.Y);
+            }
+            float width = MathF.Max(1.5f * k, road.Width * px);
+            using var under = new SKPaint { Color = old ? new SKColor(110, 70, 40) : new SKColor(70, 50, 35, 230), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = width + (2 * k), StrokeCap = SKStrokeCap.Round, StrokeJoin = SKStrokeJoin.Round };
+            if (old)
+            {
+                under.StrokeWidth = 2 * k;
+                under.PathEffect = SKPathEffect.CreateDash([6 * k, 4 * k], 0);
+                g.DrawPath(path, under);
+                continue;
+            }
+            using var top = new SKPaint { Color = new SKColor(226, 204, 160), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = width, StrokeCap = SKStrokeCap.Round, StrokeJoin = SKStrokeJoin.Round };
+            g.DrawPath(path, under);
+            g.DrawPath(path, top);
         }
     }
 

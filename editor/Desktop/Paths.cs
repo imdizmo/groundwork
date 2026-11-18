@@ -21,7 +21,10 @@ public static class Paths
     /// <param name="points">The line, world (x, z) in metres.</param>
     /// <param name="spec">How it is made.</param>
     /// <param name="adds">Gets the edge objects, standing on the ground as it is after.</param>
-    public static (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect) Apply(Ground g, IReadOnlyList<Vector2> points, Spec spec, List<(NewObject Object, bool Piece)> adds)
+    /// <param name="before">Gets each point's ground before it changed (a kept road's), unless it holds the point already.</param>
+    /// <param name="leave">Ground points (world x, z) left as they are: a river's channel under a bridge.</param>
+    public static (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect) Apply(Ground g, IReadOnlyList<Vector2> points, Spec spec, List<(NewObject Object, bool Piece)> adds,
+        IDictionary<int, MapRoads.Point>? before = null, Func<Vector2, bool>? leave = null)
     {
         var (at, heights) = Profile(points, (x, z) => HeightAt(g, x, z), spec.Even, spec.Smoothing);
         if (at.Count < 2)
@@ -52,6 +55,14 @@ public static class Paths
         int x0 = int.MaxValue, z0 = int.MaxValue, x1 = 0, z1 = 0;
         foreach (var (p, (d, h)) in near)
         {
+            if (leave != null && leave(new Vector2((p % g.W) + g.OriginX, (p / g.W) + g.OriginZ)))
+            {
+                continue;
+            }
+            if (before != null && !before.ContainsKey(p))
+            {
+                before[p] = new MapRoads.Point(g.HeightOf(p), g.Paint.AsSpan(p * g.C, g.C).ToArray());
+            }
             float w = d <= half ? 1 : 1 - Smooth(half, reach, d), now = g.HeightOf(p);
             bool lifted = MathF.Abs(h - now) * w > 0.005f;
             if (lifted)
