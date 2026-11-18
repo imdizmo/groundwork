@@ -20,7 +20,7 @@ public sealed class MeasurePanelLangTests
 
         w.View.Tape.Down(new Vector3(-10, 25, 0));
         w.View.Tape.Down(new Vector3(10, 30, 0));
-        Assert.Equal(6, w.MeasurePanel.Shown.Count);
+        Assert.Equal(7, w.MeasurePanel.Shown.Count);
         Assert.Empty(PseudoLang.Untranslated(w.MeasurePanel.Card));
     }
 }

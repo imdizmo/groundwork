@@ -14,6 +14,22 @@ namespace Groundwork.Desktop.Tests;
 public class MeasureToolTests
 {
     [Fact]
+    public void TheTimeAlongIsSlowerUphillAndSwumUnderWater()
+    {
+        var m = new MeasureTool();
+        m.Down(new Vector3(0, 0, 0));
+        m.Down(new Vector3(100, 0, 0));
+        var flat = m.Measure((_, _) => 10, water: 0)!;
+        Assert.Equal(100 / MeasureTool.Walk, flat.WalkSeconds, 0);
+        Assert.Equal(100 / MeasureTool.Run, flat.RunSeconds, 0);
+        var up = m.Measure((x, _) => x * 0.3f, water: -1)!;
+        Assert.True(up.WalkSeconds > flat.WalkSeconds * 2, $"{up.WalkSeconds}");
+        var wet = m.Measure((_, _) => -5, water: 0)!;
+        Assert.Equal(100, wet.WalkSeconds, 0);   // a metre a second swimming
+        Assert.True(MeasureTool.Pace(-0.05f) > MeasureTool.Pace(0) && MeasureTool.Pace(0) > MeasureTool.Pace(0.2f));
+    }
+
+    [Fact]
     public void TheTapeMeasuresDistanceRiseAndSlope()
     {
         var m = new MeasureTool();

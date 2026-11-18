@@ -195,6 +195,8 @@
   "measure.label.lowHigh": "Lowest / highest",
   "measure.value.lowHigh": "{0:0.0} / {1:0.0} m",
   "measure.label.water": "Water depth",
+  "measure.label.time": "Walking / running",
+  "measure.value.time": "{0} / {1}",
   "measure.value.aboveSea": "above sea",
   "mask.label.on": "Mask",
   "mask.paint.any": "Any ground",

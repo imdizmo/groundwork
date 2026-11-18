@@ -83,7 +83,23 @@ public sealed class MeasureTool
     /// <param name="Lowest">Lowest ground along the line, A and B included.</param>
     /// <param name="Highest">Highest ground along the line, A and B included.</param>
     /// <param name="WaterDepth">How far the lower point is under the water; null when both are above it.</param>
-    public sealed record Result(float Distance, float AlongSlope, float HeightA, float HeightB, float Rise, float? SlopePercent, float SlopeDegrees, float Lowest, float Highest, float? WaterDepth);
+    public sealed record Result(float Distance, float AlongSlope, float HeightA, float HeightB, float Rise, float? SlopePercent, float SlopeDegrees, float Lowest, float Highest, float? WaterDepth)
+    {
+        /// <summary>The time on foot from the first point to the second, seconds (Walk metres a second on the flat).</summary>
+        public float WalkSeconds { get; init; }
+
+        /// <summary>The time running, seconds (Run metres a second on the flat).</summary>
+        public float RunSeconds { get; init; }
+    }
+
+    /// <summary>A walker's and a game character's running speed on the flat, metres a second.</summary>
+    public const float Walk = 1.4f, Run = 5f;
+
+    /// <summary>
+    /// How much a slope (rise over run, uphill positive) slows walking, 1 on the flat: Tobler's hiking function, fastest
+    /// a little downhill; never under a tenth.
+    /// </summary>
+    public static float Pace(float slope) => MathF.Max(0.1f, MathF.Exp(-3.5f * MathF.Abs(slope + 0.05f)) / MathF.Exp(-3.5f * 0.05f));
 
     /// <summary>
     /// What the tape measures, on the ground as it is now: heightAt gives the ground's height at a world point (both
@@ -103,15 +119,32 @@ public sealed class MeasureTool
         float flat = MathF.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Z - a.Z) * (b.Z - a.Z)), rise = yb - ya;
         float lo = MathF.Min(ya, yb), hi = MathF.Max(ya, yb);
         int n = Math.Max(2, (int)MathF.Ceiling(flat));
+        // the time along it, a metre or so at a time: slowed by each stretch's slope, swum under water (a metre a second)
+        float walk = 0, run = 0, prev = ya, step = flat / n;
         for (int i = 0; i <= n; i++)
         {
             float h = heightAt(a.X + (b.X - a.X) * i / n, a.Z + (b.Z - a.Z) * i / n);
             lo = MathF.Min(lo, h);
             hi = MathF.Max(hi, h);
+            if (i > 0 && step > 0)
+            {
+                float len = MathF.Sqrt((step * step) + ((h - prev) * (h - prev)));
+                if (h < water)
+                {
+                    (walk, run) = (walk + len, run + len);
+                }
+                else
+                {
+                    float pace = Pace((h - prev) / step);
+                    (walk, run) = (walk + (len / (Walk * pace)), run + (len / (Run * pace)));
+                }
+            }
+            prev = h;
         }
         float low = MathF.Min(ya, yb);
         return new Result(flat, MathF.Sqrt(flat * flat + rise * rise), ya, yb, rise, flat > 0.01f ? rise / flat * 100 : null,
-            MathF.Atan2(MathF.Abs(rise), flat) * 180 / MathF.PI, lo, hi, low < water ? water - low : null);
+            MathF.Atan2(MathF.Abs(rise), flat) * 180 / MathF.PI, lo, hi, low < water ? water - low : null)
+        { WalkSeconds = walk, RunSeconds = run };
     }
 
     /// <summary>
@@ -137,6 +170,10 @@ public sealed class MeasureTool
                 : Lang.T("measure.value.upright", r.SlopeDegrees)),
             (Lang.T("measure.label.lowHigh"), Lang.T("measure.value.lowHigh", r.Lowest, r.Highest)),
             (Lang.T("measure.label.water"), r.WaterDepth is float d ? Lang.T("measure.value.metres", d) : Lang.T("measure.value.aboveSea")),
+            (Lang.T("measure.label.time"), Lang.T("measure.value.time", Clock(r.WalkSeconds), Clock(r.RunSeconds))),
         ]);
     }
+
+    /// <summary>Seconds as m:ss (h:mm:ss from an hour).</summary>
+    private static string Clock(float s) => TimeSpan.FromSeconds(Math.Round(Math.Max(0, s))).ToString(s >= 3600 ? @"h\:mm\:ss" : @"m\:ss", System.Globalization.CultureInfo.InvariantCulture);
 }
