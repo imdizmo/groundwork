@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.6.0
+
+- **Names and regions** (Names, `Q`): names on places in three sizes (region, place, small) and named regions drawn
+  round on the ground. They float over the 3D view, small ones only up close and the bigger one first where they would
+  cover each other, and are kept in the map's names file. Live sends them to Unreal as tagged text actors and closed
+  splines a game can read ("You enter North Reach"); the bridge needs updating for that.
+- **A picture of the map** (⋯): the whole map from above as a PNG, in colour, on parchment or engraved in ink, with
+  hill shading, water, roads, regions, names, a scale bar and a north arrow; or tilted in 3D as a block. **Map as a
+  block** in the View panel draws the map as a slab with soil and rock down its sides.
+- **Path and Rivers paint:** drag along the ground like a brush; the road is made, or the river's bed carved, when you
+  let go, and a row of dots stays on it to nudge, add to or delete, made again each time (the old ground and bed put
+  back first). Roads are kept and can be picked, changed or taken away later; a road over a river gets a bridge.
+- **Biome** picks from swatches; a catalog with no biomes gets one for each layer with the objects that belong on it.
+- **Measure** gives walking, running and riding time, slower uphill and on marsh, snow, sand, rock and forest, faster
+  on roads.
+- **New map** makes islands, archipelagos and a continent's corner.
+- **One letter for each tool** on the rail: P U B K G N I J Z Q.
+- Picking a stamp for Raise or Lower ticks Stamp once, so a click puts the whole picture in, as high as a third of its
+  size.
+- **Unreal** (with the updated bridge): a landscape material made by hand is kept; objects go in as one instanced
+  component a model, never an actor each; the sea covers the map; a model of several meshes comes in as one; a dialog
+  Unreal opens no longer hangs it. Turning Live on sends what Unreal does not have yet.
+- Fixed: the Objects list drawn past its panel over the minimap, and the objects drawer's scrollbar over its first
+  cards when docked on the left.
+- The Windows package is built but was not tried on Windows for this release.
+
 ## v0.5.0
 
 - **Replay a play session** (⋯): a game's recording of how someone played (a .playlog) opens over its map. The path
