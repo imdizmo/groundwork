@@ -90,4 +90,25 @@ public class MapNamesTests
         Assert.True(region.Width > small.Width * 1.5);
         Assert.Contains(Enumerable.Range(0, small.Width).SelectMany(x => Enumerable.Range(0, small.Height).Select(y => small.GetPixel(x, y).Alpha)), a => a > 200);
     }
+
+    [Fact]
+    public void UnrealIsSentEachNameAndRegionInItsCentimetresWithNorthAsMinusY()
+    {
+        MapNames.Labels.Clear();
+        MapNames.Regions.Clear();
+        MapNames.Labels.Add(new MapNames.Label { Text = "Hollow Ford", X = 10, Z = 20, Size = MapNames.Size.Small });
+        var r = new MapNames.Region { Name = "Westmarch" };
+        r.Points.AddRange([new(0, 0), new(10, 0), new(10, 10)]);
+        MapNames.Regions.Add(r);
+        MapNames.Regions.Add(new MapNames.Region { Name = "Too few" });
+        var body = MapNames.ForUnreal((_, _) => 3);
+        var name = body["names"]!.AsArray().Single()!;
+        Assert.Equal(("Hollow Ford", "small"), (name["text"]!.GetValue<string>(), name["size"]!.GetValue<string>()));
+        Assert.Equal((1000f, -2000f, 500f), (name["x"]!.GetValue<float>(), name["y"]!.GetValue<float>(), name["z"]!.GetValue<float>()));
+        var region = body["regions"]!.AsArray().Single()!;
+        Assert.Equal("Westmarch", region["name"]!.GetValue<string>());
+        Assert.Equal(-1000f, region["points"]![2]![1]!.GetValue<float>());
+        MapNames.Labels.Clear();
+        MapNames.Regions.Clear();
+    }
 }

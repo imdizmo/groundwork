@@ -47,6 +47,14 @@ public class MapPictureTests
         var (old, _, _) = MapPicture.Of(new Area(), 0, MapPicture.Style.Parchment, 400);
         using var paper = SKBitmap.Decode(old);
         Assert.True(paper.GetPixel(350, 100).Red > land.Red, "parchment is browner");
+
+        // engraved: flat land is bare paper (this ground's slope is even, so no hatching but its contours), the sea lined in ink
+        var (inked, _, _) = MapPicture.Of(new Area(), 0, MapPicture.Style.Engraving, 400);
+        using var ink = SKBitmap.Decode(inked);
+        var column = Enumerable.Range(20, 160).Select(y => ink.GetPixel(50, y)).ToList();
+        Assert.Contains(column, c => c.Red < 150);    // a level line across the sea
+        Assert.Contains(column, c => c.Red > 230);    // paper between them
+        Assert.True(ink.GetPixel(352, 100).Red > 200, $"land {ink.GetPixel(352, 100)}");
     }
 
     [Fact]

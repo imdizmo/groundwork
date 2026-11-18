@@ -30,6 +30,23 @@ public class MeasureToolTests
     }
 
     [Fact]
+    public void RidingIsFasterAndMarshAndSandAreSlowerThanGrass()
+    {
+        var m = new MeasureTool();
+        m.Down(new Vector3(0, 0, 0));
+        m.Down(new Vector3(100, 0, 0));
+        var grass = m.Measure((_, _) => 10, water: 0)!;
+        Assert.Equal(100 / MeasureTool.Ride, grass.RideSeconds, 0);
+        Assert.True(grass.RideSeconds < grass.RunSeconds);
+        // the far half is marsh: half the pace there
+        var wet = m.Measure((_, _) => 10, water: 0, (x, _) => x > 50 ? MeasureTool.GroundPace("Marsh") : 1)!;
+        Assert.Equal((50 / MeasureTool.Walk) + (50 / (MeasureTool.Walk * 0.5f)), wet.WalkSeconds, 0);
+        Assert.Equal(0.75f, MeasureTool.GroundPace("Beach sand"));
+        Assert.Equal(1, MeasureTool.GroundPace("Grass"));
+        Assert.True(MeasureTool.GroundPace("Cobbled road") > 1);
+    }
+
+    [Fact]
     public void TheTapeMeasuresDistanceRiseAndSlope()
     {
         var m = new MeasureTool();

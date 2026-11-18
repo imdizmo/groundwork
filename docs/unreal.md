@@ -35,6 +35,12 @@ plugin speak a numbered protocol: **Live** refuses a plugin of another version a
   `_`; `GW_Water_` by default; the prefix must be 3 or more letters, digits or `_`, ending in `_`) are rewritten in
   place; a new one is made like the first of its kind already there
   (materials, falloff), one the map no longer has is deleted. Other water (an ocean) is never touched.
+- **Names and regions**: each [name](names.md) as a text actor tagged `gw_name:<the name>` and
+  `gw_name_size:<region, place or small>`, each region as a closed spline tagged `gw_region:<its name>` and
+  `gw_region_colour:<r,g,b>` whose points are its outline, in the outliner's `Groundwork/Names` and
+  `Groundwork/Regions` folders. Their lettering shows in Unreal's editor only; the game reads the tags (and a region's
+  spline, to tell when the player enters it). All of them are made again at each change. A bridge older than this
+  editor has no route for them: the status bar says to update it, and the rest goes on.
 
 **⋯ → Place all objects in the open Unreal level…** sends every object of the map at once, as Live sends a new one;
 use it on a level that has none of the map's objects yet, after **Bring the models into Unreal**.

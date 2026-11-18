@@ -52,6 +52,8 @@ public static partial class MapTools
                 Show(ctx);
             };
             MapNames.Changed += _refresh;
+            // a new name is a place's at first (the first choice is a region's)
+            ctx.SetNumber("size", (int)MapNames.Size.Place);
             List(ctx);
             Fields(ctx);
             Show(ctx);

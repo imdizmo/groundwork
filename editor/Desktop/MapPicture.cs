@@ -19,6 +19,8 @@ internal static class MapPicture
         Colour,
         /// <summary>Browns on old paper, the water pale.</summary>
         Parchment,
+        /// <summary>Black ink on white paper: slopes hatched, contour lines, the sea lined.</summary>
+        Engraving,
     }
 
     /// <summary>The picture as a PNG, its longer side <paramref name="longSide"/> pixels, and its size.</summary>
@@ -37,7 +39,7 @@ internal static class MapPicture
         {
             Vector2 ToPx(Vector2 world) => new((world.X - area.MinX) * px, (area.MaxZ - world.Y) * px);
             float k = longSide / 1400f;   // the lettering's and the lines' scale
-            bool old = style == Style.Parchment;
+            bool old = style != Style.Colour;
             Water(g, ToPx, px, old);
             Roads(g, ToPx, px, k, old);
             Regions(g, ToPx, k, old);
@@ -68,7 +70,11 @@ internal static class MapPicture
                 float dz = (area.GroundHeight(wx, z + step) - area.GroundHeight(wx, z - step)) / (2 * step) * 2;
                 float shade = Math.Clamp(0.45f + (0.75f * Vector3.Dot(Vector3.Normalize(new Vector3(-dx, 1, -dz)), light)), 0.35f, 1.25f);
                 Vector3 c;
-                if (hgt < sea)
+                if (style == Style.Engraving)
+                {
+                    c = Engraved(area, sea, wx, z, x, y, hgt, shade, step);
+                }
+                else if (hgt < sea)
                 {
                     float deep = Math.Clamp((sea - hgt) / 25, 0, 1);
                     c = style == Style.Parchment ? Vector3.Lerp(new(0.80f, 0.80f, 0.70f), new(0.62f, 0.66f, 0.62f), deep) : Vector3.Lerp(new(0.36f, 0.62f, 0.72f), new(0.10f, 0.28f, 0.45f), deep);
@@ -98,6 +104,31 @@ internal static class MapPicture
             }
         }
         bmp.NotifyPixelsChanged();
+    }
+
+    /// <summary>
+    /// A pixel engraved: paper, inked by diagonal hatching as dark as the slope's shade, a contour line every so many
+    /// metres; the sea in level lines.
+    /// </summary>
+    private static Vector3 Engraved(IAreaView area, float sea, float wx, float z, int x, int y, float hgt, float shade, float step)
+    {
+        var (paper, ink) = (new Vector3(0.96f, 0.94f, 0.89f), new Vector3(0.10f, 0.09f, 0.08f));
+        if (hgt < sea)
+        {
+            // level lines across the sea, closer near the shore
+            float near = Math.Clamp((sea - hgt) / 6, 0, 1);
+            int gap = near < 0.5f ? 4 : 7;
+            return y % gap == 0 ? Vector3.Lerp(paper, ink, 0.55f) : paper;
+        }
+        // ponytail: hatching in screen pixels, so it is as fine at every picture size
+        // flat ground (its shade about 0.97) stays paper: only slopes turned from the light are hatched
+        float dark = Math.Clamp((0.9f - shade) / 0.45f, 0, 1);
+        bool hatch = dark > 0 && ((x + y) % 5) < dark * 3.5f;
+        // a contour every 5 m (the next one up crossed between this pixel and the next)
+        const float Every = 5;
+        bool contour = MathF.Floor(hgt / Every) != MathF.Floor(area.GroundHeight(wx + step, z) / Every)
+            || MathF.Floor(hgt / Every) != MathF.Floor(area.GroundHeight(wx, z - step) / Every);
+        return contour ? Vector3.Lerp(paper, ink, 0.7f) : hatch ? Vector3.Lerp(paper, ink, 0.85f) : paper;
     }
 
     /// <summary>The ground's colour at a world point, between its four grid points (linear).</summary>

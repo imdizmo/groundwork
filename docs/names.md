@@ -41,6 +41,6 @@ region deletes it (the innermost, where regions lie inside each other).
 
 Places are world metres (x east, z north), as everywhere in the editor; in Unreal that is X = x × 100 and Y = −z × 100
 centimetres. A game can read the file to say "You enter North Reach" (the smallest region a point lies in) or to label
-its own world map. Live does not send names to Unreal yet.
+its own world map. [Live](unreal.md#live) sends them to the open Unreal level as tagged actors and splines.
 
 Claude places names and regions with `map_name` and `map_region` and lists them in `map_catalog`.

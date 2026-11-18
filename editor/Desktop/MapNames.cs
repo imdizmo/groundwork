@@ -213,4 +213,32 @@ public static class MapNames
         }
         return $"{word} {n}";
     }
+
+    /// <summary>
+    /// What /groundwork/names is sent: each name at its place (Unreal cm, a little over the ground) with its size, and
+    /// each region's outline (Unreal cm) with its colour. Unreal makes them tagged actors the game can read.
+    /// </summary>
+    /// <param name="height">The ground's height at world x, z (metres).</param>
+    public static JsonObject ForUnreal(Func<float, float, float> height)
+    {
+        static JsonNode Xy(Vector2 p) => new JsonArray(p.X * 100, -p.Y * 100);
+        return new JsonObject
+        {
+            ["names"] = new JsonArray([.. Labels.Select(l => (JsonNode)new JsonObject
+            {
+                ["text"] = l.Text,
+                ["size"] = l.Size.ToString().ToLowerInvariant(),
+                ["x"] = l.X * 100,
+                ["y"] = -l.Z * 100,
+                ["z"] = (height(l.X, l.Z) + 2) * 100,
+            })]),
+            ["regions"] = new JsonArray([.. Regions.Where(r => r.Points.Count > 2).Select(r => (JsonNode)new JsonObject
+            {
+                ["name"] = r.Name,
+                ["colour"] = new JsonArray(r.Colour.X, r.Colour.Y, r.Colour.Z),
+                ["z"] = (height(Middle(r).X, Middle(r).Y) + 2) * 100,
+                ["points"] = new JsonArray([.. r.Points.Select(Xy)]),
+            })]),
+        };
+    }
 }

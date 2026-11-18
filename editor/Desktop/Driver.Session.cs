@@ -62,11 +62,15 @@ public static partial class Driver
         string[] args = call.Args;
         if (args.Length == 0 || call.W.Session is not { } s)
         {
-            throw new InvalidOperationException("mappicture <file.png> [colour|parchment] [pixels], with a map open");
+            throw new InvalidOperationException("mappicture <file.png> [colour|parchment|engraving|tilted] [pixels], with a map open");
         }
-        var style = args.Length > 1 && args[1] == "parchment" ? MapPicture.Style.Parchment : MapPicture.Style.Colour;
+        var style = args.Length > 1 ? args[1] switch { "parchment" => MapPicture.Style.Parchment, "engraving" => MapPicture.Style.Engraving, _ => MapPicture.Style.Colour } : MapPicture.Style.Colour;
         int side = args.Length > 2 ? int.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture) : 2048;
-        return Task.FromResult(JsonSerializer.Serialize(new { said = MainWindow.SaveMapPicture(s, Path.GetFullPath(args[0]), style, side) }));
+        return args.Length > 1 && args[1] == "tilted"
+            ? TiltedAsync(call.W, Path.GetFullPath(args[0]))
+            : Task.FromResult(JsonSerializer.Serialize(new { said = MainWindow.SaveMapPicture(s, Path.GetFullPath(args[0]), style, side) }));
+
+        static async Task<string> TiltedAsync(MainWindow w, string file) => JsonSerializer.Serialize(new { said = await w.SaveTiltedView(file) });
     }
 
     /// <summary>The 'replay' command: replay &lt;file.playlog&gt;[|&lt;file&gt;...] | replay team all|&lt;n&gt; | replay seek &lt;seconds&gt; | replay close.</summary>

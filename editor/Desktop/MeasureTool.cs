@@ -90,10 +90,38 @@ public sealed class MeasureTool
 
         /// <summary>The time running, seconds (Run metres a second on the flat).</summary>
         public float RunSeconds { get; init; }
+
+        /// <summary>The time riding, seconds (Ride metres a second on the flat; a horse swims as slowly as a walker).</summary>
+        public float RideSeconds { get; init; }
     }
 
-    /// <summary>A walker's and a game character's running speed on the flat, metres a second.</summary>
-    public const float Walk = 1.4f, Run = 5f;
+    /// <summary>A walker's, a game character's running and a horse's cantering speed on the flat, metres a second.</summary>
+    public const float Walk = 1.4f, Run = 5f, Ride = 8f;
+
+    /// <summary>Words in a layer's name and how fast its ground is to cross (1: as grass; the first that fits).</summary>
+    private static readonly (string[] Words, float Pace)[] Grounds =
+    [
+        (["road", "path", "cobble", "paved", "pave", "street", "track"], 1.1f),
+        (["marsh", "swamp", "bog", "mud", "mire"], 0.5f),
+        (["snow", "ice"], 0.6f),
+        (["sand", "dune", "beach"], 0.75f),
+        (["scree", "rubble", "boulder", "rock", "stone", "cliff", "crag"], 0.8f),
+        (["forest", "wood", "jungle", "thicket", "bush", "brush"], 0.85f),
+    ];
+
+    /// <summary>How fast a layer is to cross by its name (1 when no word fits: grass, dirt, a name of the user's own).</summary>
+    public static float GroundPace(string layer)
+    {
+        string name = layer.ToLowerInvariant();
+        foreach (var (words, pace) in Grounds)
+        {
+            if (words.Any(name.Contains))
+            {
+                return pace;
+            }
+        }
+        return 1;
+    }
 
     /// <summary>
     /// How much a slope (rise over run, uphill positive) slows walking, 1 on the flat: Tobler's hiking function, fastest
@@ -109,7 +137,8 @@ public sealed class MeasureTool
     /// <param name="heightAt">Ground height at a world (x, z).</param>
     /// <param name="water">The water level, in metres.</param>
     /// <returns>The measurements, or null until both points are set.</returns>
-    public Result? Measure(Func<float, float, float> heightAt, float water)
+    /// <param name="groundPace">How fast the ground at a world (x, z) is to cross (1 as grass); null: all as grass.</param>
+    public Result? Measure(Func<float, float, float> heightAt, float water, Func<float, float, float>? groundPace = null)
     {
         if (A is not { } a || B is not { } b)
         {
@@ -120,7 +149,7 @@ public sealed class MeasureTool
         float lo = MathF.Min(ya, yb), hi = MathF.Max(ya, yb);
         int n = Math.Max(2, (int)MathF.Ceiling(flat));
         // the time along it, a metre or so at a time: slowed by each stretch's slope, swum under water (a metre a second)
-        float walk = 0, run = 0, prev = ya, step = flat / n;
+        float walk = 0, run = 0, ride = 0, prev = ya, step = flat / n;
         for (int i = 0; i <= n; i++)
         {
             float h = heightAt(a.X + (b.X - a.X) * i / n, a.Z + (b.Z - a.Z) * i / n);
@@ -131,12 +160,12 @@ public sealed class MeasureTool
                 float len = MathF.Sqrt((step * step) + ((h - prev) * (h - prev)));
                 if (h < water)
                 {
-                    (walk, run) = (walk + len, run + len);
+                    (walk, run, ride) = (walk + len, run + len, ride + len);
                 }
                 else
                 {
-                    float pace = Pace((h - prev) / step);
-                    (walk, run) = (walk + (len / (Walk * pace)), run + (len / (Run * pace)));
+                    float pace = Pace((h - prev) / step) * (groundPace?.Invoke(a.X + (b.X - a.X) * (i - 0.5f) / n, a.Z + (b.Z - a.Z) * (i - 0.5f) / n) ?? 1);
+                    (walk, run, ride) = (walk + (len / (Walk * pace)), run + (len / (Run * pace)), ride + (len / (Ride * pace)));
                 }
             }
             prev = h;
@@ -144,19 +173,19 @@ public sealed class MeasureTool
         float low = MathF.Min(ya, yb);
         return new Result(flat, MathF.Sqrt(flat * flat + rise * rise), ya, yb, rise, flat > 0.01f ? rise / flat * 100 : null,
             MathF.Atan2(MathF.Abs(rise), flat) * 180 / MathF.PI, lo, hi, low < water ? water - low : null)
-        { WalkSeconds = walk, RunSeconds = run };
+        { WalkSeconds = walk, RunSeconds = run, RideSeconds = ride };
     }
 
     /// <summary>
     /// What to show, in the language in use: the hint and the measured values (label, value).
     /// </summary>
-    public (string Hint, List<(string, string)> Rows) Describe(Func<float, float, float> heightAt, float water)
+    public (string Hint, List<(string, string)> Rows) Describe(Func<float, float, float> heightAt, float water, Func<float, float, float>? groundPace = null)
     {
         if (A == null)
         {
             return (Lang.T("measure.hint.first"), []);
         }
-        if (Measure(heightAt, water) is not { } r)
+        if (Measure(heightAt, water, groundPace) is not { } r)
         {
             return (Lang.T("measure.hint.second"), []);
         }
@@ -171,6 +200,7 @@ public sealed class MeasureTool
             (Lang.T("measure.label.lowHigh"), Lang.T("measure.value.lowHigh", r.Lowest, r.Highest)),
             (Lang.T("measure.label.water"), r.WaterDepth is float d ? Lang.T("measure.value.metres", d) : Lang.T("measure.value.aboveSea")),
             (Lang.T("measure.label.time"), Lang.T("measure.value.time", Clock(r.WalkSeconds), Clock(r.RunSeconds))),
+            (Lang.T("measure.label.ride"), Clock(r.RideSeconds)),
         ]);
     }
 

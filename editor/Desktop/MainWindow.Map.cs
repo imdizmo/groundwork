@@ -336,7 +336,7 @@ public partial class MainWindow
         {
             return;
         }
-        if (await Dialogs.Choose(this, "Save a picture of the map", "The whole map from straight above, north up, with its water, regions and names, a scale bar and a north arrow:", ["In colour", "On parchment"], "Next") is not int style)
+        if (await Dialogs.Choose(this, "Save a picture of the map", "The whole map from straight above, north up, with its water, regions and names, a scale bar and a north arrow; or tilted in 3D, as a block cut out of the earth:", ["In colour", "On parchment", "Engraved in ink", "Tilted, in 3D"], "Next") is not int style)
         {
             return;
         }
@@ -344,7 +344,40 @@ public partial class MainWindow
         {
             return;
         }
-        Msg(new Said(SaveMapPicture(s, file, (MapPicture.Style)style), ""));
+        Msg(new Said(style == 3 ? await SaveTiltedView(file) : SaveMapPicture(s, file, (MapPicture.Style)style), ""));
+    }
+
+    /// <summary>
+    /// The whole map tilted in 3D, as the view draws it with the block look and the names on, written to a file (the
+    /// view's own camera, look and names put back after); what to say.
+    /// </summary>
+    internal async Task<string> SaveTiltedView(string file)
+    {
+        if (Session is not { } s)
+        {
+            return "No map open.";
+        }
+        var area = new SceneLayers.AreaView(s.Scene);
+        var (camera, block, names) = (View.WorldCamera, MapBlock.On, View.ShowNames);
+        try
+        {
+            MapBlock.On = true;
+            View.ShowNames = true;
+            // ponytail: north up, a fixed tilt, far enough for the whole map in a wide window; the view's 3 km reach caps big maps
+            float size = MathF.Max(area.MaxX - area.MinX, area.MaxZ - area.MinZ);
+            View.Orbit((area.MinX + area.MaxX) / 2, (area.MinZ + area.MaxZ) / 2, 0, 40, size * 1.05f);
+            await View.Picture(file).WaitAsync(TimeSpan.FromMinutes(2));
+            return $"Tilted view written: {Path.GetFileName(file)}.";
+        }
+        catch (TimeoutException)
+        {
+            return "The 3D view gave no picture in two minutes: " + View.PictureWaiting() + ".";
+        }
+        finally
+        {
+            (MapBlock.On, View.ShowNames) = (block, names);
+            View.WorldCamera = camera;
+        }
     }
 
     /// <summary>The map's picture written to a file (the driver's mappicture too); what to say.</summary>
@@ -1099,6 +1132,8 @@ public partial class MainWindow
         _pullTimer.Start();
         LiveState(null);
         Msg(new Said("LIVE both ways: what you change here goes into the open Unreal level, and what is changed there comes here.", ""));
+        // what Unreal does not have yet (the names, the areas) goes now
+        await LiveChanged();
     }
 
     private bool _pullingNow;

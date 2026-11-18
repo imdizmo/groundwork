@@ -52,7 +52,12 @@ public sealed partial class MainWindow
         View.ObjectMiddleClicked += PickKindOfObject;
         View.ObjectShiftRightClicked += DeleteObject;
         MapNames.Changed += View.NamesChanged;
-        Closed += (_, _) => MapNames.Changed -= View.NamesChanged;
+        MapNames.Changed += NamesToUnreal;
+        Closed += (_, _) =>
+        {
+            MapNames.Changed -= View.NamesChanged;
+            MapNames.Changed -= NamesToUnreal;
+        };
         WireKeys();
         Closing += async (_, e) => await OnClosingAsync(e);
         // Takes the mouse for the 3D view (see GlView.Attach).
@@ -122,4 +127,6 @@ public sealed partial class MainWindow
     /// <summary>The app's icon, for its windows (the main one, Help).</summary>
     internal static WindowIcon AppIcon() => new(Avalonia.Platform.AssetLoader.Open(new Uri($"avares://{typeof(MainWindow).Assembly.GetName().Name}/Assets/icon.png")));
 
+    /// <summary>A name or region changed: while live, sent (a send meanwhile is followed by another).</summary>
+    private void NamesToUnreal() => _ = LiveChanged();
 }

@@ -122,9 +122,9 @@ public sealed partial class ClaudeTools
 
     /// <summary>map_picture: the whole map from above, drawn as a map.</summary>
     [McpServerTool(Name = "map_picture", ReadOnly = true, Title = "See the whole map as a map")]
-    [Description("A picture of the whole map from straight above, north up, drawn as a map: the ground's colours shaded by its hills, the sea, lakes and rivers, the regions and names, a scale bar. Style colour or parchment. Changes nothing.")]
+    [Description("A picture of the whole map from straight above, north up, drawn as a map: the ground's colours shaded by its hills, the sea, lakes and rivers, the regions and names, a scale bar. Style colour, parchment or engraving (black ink: hatched slopes, contour lines every 5 m). Changes nothing.")]
     public Task<ModelContextProtocol.Protocol.CallToolResult> MapPictureTool(
-        [Description("colour or parchment")] string style = "colour",
+        [Description("colour, parchment or engraving")] string style = "colour",
         [Description("The picture's longest side in pixels (256..2048; default 1024).")] int size = 1024) => OnUi(() =>
     {
         if (NoMap() is string why)
@@ -133,7 +133,7 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var area = new SceneLayers.AreaView(s.Scene);
-        var (png, pw, ph) = MapPicture.Of(area, s.Scene.Water, style.StartsWith("parch", StringComparison.OrdinalIgnoreCase) ? MapPicture.Style.Parchment : MapPicture.Style.Colour, Math.Clamp(size, 256, 2048));
+        var (png, pw, ph) = MapPicture.Of(area, s.Scene.Water, style.StartsWith("parch", StringComparison.OrdinalIgnoreCase) ? MapPicture.Style.Parchment : style.StartsWith("engrav", StringComparison.OrdinalIgnoreCase) ? MapPicture.Style.Engraving : MapPicture.Style.Colour, Math.Clamp(size, 256, 2048));
         return new ModelContextProtocol.Protocol.CallToolResult
         {
             Content =

@@ -34,7 +34,7 @@ namespace Groundwork.Desktop;
 ///    unreal landscape|paint|models|objects  into the open Unreal level: the landscape made (and painted, its water
 ///                                   made), or only painted and its water made, the models it lacks imported,
 ///                                   every object placed; Unreal's answer
-///    mappicture &lt;file.png&gt; [colour|parchment] [pixels]  the open map's picture from above (⋯ → Save a picture of the map)
+///    mappicture &lt;file.png&gt; [colour|parchment|engraving|tilted] [pixels]  the open map's picture from above (⋯ → Save a picture of the map)
 ///    replay &lt;file&gt;[|&lt;file&gt;...]|team all|&lt;n&gt;|seek &lt;s&gt;|close  recorded play sessions over the open map
 ///                                   (Replay; team: the team server's sessions of the map, all or the n-th newest)
 ///    docs &lt;page[#anchor]&gt;            the Help window on that place of the documentation ("map.md#controls")

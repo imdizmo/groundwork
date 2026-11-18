@@ -197,6 +197,7 @@
   "measure.label.water": "Water depth",
   "measure.label.time": "Walking / running",
   "measure.value.time": "{0} / {1}",
+  "measure.label.ride": "Riding",
   "measure.value.aboveSea": "above sea",
   "mask.label.on": "Mask",
   "mask.paint.any": "Any ground",

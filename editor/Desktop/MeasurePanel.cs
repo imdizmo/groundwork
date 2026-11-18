@@ -74,7 +74,7 @@ public sealed class MeasurePanel
     public void Refresh()
     {
         float water = _view.Scene?.Water ?? 0;
-        var (hint, rows) = _view.Tape.Describe(_view.GroundHeight, water);
+        var (hint, rows) = _view.Tape.Describe(_view.GroundHeight, water, GroundPace());
         _hint.Text = hint;
         Shown.Clear();
         int r = 0;
@@ -118,5 +118,27 @@ public sealed class MeasurePanel
         {
             _rows.RowDefinitions.RemoveAt(_rows.RowDefinitions.Count - 1);
         }
+    }
+
+    /// <summary>How fast the ground is to cross at a world point: a kept road's, else its layer's by its name (null: no map).</summary>
+    private Func<float, float, float>? GroundPace()
+    {
+        if (_view.Scene is not { } s || MapProject.Current is not { Layers: var layers })
+        {
+            return null;
+        }
+        float[] paces = [.. layers.Select(l => MeasureTool.GroundPace(l.Name))];
+        var roads = MapRoads.All.ToList();
+        return (x, z) =>
+        {
+            var p = new System.Numerics.Vector2(x, z);
+            if (roads.Any(r => r.Points.Zip(r.Points.Skip(1)).Any(q => MapRoads.Distance(p, q.First, q.Second) <= r.Width / 2)))
+            {
+                return 1.1f;
+            }
+            int gx = Math.Clamp((int)MathF.Round(x - s.OriginX), 0, s.W - 1), gz = Math.Clamp((int)MathF.Round(z - s.OriginZ), 0, s.H - 1);
+            int layer = s.LayerAt((gz * s.W) + gx);
+            return layer >= 0 && layer < paces.Length ? paces[layer] : 1;
+        };
     }
 }

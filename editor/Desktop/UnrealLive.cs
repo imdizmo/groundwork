@@ -51,8 +51,13 @@ public sealed partial class UnrealLive
         // the areas go at the first push when there are any (Unreal's are the editor's: rebuilt from them)
         _areas = MapAreas.All.Count > 0 ? "" : MapAreas.Snapshot();
         _areaKinds = MapTools.AreaKinds();
+        // the names too (Unreal's are rebuilt from them)
+        _names = MapNames.None ? MapNames.Snapshot() : "";
         _holes = Holes();
     }
+
+    /// <summary>The names and regions as last sent.</summary>
+    private string _names;
 
     /// <summary>The holes as last sent: a byte a ground point (255: a hole).</summary>
     private byte[] _holes;
@@ -342,6 +347,12 @@ public sealed partial class UnrealLive
         {
             said.Add(await Post("/groundwork/areas", MapAreas.ForUnreal(_areaKinds)));
             _areas = areas;
+        }
+        // names and regions: actors tagged gw_name: and gw_region:, rebuilt from the map's
+        if (MapNames.Snapshot() is var names && names != _names)
+        {
+            said.Add(await Post("/groundwork/names", MapNames.ForUnreal((x, z) => Paths.HeightAt(g, x, z))));
+            _names = names;
         }
         return said.Count == 0 ? "" : "Live: " + string.Join("; ", said);
     }
@@ -797,6 +808,9 @@ public sealed partial class UnrealLive
         using var req = new HttpRequestMessage(HttpMethod.Post, _url + path) { Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json") };
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token);
         using var r = await Http.SendAsync(req);
-        return await r.Content.ReadAsStringAsync();
+        // a route an older bridge does not have: said so, the rest goes on
+        return r.StatusCode == System.Net.HttpStatusCode.NotFound
+            ? $"this Unreal's Groundwork Bridge is older and has no {path}: update it"
+            : await r.Content.ReadAsStringAsync();
     }
 }

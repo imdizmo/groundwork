@@ -189,8 +189,11 @@ at Z scale 100 reads them. The first row is the map's first (its origin's) row.
 
 **⋯ → Save a picture of the map** writes the whole map seen from straight above, north up, as a PNG 2048 pixels on its
 longer side: the ground's colours shaded by its hills (lit from the north-west), the sea, lakes and rivers, the regions'
-outlines and the [names](names.md), a scale bar and a north arrow. Pick **In colour** or **On parchment** (browns on old
-paper). Use it as a game's own world map, a design page or a picture for the team.
+outlines and the [names](names.md), a scale bar and a north arrow. Pick **In colour**, **On parchment** (browns on old
+paper) or **Engraved in ink** (black ink on white paper: slopes turned from the light hatched, a contour line every
+5 m, the sea in level lines). **Tilted, in 3D** instead takes the 3D view of the whole map from the south, tilted, as a
+block cut out of the earth with its names on, at the window's size (the view's own camera and look come back after).
+Use them as a game's own world map, a design page or a picture for the team.
 
 ![The sample map on parchment](images/map-picture.jpg)
 
