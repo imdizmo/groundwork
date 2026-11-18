@@ -63,6 +63,9 @@ public sealed partial class MapProject
     /// <summary>The roads file: the kept roads (MapRoads), with roads.bin beside it; written once there is one.</summary>
     public string RoadsFile { get; private set; } = "";
 
+    /// <summary>The ground before the kept roads: the roads file's name with .bin, in the map's folder too.</summary>
+    public string RoadsBeforeFile { get; private set; } = "";
+
     /// <summary>The names file: names on places and named regions (MapNames); written once there is one.</summary>
     public string NamesFile { get; private set; } = "";
     /// <summary>The holes: a grey picture the heightmap's size, white where the ground is taken away (written once there are any).</summary>
@@ -172,9 +175,14 @@ public sealed partial class MapProject
         m.CavesFile = m.Inside(S(f?["caves"]) ?? "caves.json");
         m.NamesFile = m.Inside(S(f?["names"]) ?? "names.json");
         m.RoadsFile = m.Inside(S(f?["roads"]) ?? "roads.json");
+        m.RoadsBeforeFile = m.Inside(Path.ChangeExtension(m.RoadsFile, ".bin"));
         m.HolesFile = m.Inside(S(f?["holes"]) ?? "holes.png");
         m.BedsFile = m.Inside(S(f?["beds"]) ?? "beds.bin");
         m.WornFile = m.Inside(S(f?["worn"]) ?? "worn.npy");
+        if (new[] { m.HeightsFile, m.ObjectsFile, m.WaterFile, m.AreasFile, m.HolesFile, m.BedsFile, m.CavesFile, m.NamesFile, m.RoadsFile, m.WornFile }.Concat(m.LayersFiles).Contains(m.RoadsBeforeFile))
+        {
+            throw new InvalidDataException($"{Path.Combine(m.Folder, FileName)}: the roads' ground file {Path.GetFileName(m.RoadsBeforeFile)} is another of the map's files");
+        }
         m.Catalog = S(j["catalog"]) is string c ? m.Inside(c) : null;
         m.Models = S(j["models"]) is string mo ? m.Abs(mo) : null;
         m.Stamps = S(j["stamps"]) is string st ? m.Inside(st) : null;
@@ -443,6 +451,7 @@ public sealed partial class MapProject
         (m.HeightsFile, m.LayersFile, m.ObjectsFile, m.WaterFile, m.AreasFile, m.HolesFile, m.BedsFile, m.CavesFile, m.WornFile) = (m.Abs("height.npy"), m.Abs("layers.png"), m.Abs("objects.json"), m.Abs("water.json"), m.Abs("areas.json"), m.Abs("holes.png"), m.Abs("beds.bin"), m.Abs("caves.json"), m.Abs("worn.npy"));
         m.NamesFile = m.Abs("names.json");
         m.RoadsFile = m.Abs("roads.json");
+        m.RoadsBeforeFile = m.Abs("roads.bin");
         var raster = new Raster(n, rows, x0, y0);
         float[] heights = new float[n * rows];
         byte[] mask = new byte[n * rows * 4];
@@ -570,7 +579,7 @@ public sealed partial class MapProject
         MapAreas.Load(AreasFile);
         MapCaves.Load(CavesFile);
         MapNames.Load(NamesFile);
-        MapRoads.Load(RoadsFile);
+        MapRoads.Load(RoadsFile, RoadsBeforeFile);
         MapNotes.Load(Path.Combine(Folder, "notes"));
     }
 
@@ -745,8 +754,12 @@ public sealed partial class MapProject
             KeepOld(CavesFile);
             MapCaves.Save(CavesFile);
         }
+        // written to the files named when the map was opened: none of them a link since
+        NoLinks(NamesFile);
+        NoLinks(RoadsFile);
+        NoLinks(RoadsBeforeFile);
         MapNames.Save(NamesFile);
-        MapRoads.Save(RoadsFile);
+        MapRoads.Save(RoadsFile, RoadsBeforeFile);
         WriteJson();
         return objects.Count;
     }

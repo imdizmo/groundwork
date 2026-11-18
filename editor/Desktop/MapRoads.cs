@@ -98,18 +98,17 @@ public static class MapRoads
         }.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
     }
 
-    /// <summary>The ground-before file beside the roads file.</summary>
-    private static string BeforeFile(string file) => Path.ChangeExtension(file, ".bin");
-
     /// <summary>Writes the roads file and the ground before them (nothing when there are no roads and no file yet).</summary>
-    public static void Save(string file)
+    /// <param name="file">The roads file.</param>
+    /// <param name="beforeFile">The ground-before file (the map checked it: in its folder, not a link, no other of its files).</param>
+    public static void Save(string file, string beforeFile)
     {
         if (All.Count == 0 && !File.Exists(file))
         {
             return;
         }
         File.WriteAllText(file, Text());
-        using var w = new BinaryWriter(File.Create(BeforeFile(file)));
+        using var w = new BinaryWriter(File.Create(beforeFile));
         w.Write("GWROADS1");
         w.Write(All.Count(r => r.Before != null));
         foreach (var r in All.Where(r => r.Before != null))
@@ -135,7 +134,9 @@ public static class MapRoads
     }
 
     /// <summary>Reads the roads file and the ground before them (none: no roads; a damaged ground-before file: roads without it).</summary>
-    public static void Load(string file)
+    /// <param name="file">The roads file.</param>
+    /// <param name="beforeFile">The ground-before file.</param>
+    public static void Load(string file, string beforeFile)
     {
         All.Clear();
         var o = File.Exists(file) ? JsonNode.Parse(File.ReadAllText(file)) as JsonObject : null;
@@ -144,9 +145,9 @@ public static class MapRoads
         var befores = new Dictionary<string, (IReadOnlyDictionary<int, Point>, (int, int, int, int))>();
         try
         {
-            if (o != null && File.Exists(BeforeFile(file)))
+            if (o != null && File.Exists(beforeFile))
             {
-                using var r = new BinaryReader(File.OpenRead(BeforeFile(file)));
+                using var r = new BinaryReader(File.OpenRead(beforeFile));
                 if (r.ReadString() == "GWROADS1")
                 {
                     for (int n = r.ReadInt32(); n > 0; n--)

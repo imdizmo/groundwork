@@ -13,15 +13,15 @@ public class MapRoadsTests
         string dir = Directory.CreateTempSubdirectory("gw-roads-").FullName;
         string file = Path.Combine(dir, "roads.json");
         MapRoads.All.Clear();
-        MapRoads.Save(file);
+        MapRoads.Save(file, Path.ChangeExtension(file, ".bin"));
         Assert.False(File.Exists(file));   // no roads, no file
 
         var before = new Dictionary<int, MapRoads.Point> { [12] = new(3.5f, [0.25f, 0.75f]), [13] = new(-1, [1, 0]) };
         MapRoads.All.Add(new MapRoads.Road("Road 1", [new(0, 0), new(10, 5)], 4, 2, false, 12, "Sand", "Post", 3, 0.5f, false, "Bridge") { Before = before, Grid = (64, 64, 0, 0) });
         MapRoads.All.Add(new MapRoads.Road("Road 2", [new(5, 5), new(6, 9)], 3, 3, true, 15, null, null, 3, 0.5f, true, null));
-        MapRoads.Save(file);
+        MapRoads.Save(file, Path.ChangeExtension(file, ".bin"));
         MapRoads.All.Clear();
-        MapRoads.Load(file);
+        MapRoads.Load(file, Path.ChangeExtension(file, ".bin"));
         Directory.Delete(dir, recursive: true);
 
         Assert.Equal(["Road 1", "Road 2"], MapRoads.All.Select(r => r.Name));
@@ -48,5 +48,33 @@ public class MapRoadsTests
         Assert.Equal((0f, 3.5f), (Yaw, HalfWidth));   // heading north
         Assert.Empty(MapRoads.Crossings([new(0, 0), new(20, 0)]));
         MapWater.Rivers.Clear();
+    }
+
+    [Fact]
+    public void TheRoadsGroundFileIsNeitherALinkNorAnotherOfTheMapsFiles()
+    {
+        string dir = Directory.CreateTempSubdirectory("gw-roadmap-").FullName;
+        try
+        {
+            var map = MapProject.Create("Isle", 1, generated: false, height: 2, seed: 1, under: dir);
+            string json = Path.Combine(map.Folder, MapProject.FileName);
+            Assert.EndsWith("roads.bin", MapProject.Open(map.Folder).RoadsBeforeFile);
+
+            // a roads file named so its .bin is the beds file
+            var o = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(json))!.AsObject();
+            o["files"]!["roads"] = "beds.json";
+            File.WriteAllText(json, o.ToJsonString());
+            Assert.Throws<InvalidDataException>(() => MapProject.Open(map.Folder));
+
+            // a link where the ground file goes
+            o["files"]!["roads"] = "roads.json";
+            File.WriteAllText(json, o.ToJsonString());
+            File.CreateSymbolicLink(Path.Combine(map.Folder, "roads.bin"), Path.Combine(dir, "elsewhere.bin"));
+            Assert.Throws<InvalidDataException>(() => MapProject.Open(map.Folder));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
     }
 }
