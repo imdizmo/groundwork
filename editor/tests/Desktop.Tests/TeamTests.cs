@@ -77,6 +77,13 @@ public sealed class TeamTests : IDisposable
                 c.Response.StatusCode = _version == 1 ? 201 : 200;
                 body = Encoding.UTF8.GetBytes(Row());
             }
+            else if (path == "/team/crashes" && c.Request.HttpMethod == "POST")
+            {
+                // as the team server from 0.6.0: a report must say it is a zip (a web page cannot post one in a teammate's name)
+                bool zip = c.Request.ContentType?.StartsWith("application/zip", StringComparison.Ordinal) == true;
+                c.Response.StatusCode = zip ? 201 : 415;
+                body = Encoding.UTF8.GetBytes(zip ? """{"id":"c1"}""" : """{"error":"A crash report is a zip."}""");
+            }
             else if (path == "/maps")
             {
                 body = Encoding.UTF8.GetBytes($"[{Row()}]");
@@ -111,6 +118,14 @@ public sealed class TeamTests : IDisposable
         Assert.False(Team.PlainId("../team/whoami"));
         Assert.False(Team.PlainId("a?b"));
         Assert.False(Team.PlainId(new string('a', 65)));
+    }
+
+    [Fact]
+    public async Task ACrashReportGoesUpAsAZip()
+    {
+        var (id, error) = await Team.SendCrash(_server, "0.0.0-test", [0x50, 0x4b, 5, 6]);
+        Assert.Null(error);
+        Assert.Equal("c1", id);
     }
 
     [Fact]
