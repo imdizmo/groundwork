@@ -43,8 +43,8 @@ are skipped and counted. The first line is the header:
 - `game` and `build` are shown, never interpreted.
 
 Every later line has `t`, the seconds since `started`, and `e`, what happened. Places are `p`: `[x, height, z]` in the
-map's metres (x east, z north; see [Coordinates](unreal.md#coordinates) for Unreal's), and `yaw` is a compass bearing
-in degrees (0 north, 90 east).
+map's metres (x east, z north; see [Coordinates](unreal.md#coordinates) for Unreal's), on the map's ground: where the
+player's feet are, not the middle of their body. `yaw` is a compass bearing in degrees (0 north, 90 east).
 
 | `e` | Fields |
 |---|---|
