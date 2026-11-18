@@ -52,6 +52,9 @@ public sealed partial class GlView
         _outlineFailed = false;
         _playersVao = _playersVbo = 0;
         _replayPathVao = _replayPathVbo = _replayPlayerVao = _replayPlayerVbo = 0;
+        _nameTex.Clear();
+        _textProg = _textVao = _textVbo = _regionVao = _regionVbo = 0;
+        _regionLines = null;
         Array.Clear(_replayPostVao);
         Array.Clear(_replayPostVbo);
         _lowFbo = _lowColor = _lowDepth = 0;

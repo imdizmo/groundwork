@@ -18,7 +18,7 @@ drawer runs along the bottom; the minimap sits in the corner.
 | Shape | **Shape** and **Mountain**: whole shapes put into the ground with one click, see [Shapes and mountains](shapes.md). |
 | Water | **Rivers**: see [Rivers and lakes](water.md). |
 | Paths | **Path**: paths, roads and ramps, see [Paths and ramps](paths.md). |
-| Game | **Areas**: boxes that become Unreal volumes, see [Areas](areas.md). |
+| Game | **Areas**: boxes that become Unreal volumes, see [Areas](areas.md). **Names**: names on places and regions, see [Names and regions](names.md). |
 | Tools | **Measure** (`M`) and **View** (`Esc` or `H`). |
 
 Plugins add their own tools below (see [Plugins](plugins.md)).
@@ -50,7 +50,8 @@ removes them all.
 
 **View** (`V`) shows or hides each kind of object (from the map's catalog: Trees, Rocks, Bushes, Plants, Props,
 Buildings, Markers, Other) and the water. Hidden objects cannot be picked. Plants and Markers start hidden. **Slopes over** draws the
-ground steeper than its angle red: where a player cannot walk up, where the cliffs are.
+ground steeper than its angle red: where a player cannot walk up, where the cliffs are. **Names and regions** shows the
+map's [names](names.md).
 
 ## Settings
 

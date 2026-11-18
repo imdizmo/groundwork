@@ -26,7 +26,7 @@ public interface IToolContext
     /// <param name="text">What it says now.</param>
     void SetText(string id, string text);
 
-    /// <summary>Moves a slider to a value without it counting as a change.</summary>
+    /// <summary>Moves a slider to a value (or picks a choice's option by its index) without it counting as a change.</summary>
     /// <param name="id">The slider's id.</param>
     /// <param name="value">Its value now.</param>
     void SetNumber(string id, float value);

@@ -21,6 +21,7 @@ public sealed partial class MainWindow
         // The look: the game's or plain, buildings see-through, the 3D view's resolution.
         p.Bind(ModelsBox, "view.models");
         p.Bind(SeeThroughBox, "view.seeThrough");
+        p.Bind(NamesBox, "view.names");
         p.Bind(ResolutionBox, "view.res3d");
         // The brush's shape and falloff, Select's options.
         p.Bind(Tools.ShapeBox, "brush.shape");

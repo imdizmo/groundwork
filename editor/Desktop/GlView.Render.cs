@@ -61,6 +61,7 @@ public sealed partial class GlView
         _lastFrame = now;
         double scaling = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
         int pw = Math.Max(1, (int)(Bounds.Width * scaling)), ph = Math.Max(1, (int)(Bounds.Height * scaling));
+        _screenPx = (pw, ph, (float)scaling);
         // Fewer pixels than the screen's (3D resolution): drawn into a smaller picture, then stretched.
         var (rw, rh) = RenderSize();
         bool low = (rw < pw || rh < ph) && LowResolution(rw, rh);

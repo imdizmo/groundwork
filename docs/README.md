@@ -28,6 +28,7 @@ bottom.*
 - [Tunnels and caves](caves.md)
 - [Paths and ramps](paths.md)
 - [Areas](areas.md)
+- [Names and regions](names.md)
 - [Measure](measure.md)
 - [The Mask](masks.md)
 

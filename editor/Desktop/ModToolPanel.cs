@@ -18,6 +18,7 @@ public sealed class ModToolPanel
     private readonly StackPanel _body = new() { Width = 300, Spacing = 6 };
     private readonly Dictionary<string, float> _numbers = [];
     private readonly Dictionary<string, int> _choices = [];
+    private readonly Dictionary<string, ComboBox> _choiceBoxes = [];
     private readonly Dictionary<string, bool> _toggles = [];
     private readonly Dictionary<string, string> _typed = [];
     private readonly Dictionary<string, TextBlock> _texts = [];
@@ -138,6 +139,12 @@ public sealed class ModToolPanel
             _setting = false;
             _numbers[id] = (float)slider.Value;
         }
+        else if (_choiceBoxes.TryGetValue(id, out var box))
+        {
+            _setting = true;
+            box.SelectedIndex = Math.Clamp((int)value, 0, box.ItemCount - 1);
+            _setting = false;
+        }
     }
 
     /// <summary>Moves a slider by an amount as if dragged (Changed raised, remembered).</summary>
@@ -193,6 +200,7 @@ public sealed class ModToolPanel
         _body.Children.Clear();
         _numbers.Clear();
         _choices.Clear();
+        _choiceBoxes.Clear();
         _toggles.Clear();
         _texts.Clear();
         _picked.Clear();
@@ -298,11 +306,15 @@ public sealed class ModToolPanel
         int value = Math.Clamp(_prefs?.Get(Key(ch.Id), 0) ?? 0, 0, ch.Options.Count - 1);
         _choices[ch.Id] = value;
         var box = new ComboBox { ItemsSource = ch.Options, SelectedIndex = value, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+        _choiceBoxes[ch.Id] = box;
         box.SelectionChanged += (_, _) =>
         {
             _choices[ch.Id] = Math.Max(0, box.SelectedIndex);
             _prefs?.Set(Key(ch.Id), _choices[ch.Id]);
-            Changed?.Invoke(ch.Id);
+            if (!_setting)
+            {
+                Changed?.Invoke(ch.Id);
+            }
         };
         return Ui.Row(ch.Label, box, null, "70,*,0");
     }

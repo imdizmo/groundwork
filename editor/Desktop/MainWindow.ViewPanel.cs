@@ -26,6 +26,9 @@ public sealed partial class MainWindow
     /// </summary>
     internal CheckBox SeeThroughBox { get; } = new() { Content = Lang.T("view.label.seeThrough"), FontSize = 12 };
 
+    /// <summary>Shows the map's names and regions.</summary>
+    internal CheckBox NamesBox { get; } = new() { Content = Lang.T("view.label.names"), IsChecked = true, FontSize = 12 };
+
     /// <summary>Steep ground: the ground steeper than SteepBox's degrees drawn red.</summary>
     internal CheckBox SteepCheck { get; } = new() { Content = Lang.T("view.label.steep"), FontSize = 12 };
 
@@ -102,6 +105,8 @@ public sealed partial class MainWindow
         ResolutionBox.Tip("view.res3d");
         list.Children.Add(ModelsBox);
         list.Children.Add(SeeThroughBox);
+        NamesBox.Tip("view.names");
+        list.Children.Add(NamesBox);
         SteepCheck.Tip("view.steep");
         list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { SteepCheck, SteepBox, new TextBlock { Text = "°", FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } });
         list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = Lang.T("view.label.res3d"), FontSize = 12 }, ResolutionBox } });
@@ -146,6 +151,7 @@ public sealed partial class MainWindow
     {
         ModelsBox.IsCheckedChanged += (_, _) => View.ModelsOn = ModelsBox.IsChecked == true;
         SeeThroughBox.IsCheckedChanged += (_, _) => View.SeeThroughBuildings = SeeThroughBox.IsChecked == true;
+        NamesBox.IsCheckedChanged += (_, _) => View.ShowNames = NamesBox.IsChecked == true;
         void Steep() => View.SteepAngle = SteepCheck.IsChecked == true ? (float)(SteepBox.Value ?? 35) : 0;
         SteepCheck.IsCheckedChanged += (_, _) => Steep();
         SteepBox.ValueChanged += (_, _) => Steep();

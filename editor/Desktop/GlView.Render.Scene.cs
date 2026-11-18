@@ -79,12 +79,14 @@ public sealed partial class GlView
         DrawMeasure(s, vp);
         DrawPlayers(s, vp);
         DrawReplay(s, vp);
+        DrawRegions(s, vp);
         DrawRivers(vp);
         DrawModPreview(vp);
         if (ShowNewMarkers)
         {
             DrawNewMarkers(s, vp, rh);
         }
+        DrawNames(s, vp);
     }
 
     /// <summary>The plain ground program (the game's look off), its faces culled, with the view and the sun.</summary>

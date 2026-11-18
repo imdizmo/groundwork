@@ -51,6 +51,8 @@ public sealed partial class MainWindow
         View.StrokeEnded += OnStrokeEnded;
         View.ObjectMiddleClicked += PickKindOfObject;
         View.ObjectShiftRightClicked += DeleteObject;
+        MapNames.Changed += View.NamesChanged;
+        Closed += (_, _) => MapNames.Changed -= View.NamesChanged;
         WireKeys();
         Closing += async (_, e) => await OnClosingAsync(e);
         // Takes the mouse for the 3D view (see GlView.Attach).

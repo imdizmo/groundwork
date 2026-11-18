@@ -185,6 +185,23 @@ public static class Shaders
 		void main() { frag = uColor; }
 		""";
 
+    /// <summary>The map's names: quads already in clip space, each a picture of its text.</summary>
+    public const string TextVs = """
+		layout(location = 0) in vec2 aPos;
+		layout(location = 1) in vec2 aUv;
+		out vec2 vUv;
+		void main() { vUv = aUv; gl_Position = vec4(aPos, 0.0, 1.0); }
+		""";
+
+    /// <summary>The names' fragment shader: the text's picture, faded by <c>uAlpha</c>.</summary>
+    public const string TextFs = """
+		in vec2 vUv;
+		uniform sampler2D uTex;
+		uniform float uAlpha;
+		out vec4 frag;
+		void main() { vec4 c = texture(uTex, vUv); frag = vec4(c.rgb, c.a * uAlpha); }
+		""";
+
     /// <summary>The new objects' markers: one point each, <c>uSize</c> pixels across.</summary>
     public const string MarkVs = """
 		layout(location = 0) in vec3 aPos;

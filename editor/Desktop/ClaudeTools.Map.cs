@@ -206,6 +206,8 @@ public sealed partial class ClaudeTools
             areas = MapAreas.All.Select(a => new { name = a.Name, kind = a.Kind, x = a.X, z = -a.Y, width = a.Width, depth = a.Depth, bottom = a.Bottom, top = a.Top, turn = a.Yaw }),
             rivers = MapWater.Rivers.Select((r, i) => new { number = i + 1, name = r.Name, points = r.Points.Count, top = r.Top, end = r.End }),
             lakes = MapWater.Lakes.Select((l, i) => new { number = i + 1, name = l.Name, points = l.Outline.Count, level = l.Level }),
+            names = MapNames.Labels.Select(l => new { text = l.Text, x = l.X, z = l.Z, size = l.Size.ToString().ToLowerInvariant() }),
+            regions = MapNames.Regions.Select(r => new { name = r.Name, middle = MapNames.Middle(r) is var m ? new[] { m.X, m.Y } : null, points = r.Points.Count, hectares = MathF.Abs(MapNames.Area(r)) / 1e4f }),
         });
     });
 

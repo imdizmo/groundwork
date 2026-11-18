@@ -157,7 +157,7 @@ public sealed partial class ToolPanel
         "river" => "WATER",
         "tunnel" => "CAVES",
         "path" => "PATHS",
-        "areas" => "GAME",
+        "areas" or "names" => "GAME",
         "grow" or "layers" or "checks" or "notes" => "MAP",
         _ => "PLACE",
     };
